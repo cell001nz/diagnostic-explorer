@@ -1,0 +1,58 @@
+
+.operations-dialog-panel
+{
+  @apply bg-neutral-600;
+  padding: 0 !important;
+}
+
+::ng-deep .mat-dialog-container
+{
+  @apply bg-neutral-600;
+  padding: 0 !important;
+}
+
+::ng-deep .mat-dialog-content
+{
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+::ng-deep .mat-toolbar
+{
+  padding: 0 !important;
+}
+
+.content
+{
+  display: grid;
+  gap: 0.5em;
+  grid-template-rows: 20em auto 20em;
+  grid-template-columns: auto 1fr;
+  overflow-y: hidden;
+}
+
+pre
+{
+  width: 550px;
+  height: inherit;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+}
+
+.container-operation
+{
+  height: 100%;
+  overflow-y: auto;
+}
+
+.container-parameters
+{
+  height: 100%;
+  overflow-y: auto;
+}
+
+.active-operation
+{
+  @apply font-semibold text-lime-500;
+}

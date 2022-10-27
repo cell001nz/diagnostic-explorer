@@ -1,0 +1,66 @@
+#region Copyright
+
+// Diagnostic Explorer, a .Net diagnostic toolset
+// Copyright (C) 2010 Cameron Elliot
+// 
+// This file is part of Diagnostic Explorer.
+// 
+// Diagnostic Explorer is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// Diagnostic Explorer is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public License
+// along with Diagnostic Explorer.  If not, see <http://www.gnu.org/licenses/>.
+// 
+// http://diagexplorer.sourceforge.net/
+
+#endregion
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using DiagnosticExplorer;
+
+namespace DiagnosticExplorer
+{
+	internal class ExtendedPropertyGetter : PropertyGetter
+	{
+		private string _name;
+
+		public ExtendedPropertyGetter(PropertyInfo info, ExtendedPropertyAttribute attr, bool isStatic)
+			: base(info, isStatic)
+		{
+			_name = attr.Name ?? info.Name;
+		}
+
+		public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+		{
+			string newPrepend = CombineCategories(catPrepend, _name);
+
+			object val = GetFunc(obj);
+			if (val == null)
+			{
+				base.GetProperties(obj, bag, newPrepend);
+			}
+			else
+			{
+				List<PropertyGetter> getters = DiagnosticManager.GetPropertyGetters(val);
+				foreach (PropertyGetter getter in getters)
+				{
+					getter.GetProperties(val, bag, newPrepend);
+				}
+				Category cat = bag.Categories.FindByName(newPrepend);
+				if (cat != null)
+					cat.ValueObject = val;
+			}
+		}
+	}
+}

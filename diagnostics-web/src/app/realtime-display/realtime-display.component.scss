@@ -1,0 +1,89 @@
+::ng-deep .vertical.mat-tab-group {
+  display: grid !important;
+  height: 100% !important;
+  grid-template-columns: 1fr min-content !important;
+}
+
+::ng-deep .vertical .mat-tab-labels {
+  flex-direction: column !important;
+}
+
+::ng-deep .mat-tab-label-container {
+  overflow: auto !important;
+}
+
+::ng-deep .mat-tab-label-content {
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+.warn
+{
+  color: red !important;
+}
+
+::ng-deep .detail-tabs .mat-tab-body-content
+{
+  height: 100% !important;
+  display: grid !important;
+}
+
+::ng-deep .detail-tabs .mat-tab-body-wrapper
+{
+  height: 100% !important;
+  display: grid !important;
+}
+
+
+::ng-deep .vertical .mat-tab-label {
+  padding: 0.5em 0 0.5em 0 !important;
+  min-width: 100px !important;
+  height: revert !important;
+  justify-content: start !important;
+  width: 100% !important;
+}
+
+::ng-deep .vertical .mat-tab-label-content {
+  display: grid !important;
+  justify-content: stretch !important;
+  padding-right: 1em !important;
+}
+
+::ng-deep .vertical .mat-tab-header-pagination {
+  display: none !important;;
+
+}
+
+::ng-deep .vertical .mat-tab-header-pagination-after {
+  width: 100px !important;
+}
+
+::ng-deep .vertical .mat-tab-list {
+  width: revert !important;;
+}
+
+::ng-deep .vertical .mat-tab-header {
+  grid-row-start: 1;
+  grid-column-start: 2 !important;
+}
+
+
+::ng-deep .vertical .mat-tab-label-active {
+  border-right: 2px solid !important;
+}
+
+::ng-deep  .mat-ink-bar {
+  display: none;
+}
+
+::ng-deep .mat-tab-label-active
+{
+  @apply text-yellow-400;
+  font-weight: bold;
+}
+
+::ng-deep .scope-tabs .mat-tab-labels {
+  @apply bg-neutral-700;
+}
+
+

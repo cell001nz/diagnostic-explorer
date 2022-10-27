@@ -1,0 +1,30 @@
+::ng-deep .check-info .mat-checkbox-background
+{
+  @apply bg-lime-400;
+}
+
+::ng-deep .check-notice .mat-checkbox-background
+{
+  @apply bg-purple-400;
+}
+
+::ng-deep .check-warn .mat-checkbox-background
+{
+  @apply bg-amber-400;
+}
+
+::ng-deep .check-error .mat-checkbox-background
+{
+  @apply bg-red-400;
+}
+
+::ng-deep .mat-checkbox-background
+{
+  padding: 1px !important;
+  border: 2px solid #333 !important;
+  border-radius: 0 !important;
+}
+
+::ng-deep .mat-checkbox-checkmark-path {
+  stroke: black !important;
+}

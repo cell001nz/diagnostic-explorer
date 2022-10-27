@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFrameworks>net6.0</TargetFrameworks>
+		<AssemblyName>_ConsoleApp</AssemblyName>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+		<PackageReference Include="Grpc.Net.Client" Version="2.47.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="Google.Protobuf" Version="3.21.4" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.7" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="6.0.7" />
+		<PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.2.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<ProjectReference Include="..\DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj" />
+		<ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="Processes.xml">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,6 @@
+{
+  "Diagnostics": {
+    //        "Url": "http://localhost:4080/api/diagnostics"
+    "Url": "http://diagnostics:2803/diagnostics, http://drdiagnostics:2803/diagnostics"
+  }  
+}

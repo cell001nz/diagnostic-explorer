@@ -1,0 +1,9 @@
+td
+{
+  border-bottom-color: black !important;
+}
+
+::ng-deep .realtime-events .mat-expansion-panel-header-title
+{
+  flex-grow: 0;
+}

@@ -1,0 +1,128 @@
+::ng-deep .retro-display .mat-row
+{
+  height: 20px !important;
+  min-height: 20px;
+}
+
+::ng-deep .retro-display .mat-table
+{
+  overflow: auto !important;
+}
+
+
+::ng-deep .retro-display .mat-header-row
+{
+  height: 30px !important;
+  min-height: 30px;
+}
+
+::ng-deep .retro-display .mat-expansion-panel-content
+{
+  height: 100% !important;
+  padding: 0 !important;
+  margin-bottom: 100px !important;
+}
+
+::ng-deep .retro-display .mat-expansion-panel-header > span:first-child
+{
+  display: grid !important;
+}
+
+::ng-deep .retro-display .mat-expansion-panel-header-title
+{
+  display: grid !important;
+  margin-right: 0 !important;
+}
+
+::ng-deep .retro-display .mat-expansion-panel-body
+{
+  padding: 0 !important;
+  height: calc(100% - 22.5px) !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+}
+
+::ng-deep .retro-display .mat-expansion-panel-header
+{
+  padding-left: 1em !important;
+  padding-right: 0 !important;
+}
+
+::ng-deep .mat-expansion-panel-header-description
+{
+  align-items: center !important;
+}
+
+::ng-deep .retro-display .mat-expansion-indicator
+{
+  display: none;
+}
+
+::ng-deep .detail-tabs .mat-tab-body-content
+{
+  height: 100% !important;
+  display: grid !important;
+  padding: 0 !important;
+}
+
+::ng-deep .detail-tabs .mat-tab-body-wrapper
+{
+  height: 100% !important;
+  display: grid !important;
+}
+
+
+
+
+.mat-column-date
+{
+  white-space: nowrap;
+  flex: 0 0 175px;
+  margin-right: 10px;
+}
+
+.mat-column-level
+{
+  white-space: nowrap;
+  flex: 0 0 100px;
+}
+
+.mat-column-machine
+{
+  white-space: nowrap;
+  flex: 0 0 120px;
+  margin-right: 10px;
+}
+
+.mat-column-user
+{
+  white-space: nowrap;
+  flex: 0 0 80px;
+  margin-right: 10px;
+}
+
+.mat-column-process
+{
+  flex: 0 0 150px;
+}
+.mat-column-process span
+{
+  white-space: nowrap;
+  margin-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mat-column-message {
+  flex: 1 1 100px;
+}
+
+
+.mat-column-message span {
+  white-space: nowrap;
+  //min-width: 100px;
+  //margin-right: 10px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
