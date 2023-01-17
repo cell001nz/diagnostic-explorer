@@ -26,6 +26,7 @@ $dark-theme: mat.define-dark-theme((
 @include mat.select-theme($dark-theme);
 @include mat.datepicker-theme($dark-theme);
 @include mat.progress-bar-theme($dark-theme);
+@include mat.checkbox-theme($dark-theme);
 
 .noselect {
   -webkit-touch-callout: none; /* iOS Safari */
@@ -37,6 +38,17 @@ $dark-theme: mat.define-dark-theme((
   /* Non-prefixed version, currently
                                    supported by Chrome, Edge, Opera and Firefox */
 }
+
+button.filter-clear span.mat-button-wrapper
+{
+  opacity: 0.2;
+}
+
+span.mat-checkbox-frame
+{
+  background: dimgray !important;
+}
+
 
 /* width */
 ::-webkit-scrollbar {

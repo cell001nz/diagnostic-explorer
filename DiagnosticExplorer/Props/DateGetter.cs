@@ -51,12 +51,16 @@ namespace DiagnosticExplorer
 		{
 			DateTime? dateVal = (DateTime?)GetFunc(obj);
 
+            bool isUtc = dateVal?.Kind == DateTimeKind.Unspecified
+                ? _isUtc
+                : dateVal?.Kind == DateTimeKind.Utc;
+
 			if (_exposeDate)
 			{
 				base.GetProperties(obj, bag, catPrepend);
 			}
 
-            DateTime now = _isUtc ? DateTime.UtcNow : DateTime.Now;
+            DateTime now = isUtc ? DateTime.UtcNow : DateTime.Now;
 			if (_exposeElapsed)
 			{
 				string val = dateVal == null ? "" : FormatTimeSpan(now.Subtract(dateVal.Value));

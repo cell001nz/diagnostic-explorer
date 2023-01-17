@@ -1,17 +1,19 @@
 
 
 <div class="h-full w-full overflow-hidden flex flex-col retro-nav">
-  <div class="grid text-xxs">
+  <div class="grid grid-cols-1fr-auto text-xxs">
 
     <mat-form-field class="text-xs px-2" appearance="fill" color="warn" (keydown)="model.handleKeyDown($event)">
       <mat-label>Filter</mat-label>
       <input matInput type="text" [(ngModel)]="model.processSearch">
       <button *ngIf="model.processSearch" matSuffix mat-icon-button aria-label="Clear"
-              class="text-xs"
+              class="text-xs filter-clear"
               (click)="model.processSearch=''">
         <mat-icon>close</mat-icon>
       </button>
     </mat-form-field>
+
+    <mat-checkbox [(ngModel)]="model.onlineOnly" class="text-xs mr-4 self-center"><span class="opacity-50">Online</span></mat-checkbox>
   </div>
 
   <div class="flex-grow-0 overflow-auto w-full grid">

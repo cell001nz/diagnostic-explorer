@@ -39,6 +39,9 @@ export class RealtimeModel {
   @Watch((_this: RealtimeModel) => _this.performProcessSearch())
   processSearch: Null<string> = null;
   watchEnabled = false;
+
+  @Watch((_this: RealtimeModel) => _this.performProcessSearch())
+  onlineOnly = true;
   activeCat?: CategoryModel;
   selectedIndex = 0;
 
@@ -114,22 +117,28 @@ export class RealtimeModel {
       = _(response.propertyBags).groupBy(p => p.category).value();
 
     const catData: { name: string, props: PropertyBag[] }[]
-      = _(bagCats).keys()
+      = _(bagCats).keys().concat(this.categories.map(c => c.name))
       .uniq()
       .map(name => ({name, props: bagCats[name] ?? []}))
       .value();
 
+    let cats = this.categories.slice();
 
-    this.categories = customMerge(catData,
-      this.categories,
+      customMerge(catData,
+      cats,
       d => d.name,
       c => c.name,
       d => new CategoryModel(this, d.name, d.props),
       (d, c) => c.update(d.props),
       false);
 
-    if (this.categories.filter(c => !c.subCats.length && !c.eventSinks.length))
-      this.categories = this.categories.filter(c => c.subCats.length || c.eventSinks.length);
+      cats = _.sortBy(cats, c => c.name);
+
+
+    if (cats.filter(c => !c.subCats.length && !c.eventSinks.length))
+      cats = cats.filter(c => c.subCats.length || c.eventSinks.length);
+
+    this.categories = cats;
 
     this.operationSets = response.operationSets;
   }
@@ -151,12 +160,17 @@ export class RealtimeModel {
 
   private performProcessSearch(): void {
 
-    if (this.processSearch) {
-      let tester = new RegExp(escapeRegExp(this.processSearch ?? ''), 'i');
+    console.log('Performing search');
+    if (this.processSearch || this.onlineOnly) {
+      let tester: Null<RegExp> = this.createFilterRegex();
+
       const matching = this.allProcesses.filter(p =>
-        tester.test(p.processName)
+        (!this.onlineOnly || p.state == 'Online')
+         &&
+        (tester == null
+        || tester.test(p.processName)
         || tester.test(p.machineName)
-        || tester.test(p.userName)
+        || tester.test(p.userName))
       );
 
       this.filteredProcesses = this.allProcesses === this.filteredProcesses
@@ -165,6 +179,17 @@ export class RealtimeModel {
 
     } else {
       this.filteredProcesses = this.allProcesses;
+    }
+  }
+
+  private createFilterRegex(): Null<RegExp> {
+    if (!this.processSearch)
+      return null;
+
+    try {
+      return new RegExp(this.processSearch, 'i');
+    } catch (err) {
+      return new RegExp(escapeRegExp(this.processSearch), 'i');
     }
   }
 
@@ -318,7 +343,7 @@ export class RealtimeModel {
     if (!cat)
     {
       cat = new CategoryModel(this, name);
-      this.categories = this.categories.concat(cat);
+      this.categories = _.sortBy(this.categories.concat(cat), c => c.name);
     }
 
     return cat;
@@ -329,4 +354,7 @@ export class RealtimeModel {
       cat.checkEventSeverityLevels();
   }
 
+  handleOnlineClick($evt: any) {
+    console.log($evt);
+  }
 }

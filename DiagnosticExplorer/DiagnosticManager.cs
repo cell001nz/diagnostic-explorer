@@ -39,7 +39,7 @@ namespace DiagnosticExplorer
 
 				if (existing == null)
 				{
-					bagName += GetUniqueBagNameExtension(bagName);
+					bagName += GetUniqueBagNameExtension(bagName, bagCategory);
 					RegisteredObjects.Add(new RegisteredObject(o, bagCategory, bagName));
 				}
 			}
@@ -189,29 +189,29 @@ namespace DiagnosticExplorer
 			return list.ToArray();
 		}
 
-		private static string GetUniqueBagNameExtension(string name)
+		private static string GetUniqueBagNameExtension(string name, string category)
 		{
 			if (name == null)
 				return null;
 
-			if (!BagNameExists(name))
+			if (!BagNameExists(name, category))
 				return null;
 
 			for (int i = 2;; i++)
 			{
 				string extension = $" {i}";
 				string newName = $"{name}{extension}";
-				if (!BagNameExists(newName))
+				if (!BagNameExists(newName, category))
 					return extension;
 			}
 		}
 
-		private static bool BagNameExists(string name)
+		private static bool BagNameExists(string name, string category)
 		{
 			lock (RegisteredObjects)
-			{
-				return RegisteredObjects.Any(ro => _ignoreCase.Equals(name, ro.BagName));
-			}
+            {
+                return RegisteredObjects.Any(ro => _ignoreCase.Equals(name, ro.BagName) && _ignoreCase.Equals(category, ro.BagCategory));
+            }
 		}
 
 		public static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory)
