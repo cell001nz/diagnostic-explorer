@@ -17,6 +17,7 @@ namespace DiagnosticExplorer
 		private static Dictionary<string, List<PropertyGetter>> _typeHash = new();
 
 		private static readonly Dictionary<Type, OperationSet> _operationLookup = new();
+        public static bool Enabled { get; set; } = true;
 
 		static DiagnosticManager()
 		{
@@ -31,7 +32,9 @@ namespace DiagnosticExplorer
 		}
 
 		public static void Register(object o, string bagName, string bagCategory)
-		{
+        {
+            if (!Enabled) return;
+
 			lock (RegisteredObjects)
 			{
 				RegisteredObject existing = RegisteredObjects.Find(
