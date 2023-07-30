@@ -117,19 +117,20 @@ namespace DiagnosticExplorer
 		}
 
 		public virtual void GetProperties(object obj, PropertyBag bag, string catPrepend)
-		{
-			Property p = new Property();
-			p.Name = Name;
-			p.Description = Description;
+        {
+            Property p = new Property 
+            {
+                Name = Name,
+                Description = Description,
+                Value = MaxLengthString(GetValue(obj, out object objectValue), 8092),
+                ValueObject = objectValue,
+                CanSet = CanSet,
+                SourceObject = obj,
+                SourceProperty = PropInfo
+            };
 
-			object objectValue;
-			p.Value = MaxLengthString(GetValue(obj, out objectValue), 8092);
-			p.ValueObject = objectValue;
-			p.CanSet = CanSet;
-			p.SourceObject = obj;
-			p.SourceProperty = PropInfo;
-
-			bag.AddProperty(p, PrependToCategory(catPrepend));
+            string prependToCategory = PrependToCategory(catPrepend);
+            bag.AddProperty(p, prependToCategory);
 		}
 
 		protected string PrependToCategory(string prepend)

@@ -278,7 +278,7 @@ namespace DiagnosticExplorer
 						RatePropertyAttribute rateAttr = propAttr as RatePropertyAttribute;
 						propertyList.Add(new RateGetter(info, rateAttr, isStatic));
 					}
-					else if (underlying == typeof (DateTime))
+					else if (underlying == typeof (DateTime) || underlying == typeof(DateTimeOffset))
 					{
 						DatePropertyAttribute dateAttr = propAttr as DatePropertyAttribute;
 						propertyList.Add(new DateGetter(info, dateAttr, isStatic));

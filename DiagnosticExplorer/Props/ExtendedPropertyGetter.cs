@@ -31,36 +31,46 @@ using DiagnosticExplorer;
 
 namespace DiagnosticExplorer
 {
-	internal class ExtendedPropertyGetter : PropertyGetter
-	{
-		private string _name;
+    internal class ExtendedPropertyGetter : PropertyGetter
+    {
+        private string _name;
 
-		public ExtendedPropertyGetter(PropertyInfo info, ExtendedPropertyAttribute attr, bool isStatic)
-			: base(info, isStatic)
-		{
-			_name = attr.Name ?? info.Name;
-		}
+        public ExtendedPropertyGetter(PropertyInfo info, ExtendedPropertyAttribute attr, bool isStatic)
+            : base(info, isStatic)
+        {
+            _name = attr.Name ?? info.Name;
+        }
 
-		public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
-		{
-			string newPrepend = CombineCategories(catPrepend, _name);
+        public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+        {
+            string newPrepend = CombineCategories(catPrepend, _name);
 
-			object val = GetFunc(obj);
-			if (val == null)
-			{
-				base.GetProperties(obj, bag, newPrepend);
-			}
-			else
-			{
-				List<PropertyGetter> getters = DiagnosticManager.GetPropertyGetters(val);
-				foreach (PropertyGetter getter in getters)
-				{
-					getter.GetProperties(val, bag, newPrepend);
-				}
-				Category cat = bag.Categories.FindByName(newPrepend);
-				if (cat != null)
-					cat.ValueObject = val;
-			}
-		}
-	}
+            object val = GetFunc(obj);
+            if (val == null)
+            {
+                base.GetProperties(obj, bag, catPrepend);
+                Property p = new Property
+                {
+                    Name = "null",
+                    CanSet = CanSet,
+                    SourceObject = obj,
+                    SourceProperty = PropInfo
+                };
+
+                string prependToCategory = PrependToCategory(newPrepend);
+                bag.AddProperty(p, prependToCategory);
+            }
+            else
+            {
+                List<PropertyGetter> getters = DiagnosticManager.GetPropertyGetters(val);
+                foreach (PropertyGetter getter in getters)
+                {
+                    getter.GetProperties(val, bag, newPrepend);
+                }
+                Category cat = bag.Categories.FindByName(newPrepend);
+                if (cat != null)
+                    cat.ValueObject = val;
+            }
+        }
+    }
 }

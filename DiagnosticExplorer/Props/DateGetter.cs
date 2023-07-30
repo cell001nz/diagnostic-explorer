@@ -29,50 +29,46 @@ using System.Reflection;
 
 namespace DiagnosticExplorer
 {
-	internal class DateGetter : PropertyGetter
-	{
-		private bool _exposeDate = true;
-		private bool _exposeElapsed = false;
-		private bool _exposeTimeUntil = false;
-		private bool _isUtc = false;
+    internal class DateGetter : PropertyGetter
+    {
+        private bool _exposeDate = true;
+        private bool _exposeElapsed = false;
+        private bool _exposeTimeUntil = false;
 
-		public DateGetter(PropertyInfo prop, DatePropertyAttribute attr, bool isStatic) : base(prop, isStatic)
-		{
-			if (attr != null)
-			{
-				_exposeDate = attr.ExposeDate;
-				_exposeElapsed = attr.ExposeElapsed;
-				_exposeTimeUntil = attr.ExposeTimeUntil;
-                _isUtc = attr.IsUTC;
+        public DateGetter(PropertyInfo prop, DatePropertyAttribute attr, bool isStatic) : base(prop, isStatic)
+        {
+            if (attr != null)
+            {
+                _exposeDate = attr.ExposeDate;
+                _exposeElapsed = attr.ExposeElapsed;
+                _exposeTimeUntil = attr.ExposeTimeUntil;
             }
-		}
+        }
 
-		public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
-		{
-			DateTime? dateVal = (DateTime?)GetFunc(obj);
+        public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+        {
+            if (_exposeDate)
+            {
+                base.GetProperties(obj, bag, catPrepend);
+            }
 
-            bool isUtc = dateVal?.Kind == DateTimeKind.Unspecified
-                ? _isUtc
-                : dateVal?.Kind == DateTimeKind.Utc;
+            var value = GetFunc(obj);
+            DateTime? dateVal = value is DateTimeOffset off ? off.LocalDateTime : (DateTime?) value;
+            if (dateVal != null && dateVal.Value.Kind == DateTimeKind.Utc)
+                dateVal = dateVal.Value.ToLocalTime();
 
-			if (_exposeDate)
-			{
-				base.GetProperties(obj, bag, catPrepend);
-			}
-
-            DateTime now = isUtc ? DateTime.UtcNow : DateTime.Now;
-			if (_exposeElapsed)
-			{
-				string val = dateVal == null ? "" : FormatTimeSpan(now.Subtract(dateVal.Value));
-				Property property = new Property("Time since " + Name, val);
-				bag.AddProperty(property, PrependToCategory(catPrepend));
-			}
-			if (_exposeTimeUntil)
-			{
-				string val = dateVal == null ? "" : FormatTimeSpan(dateVal.Value.Subtract(now));
-				Property property = new Property("Time until " + Name, val);
-				bag.AddProperty(property, PrependToCategory(catPrepend));
-			}
-		}
-	}
+            if (_exposeElapsed)
+            {
+                string val = dateVal == null ? "" : FormatTimeSpan(DateTime.Now.Subtract(dateVal.Value));
+                Property property = new Property("Time since " + Name, val);
+                bag.AddProperty(property, PrependToCategory(catPrepend));
+            }
+            if (_exposeTimeUntil)
+            {
+                string val = dateVal == null ? "" : FormatTimeSpan(dateVal.Value.Subtract(DateTime.Now));
+                Property property = new Property("Time until " + Name, val);
+                bag.AddProperty(property, PrependToCategory(catPrepend));
+            }
+        }
+    }
 }

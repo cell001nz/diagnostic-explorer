@@ -116,6 +116,8 @@ namespace WidgetSample
             DiagnosticHostingService.Stop();
         }
 
+        [ExtendedProperty] public Widget NullWidget => null;
+
 
         //		[CollectionProperty(CollectionMode.List, Category="Numbers")]
         public List<int> UpdateList { get; }
