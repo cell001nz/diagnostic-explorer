@@ -48,7 +48,6 @@ namespace DiagnosticExplorer
             object val = GetFunc(obj);
             if (val == null)
             {
-                base.GetProperties(obj, bag, catPrepend);
                 Property p = new Property
                 {
                     Name = "null",

@@ -37,18 +37,45 @@ namespace DiagnosticExplorer
 
 			lock (RegisteredObjects)
 			{
-				RegisteredObject existing = RegisteredObjects.Find(
-					ro => ReferenceEquals(ro.Object, o));
+				RegisteredObject existing = RegisteredObjects.Find(ro => ReferenceEquals(ro.Object, o));
 
+                bagName = MakeNameUnique(existing, bagName, bagCategory);
 				if (existing == null)
 				{
-					bagName += GetUniqueBagNameExtension(bagName, bagCategory);
 					RegisteredObjects.Add(new RegisteredObject(o, bagCategory, bagName));
 				}
+                else
+                {
+                    existing.BagName = bagName;
+                    existing.BagCategory = bagCategory;
+                }
 			}
 		}
 
-		public static void Unregister(object obj)
+        private static string MakeNameUnique(RegisteredObject obj, string name, string category)
+        {
+            if (name == null)
+                return name;
+
+            if (!NameAlreadyTaken(name, category))
+                return name;
+
+            for (int i = 2; ; i++)
+            {
+                string extension = $" {i}";
+                string newName = $"{name}{extension}";
+                if (!NameAlreadyTaken(newName, category))
+                    return newName;
+            }
+
+            bool NameAlreadyTaken(string proposedName, string proposedCat)
+            {
+                return RegisteredObjects.Any(ro => !ReferenceEquals(ro, obj) && _ignoreCase.Equals(proposedName, ro.BagName) && _ignoreCase.Equals(proposedCat, ro.BagCategory));
+            }
+        }
+
+
+        public static void Unregister(object obj)
 		{
 			lock (RegisteredObjects)
 			{
@@ -192,32 +219,8 @@ namespace DiagnosticExplorer
 			return list.ToArray();
 		}
 
-		private static string GetUniqueBagNameExtension(string name, string category)
-		{
-			if (name == null)
-				return null;
 
-			if (!BagNameExists(name, category))
-				return null;
-
-			for (int i = 2;; i++)
-			{
-				string extension = $" {i}";
-				string newName = $"{name}{extension}";
-				if (!BagNameExists(newName, category))
-					return extension;
-			}
-		}
-
-		private static bool BagNameExists(string name, string category)
-		{
-			lock (RegisteredObjects)
-            {
-                return RegisteredObjects.Any(ro => _ignoreCase.Equals(name, ro.BagName) && _ignoreCase.Equals(category, ro.BagCategory));
-            }
-		}
-
-		public static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory)
+        public static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory)
 		{
 			PropertyBag bag = new();
 			bag.Name = bagName;
