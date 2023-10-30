@@ -38,11 +38,11 @@ using System.Linq;
 
 namespace DiagnosticExplorer
 {
+    using ATraceItem = TraceItem<TraceScope>;
 
-	using ATraceItem = TraceItem<TraceScope>;
 
-	/// <summary>Enabled trace to a single source through method calls</summary>
-	public class TraceScope : IDisposable
+    /// <summary>Enabled trace to a single source through method calls</summary>
+    public class TraceScope : ITraceScope
 	{
 		[ThreadStatic] private static List<TraceScope> _scopeStack;
 		private DateTime _created = DateTime.UtcNow;
@@ -59,9 +59,130 @@ namespace DiagnosticExplorer
 		/// </summary>
 		private SortedDictionary<int, Action<string>> _traceMethods;
 
-		#region Constructors
+        #region New
 
-		public TraceScope([CallerMemberName] string name = null)
+        public static ITraceScope New([CallerMemberName] string name = null)
+        {
+            return SetupNew(name, null, TraceMode.Normal, false);
+        }
+
+        public static ITraceScope New(TraceMode mode, [CallerMemberName] string name = null)
+        {
+            return SetupNew(name, null, mode, false);
+        }
+
+        public static ITraceScope New(Action<string> traceMethod, [CallerMemberName] string name = null)
+        {
+            return SetupNew(name, traceMethod, TraceMode.Normal, false);
+        }
+
+        public static ITraceScope New(Action<string> traceMethod, TraceMode mode, [CallerMemberName] string name = null)
+        {
+            return SetupNew(name, traceMethod, mode, false);
+        }
+
+        public static ITraceScope New(string name, TraceMode mode)
+        {
+            return SetupNew(name, null, mode, false);
+        }
+
+        public static ITraceScope New(string name, Action<string> traceMethod)
+        {
+            return SetupNew(name, traceMethod, TraceMode.Normal, false);
+        }
+
+        public static ITraceScope New(string name, Action<string> traceMethod, TraceMode mode)
+        {
+            return SetupNew(name, traceMethod, mode, false);
+        }
+
+        public static ITraceScope New(string name, Action<string> traceMethod, bool forceTrace)
+        {
+            return SetupNew(name, traceMethod, TraceMode.Normal, forceTrace);
+        }
+
+        public static ITraceScope New(Action<string> traceMethod, bool forceTrace, [CallerMemberName] string name = null)
+        {
+            return SetupNew(name, traceMethod, TraceMode.Normal, forceTrace);
+        }
+
+        public static ITraceScope New(string name, Action<string> traceMethod, TraceMode mode, bool forceTrace)
+        {
+            return SetupNew(name, traceMethod, mode, forceTrace);
+        }
+
+        private static ITraceScope SetupNew(string name, Action<string> traceMethod, TraceMode mode, bool forceTrace)
+        {
+            if (AsyncTraceScope.Current != null)
+                return new AsyncTraceScope(name, traceMethod, mode, forceTrace);
+
+            return new TraceScope(name, traceMethod, mode, forceTrace);
+        }
+
+        #endregion
+
+        #region Async
+
+        public static ITraceScope Create([CallerMemberName] string name = null)
+        {
+            return SetupAsync(name, null, TraceMode.Normal, false);
+        }
+
+        public static ITraceScope Create(TraceMode mode, [CallerMemberName] string name = null)
+        {
+            return SetupAsync(name, null, mode, false);
+        }
+
+        public static ITraceScope Create(Action<string> traceMethod, [CallerMemberName] string name = null)
+        {
+            return SetupAsync(name, traceMethod, TraceMode.Normal, false);
+        }
+
+        public static ITraceScope Create(Action<string> traceMethod, TraceMode mode, [CallerMemberName] string name = null)
+        {
+            return SetupAsync(name, traceMethod, mode, false);
+        }
+
+        public static ITraceScope Create(string name, TraceMode mode)
+        {
+            return SetupAsync(name, null, mode, false);
+        }
+
+        public static ITraceScope Create(string name, Action<string> traceMethod)
+        {
+            return SetupAsync(name, traceMethod, TraceMode.Normal, false);
+        }
+
+        public static ITraceScope Create(string name, Action<string> traceMethod, TraceMode mode)
+        {
+            return SetupAsync(name, traceMethod, mode, false);
+        }
+
+        public static ITraceScope Create(string name, Action<string> traceMethod, bool forceTrace)
+        {
+            return SetupAsync(name, traceMethod, TraceMode.Normal, forceTrace);
+        }
+
+        public static ITraceScope Create(Action<string> traceMethod, bool forceTrace, [CallerMemberName] string name = null)
+        {
+            return SetupAsync(name, traceMethod, TraceMode.Normal, forceTrace);
+        }
+
+        public static ITraceScope Create(string name, Action<string> traceMethod, TraceMode mode, bool forceTrace)
+        {
+            return SetupAsync(name, traceMethod, mode, forceTrace);
+        }
+
+        private static ITraceScope SetupAsync(string name, Action<string> traceMethod, TraceMode mode, bool forceTrace)
+        {
+            return new AsyncTraceScope(name, traceMethod, mode, forceTrace);
+        }
+
+        #endregion
+
+        #region Constructors
+
+        public TraceScope([CallerMemberName] string name = null)
 		{
 			Setup(name, null, null, false);
 		}
@@ -113,6 +234,7 @@ namespace DiagnosticExplorer
 
 		private void Setup(string name, Action<string> traceMethod, TraceMode? mode, bool forceTrace)
 		{
+
 			_traceMethods = new SortedDictionary<int, Action<string>>();
 			SetTraceAction(0, traceMethod);
 
@@ -171,6 +293,8 @@ namespace DiagnosticExplorer
         }
 
 		#endregion
+
+        
 
 		public void StartAutoTraceTimer(TimeSpan time)
 		{
@@ -474,8 +598,13 @@ namespace DiagnosticExplorer
 
 		public static ITraceItem Trace(string format, params object[] args)
 		{
-			if (ScopeStack == null) return null;
+            var asyncTrace = AsyncTraceScope.Trace(format, args);
+            if (asyncTrace != null)
+                return asyncTrace;
+			
+            if (ScopeStack == null) return null;
 			if (ScopeStack.Count == 0) return null;
+
 
 			format = TryFormat(format, args);
 			lock (CurrentScope._syncLock)

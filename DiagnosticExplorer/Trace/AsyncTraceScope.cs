@@ -42,9 +42,9 @@ namespace DiagnosticExplorer
 	using ATraceItem = TraceItem<AsyncTraceScope>;
 
 	/// <summary>Enabled trace to a single source through method calls</summary>
-	public class AsyncTraceScope : IDisposable
+	public class AsyncTraceScope : ITraceScope
     {
-        private static AsyncLocal<List<AsyncTraceScope>> _scopeStack;
+        private static AsyncLocal<List<AsyncTraceScope>> _scopeStack = new();
 
         private static List<AsyncTraceScope> ScopeStack
         {
@@ -65,6 +65,8 @@ namespace DiagnosticExplorer
 		/// which should be used if the operation exceeds that time
 		/// </summary>
 		private SortedDictionary<int, Action<string>> _traceMethods;
+
+
 
 		#region Constructors
 
@@ -215,31 +217,6 @@ namespace DiagnosticExplorer
 		public void SetTraceAction(int timeMillis, Action<string> traceMethod)
 		{
 			_traceMethods[timeMillis] = traceMethod;
-		}
-
-		public static void Invoke(ISynchronizeInvoke invoke, Action action)
-		{
-			AsyncTraceScope currentScope = CurrentScope;
-			if (currentScope == null)
-			{
-				action();
-			}
-			else
-			{
-				Func<Action, AsyncTraceScope> traceFunc = ExecuteSynchronizeInvoke;
-				AsyncTraceScope scope = (AsyncTraceScope)invoke.Invoke(traceFunc, new object[] { action });
-				lock (currentScope._syncLock)
-					currentScope._ATraceItems.Add(new ATraceItem(scope));
-			}
-		}
-
-		private static AsyncTraceScope ExecuteSynchronizeInvoke(Action action)
-		{
-			using (AsyncTraceScope scope = new AsyncTraceScope())
-			{
-				action();
-				return scope;
-			}
 		}
 
 		public static TraceMode TraceMode

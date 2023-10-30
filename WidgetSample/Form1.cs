@@ -58,26 +58,28 @@ namespace WidgetSample
         private string _infoText;
         private Timer _listTestTimer;
         private Task _autoLogTask;
+        private Timer _scopeTimer;
+        private Task _scopeTask;
 
 
         public Form1()
         {
             InitializeComponent();
-            
+
             string log4net = Path.GetFullPath("log4net.config");
             XmlConfigurator.ConfigureAndWatch(new FileInfo(log4net));
 
             Trace.Listeners.Add(new TextWriterTraceListener(Console.Error));
             Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
-/*            _autoLogTask = Task.Run(async () => {
-                while (true)
-                {
-                    _formLog.Info($"Auto logging event {DateTime.Now:d MMM yyyy HH:ss:ss.ff}");
-                    await Task.Delay(100);
-                }
-            });
-*/
+            /*            _autoLogTask = Task.Run(async () => {
+                            while (true)
+                            {
+                                _formLog.Info($"Auto logging event {DateTime.Now:d MMM yyyy HH:ss:ss.ff}");
+                                await Task.Delay(100);
+                            }
+                        });
+            */
             StartDiagnostics();
             Closed += StopDiagnostics;
 
@@ -91,24 +93,29 @@ namespace WidgetSample
             gadgetGrid.RowsRemoved += HandleGadgetRemoved;
             widgetGrid.RowsRemoved += HandleWidgetRemoved;
 
-            UpdateList = new List<int> {1, 2, 4, 5};
+            UpdateList = new List<int> { 1, 2, 4, 5 };
 
             //RegisterAsync this class with diagnostics
             DiagnosticManager.Register(this, "Main Form", "Form 1");
             _compModelDemo = new ComponentModelDemo();
             //			DiagnosticManager.RegisterAsync(_compModelDemo, "Simple Demo", "ComponentModel");
-//			SendInitial();
+            //			SendInitial();
             _evtTimer = new Timer(SendEvents, null, 1000, 1000);
             _counterTimer = new Timer(IncrementCount, null, 400, 400);
             _listTestTimer = new Timer(MungeNumbersList, null, 100, 100);
 
             txtContent.DataBindings.Add("Text", this, "InfoText", false, DataSourceUpdateMode.OnPropertyChanged);
+
+
+            _scopeTimer = new Timer(x => DoScopeTimerCode(), null, 500, 500);
+            _scopeTask = RunScopeTask();
         }
 
         private static void StartDiagnostics()
         {
             Debug.WriteLine($"Starting diagnostics with ????????????????????????????");
-            DiagnosticHostingService.Start(ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri")); }
+            DiagnosticHostingService.Start(ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri"));
+        }
 
         private void StopDiagnostics(object sender, EventArgs e)
         {
@@ -214,7 +221,7 @@ namespace WidgetSample
         public string LogLotsOfStuff(string msg1, string msg2, string msg3, string msg4, string msg5, string msg6,
             string msg7)
         {
-            string[] vals = {msg1, msg2, msg3, msg4, msg5, msg6, msg7};
+            string[] vals = { msg1, msg2, msg3, msg4, msg5, msg6, msg7 };
             string[] toLog = vals.Where(x => !string.IsNullOrEmpty(x)).ToArray();
             foreach (string msg in toLog)
                 _formLog.Info(msg);
@@ -257,7 +264,7 @@ namespace WidgetSample
         {
             return new string(Enumerable.Range(1, _rand.Next(1, 10))
                 .Select(_ => _rand.Next(0, 26))
-                .Select(x => (char)('A' + ((char) x))).ToArray());
+                .Select(x => (char) ('A' + ((char) x))).ToArray());
         }
 
         [DiagnosticMethod]
@@ -269,21 +276,21 @@ namespace WidgetSample
         private void SendEvents(object o)
         {
             if (chkSystem.Checked)
-                using (new TraceScope(_formLog.Info))
+                using (TraceScope.Create(_formLog.Info))
                 {
                     TraceScope.Trace("Form Trace Scope {0}", _evtCount1++);
                     TraceScopeExample.TestTraceScope1();
                 }
 
             if (chkWidgets.Checked)
-                using (new TraceScope(_widgetLog.Info))
+                using (TraceScope.Create(_widgetLog.Info))
                 {
                     TraceScope.Trace("Widget Trace Scope {0}", _evtCount1++);
                     TraceScopeExample.TestTraceScope1();
                 }
 
             if (chkGadgets.Checked)
-                using (new TraceScope(_gadgetLog.Info))
+                using (TraceScope.Create(_gadgetLog.Info))
                 {
                     TraceScope.Trace("Gadget Trace Scope {0}", _evtCount1++);
                     TraceScopeExample.TestTraceScope1();
@@ -294,19 +301,19 @@ namespace WidgetSample
         {
             for (int i = 0; i < 10; i++)
             {
-                using (new TraceScope(_formLog.Info))
+                using (TraceScope.Create(_formLog.Info))
                 {
                     TraceScope.Trace("Form Trace Scope {0}", _evtCount1++);
                     TraceScopeExample.TestTraceScope1();
                 }
 
-                using (new TraceScope(_widgetLog.Info))
+                using (TraceScope.Create(_widgetLog.Info))
                 {
                     TraceScope.Trace("Widget Trace Scope {0}", _evtCount1++);
                     TraceScopeExample.TestTraceScope1();
                 }
 
-                using (new TraceScope(_gadgetLog.Info))
+                using (TraceScope.Create(_gadgetLog.Info))
                 {
                     TraceScope.Trace("Gadget Trace Scope {0}", _evtCount1++);
                     TraceScopeExample.TestTraceScope1();
@@ -371,7 +378,7 @@ namespace WidgetSample
             }
         }
 
-       
+
         private void bNotice_Click(object sender, EventArgs e)
         {
             try
@@ -445,16 +452,85 @@ namespace WidgetSample
             }
         }
 
-        private void btnTraceScope_Click(object sender, EventArgs e)
+        private async void btnTraceScope_Click(object sender, EventArgs e)
         {
             using (new TraceScope(_formLog.Info))
             {
-                TraceScope.Trace("In Trace Scope Button Click");
-                TraceScopeExample.TestTraceScope1();
+                TraceScope.Trace($"In Trace Scope Button Click 1 InvokeRequired: {InvokeRequired}");
+                
+                await Task.Run(async () => {
+                    await Task.Delay(100);
+                    TraceScope.Trace("In the async bit A");
+                    await Task.Delay(100);
+                    TraceScope.Trace("In the async bit B");
+                });
+
+                await Task.Delay(1000);
+                // await TraceScopeExample.TestTraceScope1();
             }
 
             // MessageBox.Show("Just generated a trace scope.  Check diagnostics.");
         }
+
+        private async void btnTestTraceScope2_Click(object sender, EventArgs e)
+        {
+            using (new AsyncTraceScope(_formLog.Info))
+            {
+
+                TraceScope.Trace($"In Trace Scope Button Click 2 InvokeRequired: {InvokeRequired}");
+                // await TraceScopeExample.TestTraceScope1();
+
+                await Task.Run(async () => {
+                    await Task.Delay(100);
+                    TraceScope.Trace("In the async bit A");
+                    await Task.Delay(100);
+                    TraceScope.Trace("In the async bit B");
+                });
+
+                await Task.Delay(1000);
+            }
+        }
+
+        private async Task RunScopeTask()
+        {
+            while (true)
+            {
+                // using (var scope = new TraceScope("SYNC BLAH 1"))
+                {
+                    string message = $"£$%£$%£$%£$%£$%£$%£$%£$%£$%£$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} £$%£$%£$%£$%£$%£$%£$%£$%£$%£$%";
+                    TraceScope.Trace(message);
+                }
+                // using (var scope = new AsyncTraceScope("ASYNC BLAH 1"))
+                {
+                    string message = $"£$%£$%£$%£$%£$%£$%£$%£$%£$%£$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} £$%£$%£$%£$%£$%£$%£$%£$%£$%£$%";
+                    TraceScope.Trace(message);
+                }
+
+                await Task.Delay(500);
+            }
+        }
+
+        private void DoScopeTimerCode()
+        {
+            Invoke(() => {
+                using (var scope = new TraceScope("SYNC BLAH 2"))
+                {
+
+                    string message = $"£$%£$%£$%£$%£$%£$%£$%£$%£$%£$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} £$%£$%£$%£$%£$%£$%£$%£$%£$%£$% ";
+                    TraceScope.Trace(message);
+                }
+            });
+            Invoke(() => {
+                using (var scope = new AsyncTraceScope("ASYNC BLAH 2"))
+                {
+
+                    string message = $"£$%£$%£$%£$%£$%£$%£$%£$%£$%£$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} £$%£$%£$%£$%£$%£$%£$%£$%£$%£$% ";
+                    TraceScope.Trace(message);
+                }
+            });
+
+        }
+
 
         private void btn10_Click(object sender, EventArgs e)
         {
@@ -481,8 +557,9 @@ namespace WidgetSample
                     for (int i = 0; i < count; i++)
                     {
 
-                        LoggingEventData data = new() {
-                            Message = $"Event #{i}", 
+                        LoggingEventData data = new()
+                        {
+                            Message = $"Event #{i}",
                             Level = IntToLevel(_rand.Next(1, 12) * 10000)
                         };
 
@@ -519,6 +596,6 @@ namespace WidgetSample
             if (value >= Level.Trace.Value) return Level.Trace;
             return Level.Verbose;
         }
-       
+
     }
 }
