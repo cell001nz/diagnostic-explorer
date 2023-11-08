@@ -16,7 +16,7 @@ namespace WidgetSample
         {
             string ident = $"########## {_count++} ##########";
 
-			using (new AsyncTraceScope())
+			using (new TraceScope())
 			{
 				int times = _rand.Next(1, 5);
 				TraceScope.Trace($"{ident} About to call TestTraceScope2() {times} times");
@@ -32,7 +32,7 @@ namespace WidgetSample
 
 		public static async Task TestTraceScope2(string ident)
 		{
-			using (new AsyncTraceScope())
+			using (new TraceScope())
 			{
 				if (_rand.Next(100) < 50)
 					await TestTraceScope2(ident);
@@ -51,7 +51,7 @@ namespace WidgetSample
 
 		public static async Task TestTraceScope3(string ident)
 		{
-			using (new AsyncTraceScope())
+			using (new TraceScope())
 			{
 				if (_rand.Next(100) < 5)
 					    await TestTraceScope2(ident);
@@ -66,7 +66,7 @@ namespace WidgetSample
 
 		public static async Task TestTraceScope4(string ident)
 		{
-			using (new AsyncTraceScope())
+			using (new TraceScope())
 			{
                 await Task.Delay(20);
 				TraceScope.Trace($"{ident} Your lucky random number is { _rand.Next()}");

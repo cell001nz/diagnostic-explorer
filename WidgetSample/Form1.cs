@@ -30,6 +30,7 @@ using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DiagnosticExplorer;
@@ -276,24 +277,24 @@ namespace WidgetSample
         private void SendEvents(object o)
         {
             if (chkSystem.Checked)
-                using (TraceScope.Create(_formLog.Info))
+                using (new TraceScope(_formLog.Info))
                 {
-                    TraceScope.Trace("Form Trace Scope {0}", _evtCount1++);
-                    TraceScopeExample.TestTraceScope1();
+                    TraceScope.Trace($"Form Trace Scope {_evtCount1++}");
+                    Task.Run(TraceScopeExample.TestTraceScope1);
                 }
 
             if (chkWidgets.Checked)
-                using (TraceScope.Create(_widgetLog.Info))
+                using (new TraceScope(_widgetLog.Info))
                 {
-                    TraceScope.Trace("Widget Trace Scope {0}", _evtCount1++);
-                    TraceScopeExample.TestTraceScope1();
+                    TraceScope.Trace($"Widget Trace Scope {_evtCount1++}");
+                    Task.Run(TraceScopeExample.TestTraceScope1);
                 }
 
             if (chkGadgets.Checked)
-                using (TraceScope.Create(_gadgetLog.Info))
+                using (new TraceScope(_gadgetLog.Info))
                 {
-                    TraceScope.Trace("Gadget Trace Scope {0}", _evtCount1++);
-                    TraceScopeExample.TestTraceScope1();
+                    TraceScope.Trace($"Gadget Trace Scope {_evtCount1++}");
+                    Task.Run(TraceScopeExample.TestTraceScope1);
                 }
         }
 
@@ -301,22 +302,22 @@ namespace WidgetSample
         {
             for (int i = 0; i < 10; i++)
             {
-                using (TraceScope.Create(_formLog.Info))
+                using (new TraceScope(_formLog.Info))
                 {
-                    TraceScope.Trace("Form Trace Scope {0}", _evtCount1++);
-                    TraceScopeExample.TestTraceScope1();
+                    TraceScope.Trace($"Form Trace Scope {_evtCount1++}");
+                    Task.Run(TraceScopeExample.TestTraceScope1);
                 }
 
-                using (TraceScope.Create(_widgetLog.Info))
+                using (new TraceScope(_widgetLog.Info))
                 {
-                    TraceScope.Trace("Widget Trace Scope {0}", _evtCount1++);
-                    TraceScopeExample.TestTraceScope1();
+                    TraceScope.Trace($"Widget Trace Scope {_evtCount1++}");
+                    Task.Run(TraceScopeExample.TestTraceScope1);
                 }
 
-                using (TraceScope.Create(_gadgetLog.Info))
+                using (new TraceScope(_gadgetLog.Info))
                 {
-                    TraceScope.Trace("Gadget Trace Scope {0}", _evtCount1++);
-                    TraceScopeExample.TestTraceScope1();
+                    TraceScope.Trace($"Gadget Trace Scope {_evtCount1++}");
+                    Task.Run(TraceScopeExample.TestTraceScope1);
                 }
             }
         }
@@ -458,12 +459,27 @@ namespace WidgetSample
             {
                 TraceScope.Trace($"In Trace Scope Button Click 1 InvokeRequired: {InvokeRequired}");
                 
-                await Task.Run(async () => {
+                
+
+                Task task1 = Task.Run(async () => {
                     await Task.Delay(100);
-                    TraceScope.Trace("In the async bit A");
+                    TraceScope.Trace("In the async bit A1");
+
+                    await TraceScopeExample.TestTraceScope1();
+
                     await Task.Delay(100);
-                    TraceScope.Trace("In the async bit B");
+                    TraceScope.Trace("In the async bit A2");
                 });
+
+                Task task2 = Task.Run(async () => {
+                    await Task.Delay(100);
+                    TraceScope.Trace("In the async bit B1");
+                    await Task.Delay(100);
+                    TraceScope.Trace("In the async bit B2");
+                });
+
+                await task1;
+                await task2;
 
                 await Task.Delay(1000);
                 // await TraceScopeExample.TestTraceScope1();
@@ -474,21 +490,59 @@ namespace WidgetSample
 
         private async void btnTestTraceScope2_Click(object sender, EventArgs e)
         {
-            using (new AsyncTraceScope(_formLog.Info))
-            {
 
-                TraceScope.Trace($"In Trace Scope Button Click 2 InvokeRequired: {InvokeRequired}");
-                // await TraceScopeExample.TestTraceScope1();
+            TaskFactory factory = new TaskFactory();
+            
 
-                await Task.Run(async () => {
+            using var scope = new TraceScope("UI_ACTION_RoutingModel_SendAll", _formLog.Info, forceTrace: true);
+
+            TraceScope.Trace($"In Trace Scope Button Click 2 InvokeRequired: {InvokeRequired}");
+            // await TraceScopeExample.TestTraceScope1();
+
+            Report("Starting");
+
+            Task task1 = Task.Run(async () => {
+                await Task.Delay(100);
+                Report("In the async bit A");
+
+                Enumerable.Range(1, 20).AsParallel().WithDegreeOfParallelism(3).ForAll(async x => {
+                    List<string> ids = new();
+                    ids.Add(Task.CurrentId?.ToString() ?? "X");
+                    using var scope2 = new TraceScope("Doing the parallel bit");
+                    Report($"Parallel...{x}...A");
+                    ids.Add(Task.CurrentId?.ToString() ?? "X");
                     await Task.Delay(100);
-                    TraceScope.Trace("In the async bit A");
-                    await Task.Delay(100);
-                    TraceScope.Trace("In the async bit B");
+                    ids.Add(Task.CurrentId?.ToString() ?? "X");
+
+                    await Task.Run(async () => {
+                        ids.Add(Task.CurrentId?.ToString() ?? "X");
+                        Report($"Inner task {x} Q");
+                        await Task.Delay(100);
+                        ids.Add(Task.CurrentId?.ToString() ?? "X");
+                        Report($"Inner task {x} W");
+                    });
+
+                    ids.Add(Task.CurrentId?.ToString() ?? "X");
+                    Report($"Parallel...{x}...B [" + string.Join(", ", ids) + "]");
+
                 });
+                
+                await Task.Delay(100);
+                Report("In the async bit B");
+            });
+            
+            Report("Finished");
 
-                await Task.Delay(1000);
-            }
+            await task1;
+
+            await Task.Delay(1000);
+
+        }
+
+        static void Report(string message)
+        {
+            TraceScope.Trace($"REPORT {Task.CurrentId} {message}");
+            Trace.WriteLine($"REPORT {Task.CurrentId} {message}");
         }
 
         private async Task RunScopeTask()
@@ -521,7 +575,7 @@ namespace WidgetSample
                 }
             });
             Invoke(() => {
-                using (var scope = new AsyncTraceScope("ASYNC BLAH 2"))
+                using (var scope = new TraceScope("ASYNC BLAH 2"))
                 {
 
                     string message = $"£$%£$%£$%£$%£$%£$%£$%£$%£$%£$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} £$%£$%£$%£$%£$%£$%£$%£$%£$%£$% ";
@@ -553,7 +607,7 @@ namespace WidgetSample
             try
             {
                 Stopwatch watch = Stopwatch.StartNew();
-                await Task.Run(async () => {
+                await Task.Run(() => {
                     for (int i = 0; i < count; i++)
                     {
 
