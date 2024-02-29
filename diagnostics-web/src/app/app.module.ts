@@ -16,6 +16,7 @@ import {MatButtonModule} from "@angular/material/button";
 import {HttpClientModule} from '@angular/common/http';
 import {MatTableModule} from '@angular/material/table';
 import {MatInputModule} from '@angular/material/input';
+import {MatListModule} from '@angular/material/list';
 import {FormsModule} from '@angular/forms';
 import { RealtimeCategoryComponent } from './realtime-category/realtime-category.component';
 import {MatExpansionModule} from '@angular/material/expansion';
@@ -39,6 +40,7 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import { LevelNamePipe } from './pipes/level-name.pipe';
 import {AngularSplitModule} from 'angular-split';
 import {AppConfigService} from './services/app-config.service';
+import {CollapsibleRegionComponent} from "./collapsible-region/collapsible-region.component";
 
 @NgModule({
   declarations: [
@@ -54,34 +56,36 @@ import {AppConfigService} from './services/app-config.service';
     InfoDialogComponent,
     ExecOperationsComponent,
     SummaryLinePipe,
-    LevelNamePipe
+    LevelNamePipe,
+    CollapsibleRegionComponent
   ],
-    imports: [
-        BrowserModule,
-        AppRoutingModule,
-        MatDialogModule,
-        MatTabsModule,
-        MatSidenavModule,
-        BrowserAnimationsModule,
-        MatToolbarModule,
-        MatIconModule,
-        MatButtonModule,
-        MatSnackBarModule,
-        HttpClientModule,
-        MatTableModule,
-        MatInputModule,
-        FormsModule,
-        MatExpansionModule,
-        MatCardModule,
-        MatTooltipModule,
-        MatCheckboxModule,
-        MatMenuModule,
-        MatSelectModule,
-        MatDatepickerModule,
-        MatNativeDateModule,
-        MatProgressBarModule,
-        AngularSplitModule
-    ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    MatDialogModule,
+    MatTabsModule,
+    MatSidenavModule,
+    BrowserAnimationsModule,
+    MatToolbarModule,
+    MatIconModule,
+    MatButtonModule,
+    MatSnackBarModule,
+    HttpClientModule,
+    MatTableModule,
+    MatInputModule,
+    FormsModule,
+    MatExpansionModule,
+    MatCardModule,
+    MatTooltipModule,
+    MatCheckboxModule,
+    MatMenuModule,
+    MatSelectModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatProgressBarModule,
+    AngularSplitModule,
+    MatListModule
+  ],
   providers: [
     {provide: MAT_DATE_LOCALE, useValue: 'en-GB'},
     {

@@ -1,12 +1,14 @@
 ﻿import {SystemEvent} from './DiagResponse';
 import {IFilterableEvent} from './IFilterableEvent';
-import {Level} from './Level';
+import {CollapsibleRegion} from "./CollapsibleRegion";
 
 export class EventModel extends SystemEvent implements IFilterableEvent {
   isSelected = false;
   machine = '';
   process = '';
   user = '';
+
+  regions: CollapsibleRegion[];
 
   constructor(evt: SystemEvent) {
     super();
@@ -16,12 +18,12 @@ export class EventModel extends SystemEvent implements IFilterableEvent {
     this.level = evt.level;
     this.message = evt.message;
     this.detail = evt.detail;
-  }
 
+    this.regions = CollapsibleRegion.parseRegions(this.displayText);
+  }
 
   get displayText(): string {
     return this.detail ?? this.message;
   }
 
 }
-
