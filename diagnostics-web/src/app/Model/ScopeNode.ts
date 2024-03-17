@@ -1,14 +1,15 @@
 import {environment} from './../../environments/environment';
 
-export class CollapsibleRegion
+export class ScopeNode
 {
   displayText: string = '';
   firstLine: string = '';
   isBegin: boolean = false;
   level: number = 1;
+  expanded = true;
 
-  childRegions: CollapsibleRegion[] = [];
-  parentRegion?: CollapsibleRegion;
+  childRegions: ScopeNode[] = [];
+  parentRegion?: ScopeNode;
 
   constructor(txt: string, isBegin: boolean = false)
   {
@@ -38,19 +39,25 @@ export class CollapsibleRegion
     return this.displayText != '' && !this.hasChildren() ? this.displayText : this.firstLine;
   }
 
-  public addChild(reg: CollapsibleRegion)
+  public addChild(reg: ScopeNode)
   {
     this.childRegions.push(reg);
     reg.level = this.level + 1;
     reg.parentRegion = this;
   }
 
-  public static parseRegions(displayText: string): CollapsibleRegion[]
+  public static parseTraceScope(displayText: string): ScopeNode | undefined
   {
-    let regions: CollapsibleRegion[] = [];
+    let regions: ScopeNode[] = [];
+    let scopePattern = /\[00\.000] \[00\.000] BEGIN.*/gs;
+    let result = displayText.match(scopePattern);
+    if (!result?.length)
+      return undefined;
 
-    const displayLines = displayText.
-    split(/\r\n|\r|\n/);
+    console.log('result: ', result[0]);
+    displayText = result[0];
+
+    const displayLines = displayText.split(/\r\n|\r|\n/);
 
     var curCollapsibleRegion = undefined;
     var blockString = '';
@@ -61,7 +68,7 @@ export class CollapsibleRegion
 
       if (dl.indexOf("] BEGIN") > -1)
       {
-        let newRegion = new CollapsibleRegion(dl, true);
+        let newRegion = new ScopeNode(dl, true);
 
         /**
          *  If the current block is a BEGIN, then add this as a child
@@ -118,7 +125,7 @@ export class CollapsibleRegion
          */
         curCollapsibleRegion = curCollapsibleRegion?.parentRegion;
 
-        let newRegion = new CollapsibleRegion(dl);
+        let newRegion = new ScopeNode(dl);
 
         /**
          * If parent exists, add as child.
@@ -143,7 +150,7 @@ export class CollapsibleRegion
          */
         if (curCollapsibleRegion.isBegin)
         {
-          let newRegion = new CollapsibleRegion(dl);
+          let newRegion = new ScopeNode(dl);
           curCollapsibleRegion.addChild(newRegion);
           curCollapsibleRegion = newRegion;
         }
@@ -160,14 +167,14 @@ export class CollapsibleRegion
         /**
          * If you made it here, this is automatically a top level block
          */
-        let newRegion = new CollapsibleRegion(dl);
+        let newRegion = new ScopeNode(dl);
         regions.push(newRegion);
 
         curCollapsibleRegion = newRegion;
       }
     }
 
-    return regions;
+    return regions[0];
   }
 }
 

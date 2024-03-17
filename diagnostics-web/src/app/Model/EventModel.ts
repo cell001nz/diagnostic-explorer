@@ -1,6 +1,6 @@
 ﻿import {SystemEvent} from './DiagResponse';
 import {IFilterableEvent} from './IFilterableEvent';
-import {CollapsibleRegion} from "./CollapsibleRegion";
+import {ScopeNode} from "./ScopeNode";
 
 export class EventModel extends SystemEvent implements IFilterableEvent {
   isSelected = false;
@@ -8,7 +8,7 @@ export class EventModel extends SystemEvent implements IFilterableEvent {
   process = '';
   user = '';
 
-  regions: CollapsibleRegion[];
+  region?: ScopeNode;
 
   constructor(evt: SystemEvent) {
     super();
@@ -19,7 +19,7 @@ export class EventModel extends SystemEvent implements IFilterableEvent {
     this.message = evt.message;
     this.detail = evt.detail;
 
-    this.regions = CollapsibleRegion.parseRegions(this.displayText);
+    this.region = ScopeNode.parseTraceScope(this.displayText);
   }
 
   get displayText(): string {

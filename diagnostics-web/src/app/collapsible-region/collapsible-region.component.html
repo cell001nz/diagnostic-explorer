@@ -1,11 +1,22 @@
+
+<div><material {{region?.firstLine}}</div>
+<div class="ml-10">
+<app-collapsible-region *ngFor="let child of region?.childRegions" [region]="child"></app-collapsible-region>
+</div>
+<div>{{region?.displayText}}</div>
+
+<!--
+
 <table class="h-full flex flex-col items-stretch bg-neutral-900 text-neutral-300 resize-none">
   <tr class="grid h-full v-full flex flex-col items-stretch">
-    <mat-expansion-panel class="no-padding grid h-full v-full flex flex-col items-stretch" *ngIf="region?.hasChildren()">
-      <mat-expansion-panel-header class="no-padding" style="font-size: 14px;">
+    <mat-expansion-panel class="no-padding grid h-full v-full flex flex-col items-stretch"
+                         [expanded]="region?.expanded"
+                         *ngIf="region?.hasChildren()">
+      <mat-expansion-panel-header class="no-padding">
         {{region?.firstLine}}
       </mat-expansion-panel-header>
 
-      <table [class]="getClass()" style="width: 100%">
+      <table class="collapsible-region-level{{region?.level}} w-full">
         <tr class="grid h-full v-full flex flex-col items-stretch" *ngIf="region?.displayText">
           <mat-card-content [innerText]="region?.displayText"></mat-card-content>
         </tr>
@@ -21,3 +32,4 @@
     <mat-card-content [innerText]="region?.getDisplayText()"></mat-card-content>
   </tr>
 </table>
+-->

@@ -1,5 +1,5 @@
 import {Component, Input, OnInit} from '@angular/core';
-import {CollapsibleRegion} from "../Model/CollapsibleRegion";
+import {ScopeNode} from "../Model/ScopeNode";
 
 @Component({
   selector: 'app-collapsible-region',
@@ -9,9 +9,10 @@ import {CollapsibleRegion} from "../Model/CollapsibleRegion";
 export class CollapsibleRegionComponent implements OnInit {
 
   @Input()
-  region?: CollapsibleRegion;
+  region?: ScopeNode;
 
-  constructor() { }
+  constructor() { 
+  }
 
   ngOnInit(): void
   {
@@ -21,4 +22,11 @@ export class CollapsibleRegionComponent implements OnInit {
   {
     return 'collapsible-region-level' + this.region?.level;
   }
+  
+  
+ 
 }
+
+
+
+
