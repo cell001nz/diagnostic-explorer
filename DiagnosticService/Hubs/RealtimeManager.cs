@@ -35,17 +35,7 @@ public class RealtimeManager : IHostedService
 
     private static readonly TimeSpan _alertDuration = TimeSpan.FromSeconds(2);
 
-    private readonly RealtimeOptions _config;
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = true, 
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
-
-    [CollectionProperty(CollectionMode.Categories, Category = "Processes", CategoryProperty = nameof(DiagProcess.Id))]
+   [CollectionProperty(CollectionMode.Categories, Category = "Processes", CategoryProperty = nameof(DiagProcess.Id))]
     public ICollection<DiagProcess> Processes => _processes.Values;
 
 
@@ -53,9 +43,8 @@ public class RealtimeManager : IHostedService
     public ICollection<DiagnosticSubscription> Subscriptions => _subscriptions.Values;
 
 
-    public RealtimeManager(IHostApplicationLifetime lifetime, IOptions<RealtimeOptions> config)
+    public RealtimeManager(IHostApplicationLifetime lifetime)
     {
-        _config = config.Value;
         lifetime.ApplicationStarted.Register(() => StartAsync(lifetime.ApplicationStopping));
         lifetime.ApplicationStopping.Register(() => StopAsync(CancellationToken.None));
     }
@@ -238,23 +227,6 @@ public class RealtimeManager : IHostedService
             group.LastOnline = DateTime.UtcNow;
     }
 
-    public RegistrationResponse RegisterOld(Registration registration)
-    {
-        if (!string.IsNullOrWhiteSpace(_config.RegistrationRedirect))
-            return WebApiUtil.Post<RegistrationResponse>($"{_config.RegistrationRedirect}/action/Register", registration).Result;
-
-        Register(registration);
-        return new RegistrationResponse(_config.RenewTime);
-    }
-    public void DeregisterOld(Registration registration)
-    {
-        if (!string.IsNullOrWhiteSpace(_config.RegistrationRedirect))
-            WebApiUtil.Post<RegistrationResponse>($"{_config.RegistrationRedirect}/action/Deregister", registration).Wait();
-        else
-            Deregister(registration);
-    }
-
-
     public void Register(Registration registration, string? connectionId = null)
     {
         Registrations.Register(1);
@@ -262,10 +234,6 @@ public class RealtimeManager : IHostedService
         try
         {
             RegistrationMode regMode = connectionId == null ? RegistrationMode.Auto : RegistrationMode.SignalR;
-
-            //Backward compatibility
-            if (string.IsNullOrEmpty(registration.MachineName) && !string.IsNullOrWhiteSpace(registration.Uri))
-                registration.MachineName = GetHost(registration.Uri);
 
             DiagProcess? process = null;
             if (!string.IsNullOrWhiteSpace(registration.InstanceId))
@@ -283,8 +251,7 @@ public class RealtimeManager : IHostedService
                     .ToArray();
 
                 if (found.Length >= 1)
-                    process = found.FirstOrDefault(x => _ic.Equals(x.Uri, registration.Uri))
-                              ?? found.FirstOrDefault(x => x.State == OnlineState.Offline);
+                    process = found.FirstOrDefault(x => x.State == OnlineState.Offline);
             }
 
             OnlineState? previousState = process?.State;
@@ -298,10 +265,8 @@ public class RealtimeManager : IHostedService
                 _processes.TryAdd(process.Id, process);
             }
 
-            bool uriChanged = registration.Uri != process.Uri;
 
             process.UserName = registration.UserName;
-            process.Uri = registration.Uri;
             process.ProcessId = registration.ProcessId;
             process.State = OnlineState.Online;
             process.LastOnline = DateTime.UtcNow;
@@ -313,18 +278,6 @@ public class RealtimeManager : IHostedService
 
             if (connectionId != null && _diagClients.TryGetValue(connectionId, out DiagnosticClientHandler? diagClient))
                 GetSubscription(process).SetDiagnosticClient(diagClient);
-
-            if (uriChanged)
-                GetSubscription(process).SetDiagnosticClient(new DiagnosticClient(process.Uri));
-
-
-            if (registration.Uri != null)
-            {
-                IEnumerable<DiagProcess> toReset = Processes.Where(x => x != process && _ic.Equals(x.Uri, registration.Uri));
-
-                foreach (DiagProcess diagProcess in toReset)
-                    SetPortToZero(diagProcess);
-            }
 
             if (process.State != previousState)
                 ProcessChanged.OnNext(process);
@@ -341,20 +294,13 @@ public class RealtimeManager : IHostedService
     }
 
 
-    private void SetPortToZero(DiagProcess process)
-    {
-        UriBuilder builder = new(process.Uri);
-        builder.Port = 0;
-        process.Uri = builder.ToString();
-    }
-
     /// <summary>
     ///     Remove any entries which are no longer needed
     /// </summary>
     private void TidyProcesses()
     {
         //Mark as offline anything which is 5 seconds late for renewal
-        TimeSpan expiryTime = TimeSpan.FromSeconds(_config.RenewTime.TotalSeconds + 10);
+        TimeSpan expiryTime = TimeSpan.FromSeconds(30);
 
         DiagProcess[] autoOnline = Processes
             .Where(x => x.State == OnlineState.Online && x.RegistrationMode == RegistrationMode.Auto)
@@ -418,19 +364,10 @@ public class RealtimeManager : IHostedService
         return _processes.TryGetValue(id, out var value) ? value : null;
     }
 
-    private string? GetHost(string callbackUrl)
-    {
-        if (string.IsNullOrEmpty(callbackUrl))
-            return null;
-
-        Uri uri = new(callbackUrl);
-        return uri.Host;
-    }
-
+   
     public void Deregister(Registration registration)
     {
-        Deregister(() => Processes.FindByUri(registration.Uri)
-                         ?? Processes.FindByInstanceId(registration.InstanceId));
+        Deregister(() => Processes.FindByInstanceId(registration.InstanceId));
     }
 
     private void Deregister(DiagnosticClientHandler client)

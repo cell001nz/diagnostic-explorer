@@ -8,69 +8,64 @@ import {DiagProcess} from './DiagProcess';
 
 @Injectable()
 export class AppModel {
-  tabIndex = 0;
-  private watchEnabled = false;
+    tabIndex = 0;
+    private watchEnabled = false;
 
-  lots: number[] = Array.from(new Array(200).keys());
+    lots: number[] = Array.from(new Array(200).keys());
 
-  constructor(readonly realtimeModel: RealtimeModel,
-              readonly hubService: DiagHubService,
-              readonly retroModel: RetroModel,
-              private _snackBar: MatSnackBar) {
-    this.watchEnabled = true;
-  }
+    constructor(readonly realtimeModel: RealtimeModel,
+                readonly hubService: DiagHubService,
+                readonly retroModel: RetroModel,
+                private _snackBar: MatSnackBar) {
+        this.watchEnabled = true;
+    }
 
 
-  viewRealtime() {
-    this.tabIndex = 0;
-  }
+    viewRealtime() {
+        this.tabIndex = 0;
+    }
 
-  viewRetro() {
-    this.tabIndex = 1;
-  }
+    viewRetro() {
+        this.tabIndex = 1;
+    }
 
-  async start(): Promise<void> {
-    await this.hubService.connect();
-    await this.realtimeModel.start();
-      // .then(async () => console.log(await connection.invoke("register", "Hello")));
-  }
+    async start(): Promise<void> {
+        await this.hubService.connect();
+        await this.realtimeModel.start();
+        // .then(async () => console.log(await connection.invoke("register", "Hello")));
+    }
 
-  get titleMessage(): string
-  {
-    return this.tabIndex === 0
-      ? this.realtimeModel.titleMessage
-      : this.retroModel.titleMessage;
-  }
+    get titleMessage(): string {
+        return this.tabIndex === 0
+            ? this.realtimeModel.titleMessage
+            : this.retroModel.titleMessage;
+    }
 
-  get mainMessage(): string
-  {
-    return this.tabIndex === 0
-      ? this.realtimeModel.mainMessage
-      : this.retroModel.mainMessage;
-  }
+    get mainMessage(): string {
+        return this.tabIndex === 0
+            ? this.realtimeModel.mainMessage
+            : this.retroModel.mainMessage;
+    }
 
-  get mainMessageClass(): string
-  {
-    return this.tabIndex === 0
-      ? this.realtimeModel.mainMessageClass
-      : this.retroModel.mainMessageClass;
-  }
+    get mainMessageClass(): string {
+        return this.tabIndex === 0
+            ? this.realtimeModel.mainMessageClass
+            : this.retroModel.mainMessageClass;
+    }
 
-  get mainMessageCanClick(): boolean
-  {
-    return this.mainMessageClick !== _.noop;
-  }
+    get mainMessageCanClick(): boolean {
+        return this.mainMessageClick !== _.noop;
+    }
 
-  get mainMessageClick(): (() => void)
-  {
-    return this.tabIndex === 0
-      ? this.realtimeModel.mainMessageClick
-      : this.retroModel.mainMessageClick;
-  }
+    get mainMessageClick(): (() => void) {
+        return this.tabIndex === 0
+            ? this.realtimeModel.mainMessageClick
+            : this.retroModel.mainMessageClick;
+    }
 
-  async showRetro(item: DiagProcess): Promise<void> {
-    this.tabIndex = 1;
-    await this.retroModel.searchProcess(item);
-  }
+    async showRetro(item: DiagProcess): Promise<void> {
+        this.tabIndex = 1;
+        await this.retroModel.searchProcess(item);
+    }
 }
 

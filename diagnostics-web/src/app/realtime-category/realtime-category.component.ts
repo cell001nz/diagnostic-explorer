@@ -13,69 +13,69 @@ import {ExecOperationsComponent} from '../exec-operations/exec-operations.compon
 import {RealtimeModel} from '../Model/RealtimeModel';
 
 @Component({
-  selector: 'app-realtime-category',
-  templateUrl: './realtime-category.component.html',
-  styleUrls: ['./realtime-category.component.scss']
+    selector: 'app-realtime-category',
+    templateUrl: './realtime-category.component.html',
+    styleUrls: ['./realtime-category.component.scss']
 })
 export class RealtimeCategoryComponent implements OnInit {
 
-  @Input()
-  category?: CategoryModel;
+    @Input()
+    category?: CategoryModel;
 
-  constructor(private _snackBar: MatSnackBar, private realtimeModel: RealtimeModel, private dialog: MatDialog) {
-  }
-
-  ngOnInit(): void {
-  }
-
-  handleDoubleClick(prop: PropModel, evt: MouseEvent) {
-    if (evt.detail === 2) {
-      new Clipboard(document).copy(prop.value);
-
-      const config: MatSnackBarConfig = {
-        horizontalPosition: 'center',
-        verticalPosition: 'top',
-        politeness: 'assertive',
-        panelClass: 'value-copied-snackbar',
-        duration: 1000,
-      };
-      this._snackBar.open('Value copied to clipboard!', '', config);
+    constructor(private _snackBar: MatSnackBar, private realtimeModel: RealtimeModel, private dialog: MatDialog) {
     }
-  }
 
-  handleClick($event: MouseEvent) {
-    $event.cancelBubble = true;
-  }
+    ngOnInit(): void {
+    }
 
-  showOperationsDialog(evt: MouseEvent, subCat: SubCat): void {
+    handleDoubleClick(prop: PropModel, evt: MouseEvent) {
+        if (evt.detail === 2) {
+            new Clipboard(document).copy(prop.value);
 
-    evt.cancelBubble = true;
-    const model = new ExecOperationsModel(this.realtimeModel, subCat);
+            const config: MatSnackBarConfig = {
+                horizontalPosition: 'center',
+                verticalPosition: 'top',
+                politeness: 'assertive',
+                panelClass: 'value-copied-snackbar',
+                duration: 1000,
+            };
+            this._snackBar.open('Value copied to clipboard!', '', config);
+        }
+    }
 
-    const dialogRef = this.dialog.open(ExecOperationsComponent, {
-      disableClose: true,
-      panelClass: 'operations-dialog-panel',
-      width: '600px',
-      // height: '450px',
-      data: model
-    });
+    handleClick($event: MouseEvent) {
+        $event.cancelBubble = true;
+    }
 
-    model.finished.subscribe(_ => dialogRef.close());
-  }
+    showOperationsDialog(evt: MouseEvent, subCat: SubCat): void {
 
-  showSetPropertyDialog(prop: PropModel): void {
-    const data = new PromptData(prop.getPropertyPath(), prop.value);
+        evt.cancelBubble = true;
+        const model = new ExecOperationsModel(this.realtimeModel, subCat);
 
-    const dialogRef = this.dialog.open(SetPropertyDialogComponent, {
-      disableClose: true,
-      width: '500px',
-      height: '250px',
-      data: data,
-    });
+        const dialogRef = this.dialog.open(ExecOperationsComponent, {
+            disableClose: true,
+            panelClass: 'operations-dialog-panel',
+            width: '600px',
+            // height: '450px',
+            data: model
+        });
 
-    dialogRef.afterClosed().subscribe(async (result: PromptResult) => {
-      if (result.button === 'OK')
-        await this.category!.realtimeModel.setPropertyValue(prop, result.value);
-    });
-  }
+        model.finished.subscribe(_ => dialogRef.close());
+    }
+
+    showSetPropertyDialog(prop: PropModel): void {
+        const data = new PromptData(prop.getPropertyPath(), prop.value);
+
+        const dialogRef = this.dialog.open(SetPropertyDialogComponent, {
+            disableClose: true,
+            width: '500px',
+            height: '250px',
+            data: data,
+        });
+
+        dialogRef.afterClosed().subscribe(async (result: PromptResult) => {
+            if (result.button === 'OK')
+                await this.category!.realtimeModel.setPropertyValue(prop, result.value);
+        });
+    }
 }

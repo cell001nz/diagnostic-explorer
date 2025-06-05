@@ -30,17 +30,13 @@ using ProtoBuf;
 namespace DiagnosticExplorer
 {
 	[ProtoContract(UseProtoMembersOnly = true)]
-	[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
 	public enum EventSeverity
 	{
 		[ProtoEnum]
-		[EnumMember]
 		Low = 1,
 		[ProtoEnum]
-		[EnumMember]
 		Medium,
 		[ProtoEnum]
-		[EnumMember]
 		High,
 	}
 }

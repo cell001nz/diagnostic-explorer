@@ -12,10 +12,10 @@
 $dark-primary: mat.define-palette(mat.$blue-palette);
 $dark-accent: mat.define-palette(mat.$blue-grey-palette);
 $dark-theme: mat.define-dark-theme((
-  color: (
-    primary: $dark-primary,
-    accent: $dark-accent,
-  )
+        color: (
+                primary: $dark-primary,
+                accent: $dark-accent,
+        )
 ));
 
 // Apply the dark theme by default
@@ -39,13 +39,11 @@ $dark-theme: mat.define-dark-theme((
                                    supported by Chrome, Edge, Opera and Firefox */
 }
 
-button.filter-clear span.mat-button-wrapper
-{
+button.filter-clear span.mat-button-wrapper {
   opacity: 0.2;
 }
 
-span.mat-checkbox-frame
-{
+span.mat-checkbox-frame {
   background: dimgray !important;
 }
 
@@ -85,8 +83,7 @@ body {
   margin: 0;
 }
 
-.as-split-gutter
-{
+.as-split-gutter {
   background: #555 !important;
   flex-basis: 9px !important;
 }
@@ -154,18 +151,15 @@ body {
   background: black;
 }
 
-.alert-pill
-{
+.alert-pill {
   border-radius: 0.25rem;
 }
 
-.title-online
-{
+.title-online {
   @apply text-green-500;
 }
 
-.title-offline
-{
+.title-offline {
   @apply text-red-500;
 }
 
@@ -182,13 +176,11 @@ body {
   padding: 0;
 }
 
-.mat-header-cell
-{
+.mat-header-cell {
   background: #444 !important;
 }
 
-.mat-header-row
-{
+.mat-header-row {
   background: #444 !important;
 }
 
@@ -205,3 +197,6 @@ fieldset {
   border: 2px groove #555;
 }
 
+.foobar {
+  color: red;
+}

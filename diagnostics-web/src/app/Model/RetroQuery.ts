@@ -12,9 +12,8 @@ export class RetroQuery {
     message?: string;
 }
 
-export class RetroSearchResult
-{
-  searchId = 0;
-  info = '';
-  results: DiagnosticMsg[] = [];
+export class RetroSearchResult {
+    searchId = 0;
+    info = '';
+    results: DiagnosticMsg[] = [];
 }

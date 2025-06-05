@@ -32,7 +32,6 @@ using ProtoBuf;
 namespace DiagnosticExplorer
 {
 	[ProtoContract(UseProtoMembersOnly = true)]
-	[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
 	public class PropertyBag
 	{
 
@@ -72,19 +71,15 @@ namespace DiagnosticExplorer
 
 
 		[ProtoMember(1)]
-		[DataMember]
 		public string Name { get; set; }
 
 		[ProtoMember(2)]
-		[DataMember]
 		public string Category { get; set; }
 
 		[ProtoMember(3)]
-		[DataMember(Order = 1, IsRequired = false)]
 		public string OperationSet { get; set; }
 
 		[ProtoMember(4)]
-		[DataMember(Order = 1, IsRequired = false)]
 		public List<Category> Categories { get; set; }
 
 		public object SourceObject { get; set; }

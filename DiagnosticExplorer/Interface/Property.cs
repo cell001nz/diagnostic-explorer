@@ -33,7 +33,6 @@ using ProtoBuf;
 namespace DiagnosticExplorer
 {
 	[ProtoContract(UseProtoMembersOnly = true)]
-	[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
 	public class Property
 	{
 		public Property()
@@ -57,23 +56,18 @@ namespace DiagnosticExplorer
 		}
 
 		[ProtoMember(1)]
-		[DataMember]
 		public string Name { get; set; }
 
 		[ProtoMember(2)]
-		[DataMember]
 		public string Value { get; set; }
 
 		[ProtoMember(3)]
-		[DataMember(Order = 2, IsRequired = false)]
 		public string Description { get; set; }
 
 		[ProtoMember(4)]
-		[DataMember(Order = 3, IsRequired = false)]
 		public string OperationSet { get; set; }
 
 		[ProtoMember(5)]
-		[DataMember(Order = 3, IsRequired = false)]
 		public bool CanSet { get; set; }
 
 		internal object SourceObject { get; set; }

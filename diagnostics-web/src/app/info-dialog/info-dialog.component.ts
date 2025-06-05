@@ -3,15 +3,16 @@ import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 import {InfoDialogData} from '../Model/InfoDialogData';
 
 @Component({
-  selector: 'app-info-dialog',
-  templateUrl: './info-dialog.component.html',
-  styleUrls: ['./info-dialog.component.scss']
+    selector: 'app-info-dialog',
+    templateUrl: './info-dialog.component.html',
+    styleUrls: ['./info-dialog.component.scss']
 })
 export class InfoDialogComponent implements OnInit {
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: InfoDialogData) { }
+    constructor(@Inject(MAT_DIALOG_DATA) public data: InfoDialogData) {
+    }
 
-  ngOnInit(): void {
-  }
+    ngOnInit(): void {
+    }
 
 }

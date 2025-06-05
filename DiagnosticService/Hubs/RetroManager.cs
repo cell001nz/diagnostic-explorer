@@ -32,7 +32,7 @@ public class RetroManager : IHostedService
     public EventSink RetroEvents { get; } = EventSinkRepo.Default.GetSink("Retro Events", "Retro");
 
 
-    public RetroManager(IHostApplicationLifetime lifetime, IOptions<RetroOptions> config)
+    public RetroManager(IHostApplicationLifetime lifetime, IOptions<DiagServiceSettings> config)
     {
         Options = config.Value;
         lifetime.ApplicationStarted.Register(() => StartAsync(lifetime.ApplicationStopping));
@@ -93,7 +93,7 @@ public class RetroManager : IHostedService
     public int ItemsInQueue => _writeChannel.Reader.CanCount ? _writeChannel.Reader.Count : -1;
 
     [ExtendedProperty]
-    public RetroOptions Options { get; set; }
+    public DiagServiceSettings Options { get; set; }
 
     [RateProperty(ExposeTotal = false, ExposeRate = true)]
     public RateCounter EventsQueued { get; set; } = new(3);

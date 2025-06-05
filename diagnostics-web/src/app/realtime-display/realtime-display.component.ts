@@ -3,16 +3,16 @@ import {AppModel} from '../Model/AppModel';
 import {RealtimeModel} from '../Model/RealtimeModel';
 
 @Component({
-  selector: 'app-realtime-display',
-  templateUrl: './realtime-display.component.html',
-  styleUrls: ['./realtime-display.component.scss']
+    selector: 'app-realtime-display',
+    templateUrl: './realtime-display.component.html',
+    styleUrls: ['./realtime-display.component.scss']
 })
 export class RealtimeDisplayComponent implements OnInit {
 
-  constructor(readonly model: RealtimeModel) {
-  }
+    constructor(readonly model: RealtimeModel) {
+    }
 
-  ngOnInit(): void {
-  }
+    ngOnInit(): void {
+    }
 
 }

@@ -18,85 +18,83 @@ import {MatTableModule} from '@angular/material/table';
 import {MatInputModule} from '@angular/material/input';
 import {MatListModule} from '@angular/material/list';
 import {FormsModule} from '@angular/forms';
-import { RealtimeCategoryComponent } from './realtime-category/realtime-category.component';
+import {RealtimeCategoryComponent} from './realtime-category/realtime-category.component';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {MatCardModule} from '@angular/material/card';
-import { RealtimeEventsComponent } from './realtime-events/realtime-events.component';
+import {RealtimeEventsComponent} from './realtime-events/realtime-events.component';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
-import { EventFilterComponent } from './event-filter/event-filter.component';
+import {EventFilterComponent} from './event-filter/event-filter.component';
 import {MatCheckboxModule} from '@angular/material/checkbox';
-import { SetPropertyDialogComponent } from './set-property-dialog/set-property-dialog.component';
+import {SetPropertyDialogComponent} from './set-property-dialog/set-property-dialog.component';
 import {MatDialogModule} from '@angular/material/dialog';
-import { InfoDialogComponent } from './info-dialog/info-dialog.component';
-import { ExecOperationsComponent } from './exec-operations/exec-operations.component';
+import {InfoDialogComponent} from './info-dialog/info-dialog.component';
+import {ExecOperationsComponent} from './exec-operations/exec-operations.component';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatSelectModule} from '@angular/material/select';
 import {MatDatepickerModule} from '@angular/material/datepicker';
 import {MAT_DATE_LOCALE, MatNativeDateModule} from '@angular/material/core';
-import {DatePipe} from '@angular/common';
-import { SummaryLinePipe } from './pipes/summary-line.pipe';
+import {APP_BASE_HREF, DatePipe} from '@angular/common';
+import {SummaryLinePipe} from './pipes/summary-line.pipe';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
-import { LevelNamePipe } from './pipes/level-name.pipe';
+import {LevelNamePipe} from './pipes/level-name.pipe';
 import {AngularSplitModule} from 'angular-split';
-import {AppConfigService} from './services/app-config.service';
 import {CollapsibleRegionComponent} from "./collapsible-region/collapsible-region.component";
+import {getBaseLocation} from "./util/util";
+import {BASE_API_URL} from "../injectionTokens";
+import {environment} from "../environments/environment";
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    RetroNavComponent,
-    RetroDisplayComponent,
-    RealtimeNavComponent,
-    RealtimeDisplayComponent,
-    RealtimeCategoryComponent,
-    RealtimeEventsComponent,
-    EventFilterComponent,
-    SetPropertyDialogComponent,
-    InfoDialogComponent,
-    ExecOperationsComponent,
-    SummaryLinePipe,
-    LevelNamePipe,
-    CollapsibleRegionComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    MatDialogModule,
-    MatTabsModule,
-    MatSidenavModule,
-    BrowserAnimationsModule,
-    MatToolbarModule,
-    MatIconModule,
-    MatButtonModule,
-    MatSnackBarModule,
-    HttpClientModule,
-    MatTableModule,
-    MatInputModule,
-    FormsModule,
-    MatExpansionModule,
-    MatCardModule,
-    MatTooltipModule,
-    MatCheckboxModule,
-    MatMenuModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatProgressBarModule,
-    AngularSplitModule,
-    MatListModule
-  ],
-  providers: [
-    {provide: MAT_DATE_LOCALE, useValue: 'en-GB'},
-    {
-      provide: APP_INITIALIZER,
-      multi: true,
-      deps: [AppConfigService],
-      useFactory: (appConfigService: AppConfigService) => () => appConfigService.initialise()
-    },
-    DatePipe
-  ],
-  bootstrap: [AppComponent]
+    declarations: [
+        AppComponent,
+        RetroNavComponent,
+        RetroDisplayComponent,
+        RealtimeNavComponent,
+        RealtimeDisplayComponent,
+        RealtimeCategoryComponent,
+        RealtimeEventsComponent,
+        EventFilterComponent,
+        SetPropertyDialogComponent,
+        InfoDialogComponent,
+        ExecOperationsComponent,
+        SummaryLinePipe,
+        LevelNamePipe,
+        CollapsibleRegionComponent
+    ],
+    imports: [
+        BrowserModule,
+        AppRoutingModule,
+        MatDialogModule,
+        MatTabsModule,
+        MatSidenavModule,
+        BrowserAnimationsModule,
+        MatToolbarModule,
+        MatIconModule,
+        MatButtonModule,
+        MatSnackBarModule,
+        HttpClientModule,
+        MatTableModule,
+        MatInputModule,
+        FormsModule,
+        MatExpansionModule,
+        MatCardModule,
+        MatTooltipModule,
+        MatCheckboxModule,
+        MatMenuModule,
+        MatSelectModule,
+        MatDatepickerModule,
+        MatNativeDateModule,
+        MatProgressBarModule,
+        AngularSplitModule,
+        MatListModule
+    ],
+    providers: [
+        {provide: MAT_DATE_LOCALE, useValue: 'en-GB'},
+        {provide: APP_BASE_HREF, useFactory: getBaseLocation},
+        {provide: BASE_API_URL, useValue: environment.apiRoot},
+        DatePipe
+    ],
+    bootstrap: [AppComponent]
 })
 export class AppModule {
 }

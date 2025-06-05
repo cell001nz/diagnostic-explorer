@@ -4,16 +4,16 @@ import {PropGroup} from './PropGroup';
 import {CategoryModel} from './CategoryModel';
 
 export class SubCat {
-  cat: CategoryModel;
+    cat: CategoryModel;
     name = '';
     groups: PropGroup[] = [];
     isExpanded = true;
     operationSet = '';
 
     constructor(cat: CategoryModel, bag: PropertyBag) {
-      this.cat = cat;
-      this.name = bag.name;
-      this.update(bag);
+        this.cat = cat;
+        this.name = bag.name;
+        this.update(bag);
     }
 
     update(bag: PropertyBag) {
@@ -27,13 +27,12 @@ export class SubCat {
             (s, t) => t.update(s));
     }
 
-  handleDoubleClick(evt: MouseEvent) {
-    if (evt.detail === 2)
-    {
-      this.isExpanded = true;
-      this.cat.subCats.forEach(c => c.isExpanded = c === this);
-      this.cat.eventSinks.forEach(c => c.isExpanded = false);
+    handleDoubleClick(evt: MouseEvent) {
+        if (evt.detail === 2) {
+            this.isExpanded = true;
+            this.cat.subCats.forEach(c => c.isExpanded = c === this);
+            this.cat.eventSinks.forEach(c => c.isExpanded = false);
+        }
     }
-  }
 }
 

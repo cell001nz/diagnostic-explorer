@@ -1,9 +1,11 @@
-
-<div><material {{region?.firstLine}}</div>
-<div class="ml-10">
-<app-collapsible-region *ngFor="let child of region?.childRegions" [region]="child"></app-collapsible-region>
+<div>
+    <button (click)="region?.toggleExpanded()">{{ region?.expanded ? '-' : '+' }}</button>
+    {{ region?.firstLine }}
 </div>
-<div>{{region?.displayText}}</div>
+<div>{{ region?.displayText }}</div>
+<div class="ml-10" *ngIf="region?.expanded">
+    <app-collapsible-region *ngFor="let child of region?.childRegions" [region]="child"></app-collapsible-region>
+</div>
 
 <!--
 

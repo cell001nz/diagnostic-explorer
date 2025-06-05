@@ -72,13 +72,11 @@ public class MongoRetroLogger : IRetroLogger
         BsonClassMap.RegisterClassMap(map3);
     }
 
-    public MongoRetroLogger(string name, string connectionString)
+    public MongoRetroLogger(string connectionString)
     {
-        Name = name;
         ConnectionString = connectionString;
     }
 
-    public string Name { get; }
     public string ConnectionString { get; set; }
 
 

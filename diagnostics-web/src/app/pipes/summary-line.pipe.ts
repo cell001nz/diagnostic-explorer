@@ -1,21 +1,21 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import {Pipe, PipeTransform} from '@angular/core';
 
 @Pipe({
-  name: 'summaryLine'
+    name: 'summaryLine'
 })
 export class SummaryLinePipe implements PipeTransform {
 
-  transform(value: string, maxLen: number): string {
+    transform(value: string, maxLen: number): string {
 
-    if (!value)
-      return value;
+        if (!value)
+            return value;
 
 
-    let s = value.replace(/\r?\n.*/g, '');
-    if (maxLen)
-      s = s.substring(0, maxLen);
+        let s = value.replace(/\r?\n.*/g, '');
+        if (maxLen)
+            s = s.substring(0, maxLen);
 
-    return s;
-  }
+        return s;
+    }
 
 }

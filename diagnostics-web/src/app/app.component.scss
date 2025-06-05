@@ -2,7 +2,7 @@
 div.header {
   /* you must include "div" for IE */
   position: absolute;
-  top:0;
+  top: 0;
   left: 0;
   width: 100%;
   height: 100px;
@@ -10,4 +10,7 @@ div.header {
   overflow: hidden;
 }
 
-.content { height: 100%; overflow: auto; }
+.content {
+  height: 100%;
+  overflow: auto;
+}

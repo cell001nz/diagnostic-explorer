@@ -11,7 +11,6 @@ namespace DiagnosticExplorer
 {
 
 	[ProtoContract(UseProtoMembersOnly = true)]
-	[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
 	public class Operation
 	{
 		public Operation()
@@ -33,19 +32,15 @@ namespace DiagnosticExplorer
 		}
 
 		[ProtoMember(1)]
-		[DataMember]
 		public string ReturnType { get; set; }
 
 		[ProtoMember(2)]
-		[DataMember]
 		public string Signature { get; set; }
 
 		[ProtoMember(3)]
-		[DataMember]
 		public string Description { get; set; }
 
 		[ProtoMember(4)]
-		[DataMember]
 		public List<OperationParameter> Parameters { get; set; }
 		
 		internal MethodInfo MethodInfo { get; private set; }

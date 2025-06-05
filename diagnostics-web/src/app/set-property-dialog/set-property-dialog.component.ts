@@ -4,40 +4,40 @@ import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {PromptData, PromptResult} from '../util/PromptResult';
 
 @Component({
-  selector: 'app-set-property-dialog',
-  templateUrl: './set-property-dialog.component.html',
-  styleUrls: ['./set-property-dialog.component.scss']
+    selector: 'app-set-property-dialog',
+    templateUrl: './set-property-dialog.component.html',
+    styleUrls: ['./set-property-dialog.component.scss']
 })
 export class SetPropertyDialogComponent implements OnInit {
 
-  text: string = '';
-  value: string = '';
+    text: string = '';
+    value: string = '';
 
-  constructor(public dialogRef: MatDialogRef<SetPropertyDialogComponent>,
-              @Inject(MAT_DIALOG_DATA) public prompt: PromptData) {
+    constructor(public dialogRef: MatDialogRef<SetPropertyDialogComponent>,
+                @Inject(MAT_DIALOG_DATA) public prompt: PromptData) {
 
-    this.text = prompt.text;
-    this.value = prompt.value;
-  }
+        this.text = prompt.text;
+        this.value = prompt.value;
+    }
 
-  ngOnInit(): void {
-  }
+    ngOnInit(): void {
+    }
 
 
-  onCancelClick(): void {
-    this.dialogRef.close(new PromptResult('Cancel', ''));
-  }
+    onCancelClick(): void {
+        this.dialogRef.close(new PromptResult('Cancel', ''));
+    }
 
-  onOkClick(): void {
-    this.dialogRef.close(new PromptResult('OK', this.value));
-  }
+    onOkClick(): void {
+        this.dialogRef.close(new PromptResult('OK', this.value));
+    }
 
-  handleKeyUp(evt: KeyboardEvent) {
-    console.log(evt.key);
-    if (evt.key === 'Enter')
-      this.onOkClick();
+    handleKeyUp(evt: KeyboardEvent) {
+        console.log(evt.key);
+        if (evt.key === 'Enter')
+            this.onOkClick();
 
-    if (evt.key === 'Escape')
-      this.onCancelClick();
-  }
+        if (evt.key === 'Escape')
+            this.onCancelClick();
+    }
 }

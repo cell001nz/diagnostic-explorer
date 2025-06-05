@@ -33,7 +33,6 @@ namespace DiagnosticExplorer
 {
 
 	[ProtoContract(UseProtoMembersOnly = true)]
-	[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
 	public class DiagnosticResponse
 	{
 		public DiagnosticResponse()
@@ -44,32 +43,21 @@ namespace DiagnosticExplorer
 		}
 
 		[ProtoMember(1)]
-		[DataMember]
 		public List<PropertyBag> PropertyBags { get; set; }
 
 		[ProtoMember(2)]
-		[DataMember]
 		public List<EventResponse> Events { get; set; }
 
 		[ProtoMember(3)]
-		[DataMember]
 		public string Context { get; set; }
 
 		[ProtoMember(4)]
-		[DataMember]
 		public string ExceptionMessage { get; set; }
 
 		[ProtoMember(5)]
-		[DataMember]
 		public string ExceptionDetail { get; set; }
 
 		[ProtoMember(6)]
-		[DataMember(Order = 1, IsRequired = false)]
 		public List<OperationSet> OperationSets { get; set; }
-
-		[ProtoIgnore]
-		[DataMember(Order = 2, IsRequired = false)]
-		public byte[] ProtoResponse { get; set; }
-
 	}
 }

@@ -49,8 +49,6 @@ public class DiagProcess
 
     public string? UserName { get; set; }
         
-    public string? Uri { get; set; }
-
     public OnlineState State { get; set; }
 
     public RegistrationMode RegistrationMode { get; set; } = RegistrationMode.NA;
@@ -76,7 +74,7 @@ public class DiagProcess
     public override string ToString()
     {
         return
-            $"DiagProcess PID:{ProcessId} Process:{ProcessName}, Uri:{Uri}, State:{State}, LastOnline:{LastOnline}";
+            $"DiagProcess PID:{ProcessId} Process:{ProcessName}, State:{State}, LastOnline:{LastOnline}";
     }
 }
 
@@ -97,8 +95,4 @@ public static class DiagProcessExtensions
         return list.FirstOrDefault(item => string.Equals(item.InstanceId, instanceId, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    public static DiagProcess? FindByUri(this IEnumerable<DiagProcess> list, string uri)
-    {
-        return list.FirstOrDefault(item => string.Equals(item.Uri, uri, StringComparison.InvariantCultureIgnoreCase));
-    }
 }

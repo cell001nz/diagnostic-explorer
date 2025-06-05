@@ -9,12 +9,12 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Grpc.Net.Client" Version="2.47.0" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="Google.Protobuf" Version="3.21.4" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.7" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="6.0.7" />
-		<PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.2.0">
+		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client.Core" Version="8.0.10" />
+		<PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="4.11.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

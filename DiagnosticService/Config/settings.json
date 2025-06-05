@@ -1,0 +1,14 @@
+{
+
+  "DiagServiceSettings": {
+    "RetroType": "mongo",
+    "RetroConnection": "mongodb://localhost:27017",
+    "UseSpaProxy":  false,
+    "Urls": []
+  },
+
+  "DiagnosticExplorer": {
+    "Uri": "http://diagnostics:2803/diagnostics",
+    "Enabled": "true"
+  }
+}

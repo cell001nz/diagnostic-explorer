@@ -1,4 +1,3 @@
-﻿export class AppConfig
-{
-  apiBaseUrl = '';
+﻿export class AppConfig {
+    apiBaseUrl = '';
 }

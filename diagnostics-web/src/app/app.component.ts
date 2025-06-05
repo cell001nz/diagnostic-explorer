@@ -5,24 +5,27 @@ import {RetroModel} from './Model/RetroModel';
 import {ScopeNode} from "./Model/ScopeNode";
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
-  providers: [AppModel, RealtimeModel, RetroModel]
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.scss'],
+    providers: [AppModel, RealtimeModel, RetroModel]
 
 })
 export class AppComponent {
-  title = 'diagnostics-web';
-  region?: ScopeNode;
-  constructor(readonly appModel: AppModel) {
-    appModel.start();
-    
-    this.region = ScopeNode.parseTraceScope(this._sampleTrace);    
-  }
+    title = 'diagnostics-web';
+    region?: ScopeNode;
+
+    constructor(readonly appModel: AppModel) {
+        appModel.start();
+
+        this.region = ScopeNode.parseTraceScope(this._sampleTrace);
+        console.log(this.region);
+    }
 
 
-
-  _sampleTrace = `19541 [1] INFO  WidgetSample.Form1 (null) - [00.000] [00.000] BEGIN btnTraceScope_Click (2.584 seconds)
+    _sampleTrace = `19541 [1] INFO  WidgetSample.Form1 (null) - 
+  
+[00.000] [00.000] BEGIN btnTraceScope_Click (2.584 seconds)
 [00.000] [00.000] In Trace Scope Button Click 1 InvokeRequired: False
 [00.104] [00.104] In the async bit B1
 [00.104] [00.000] In the async bit A1

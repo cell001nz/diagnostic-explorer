@@ -1,11 +1,12 @@
-﻿{
+{
   "profiles": {
-    "DiagnosticService": {
+    "Diagnostic.Service": {
       "commandName": "Project",
-      "dotnetRunMessages": true,
+      "launchBrowser": true,
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
-      }
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50210;http://localhost:50211"
     }
   }
 }

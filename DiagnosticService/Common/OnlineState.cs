@@ -29,11 +29,10 @@ using System.Runtime.Serialization;
 
 namespace DiagnosticExplorer.Common;
 
-[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
-public enum RegistrationMode
+public enum OnlineState
 {
-    [EnumMember] NA,
-    [EnumMember] Manual,
-    [EnumMember] Auto,
-    [EnumMember] SignalR
+    NA = 0,
+    Unknown = 1,
+    Online = 2,
+    Offline = 3
 }

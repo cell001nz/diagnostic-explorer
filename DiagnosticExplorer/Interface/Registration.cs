@@ -31,29 +31,21 @@ using System.Runtime.Serialization;
 namespace DiagnosticExplorer
 {
 
-	[DataContract(Namespace = "http://diagnosticexplorer.com/2010")]
 	public class Registration
 	{
     
-        [IgnoreDataMember]
         public string InstanceId { get; set; }
 
-		[DataMember]
 		public string ProcessName { get; set; }
 
-		[DataMember]
 		public string UserName { get; set; }
 
-		[DataMember]
 		public string UserDomain { get; set; }
 
-		[DataMember]
 		public int ProcessId { get; set; }
 
-		[DataMember]
 		public string Uri { get; set; }
 
-		[DataMember(IsRequired = false)]
 		public string MachineName { get; set; }
 
 		public override string ToString()

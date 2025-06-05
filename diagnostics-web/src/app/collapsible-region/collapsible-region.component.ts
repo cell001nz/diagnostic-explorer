@@ -2,29 +2,26 @@ import {Component, Input, OnInit} from '@angular/core';
 import {ScopeNode} from "../Model/ScopeNode";
 
 @Component({
-  selector: 'app-collapsible-region',
-  templateUrl: './collapsible-region.component.html',
-  styleUrls: ['./collapsible-region.component.scss']
+    selector: 'app-collapsible-region',
+    templateUrl: './collapsible-region.component.html',
+    styleUrls: ['./collapsible-region.component.scss']
 })
 export class CollapsibleRegionComponent implements OnInit {
 
-  @Input()
-  region?: ScopeNode;
+    @Input()
+    region?: ScopeNode;
 
-  constructor() { 
-  }
+    constructor() {
+    }
 
-  ngOnInit(): void
-  {
-  }
+    ngOnInit(): void {
+    }
 
-  public getClass(): string
-  {
-    return 'collapsible-region-level' + this.region?.level;
-  }
-  
-  
- 
+    public getClass(): string {
+        return 'collapsible-region-level' + this.region?.level;
+    }
+
+
 }
 
 

@@ -157,7 +157,9 @@ public class RegistrationHandler
         {
             Debug.WriteLine("Diagnostic RegistrationHandler constructing connection");
             _connection = new HubConnectionBuilder()
-                .WithUrl(_url)
+                .WithUrl(_url, options => {
+                    options.UseDefaultCredentials = true;
+                })
                 .Build();
 
             _connection.Closed += HandleClosed;

@@ -1,5 +1,4 @@
-﻿export class InfoDialogData
-{
-  title = '';
-  message = '';
+﻿export class InfoDialogData {
+    title = '';
+    message = '';
 }
