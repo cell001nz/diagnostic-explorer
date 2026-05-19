@@ -53,7 +53,14 @@ public static class Program
 
         var settings = app.Services.GetService<IOptions<DiagServiceSettings>>().Value;
 
-        app.UseDeveloperExceptionPage();
+        if (app.Environment.IsDevelopment())
+            app.UseDeveloperExceptionPage();
+        else
+            app.UseExceptionHandler(errorApp => errorApp.Run(async context => {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("An unexpected error occurred.");
+            }));
 
         app.UseRouting();
         app.UseCors(x => x.SetIsOriginAllowed(x => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
