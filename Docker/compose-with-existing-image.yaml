@@ -1,0 +1,74 @@
+# Pulls the published diagnostic-explorer image and brings it up alongside
+# a MongoDB container -- no local Docker build required.
+#
+# Run from the repo root:
+#   docker compose -f Docker/compose-with-existing-image.yaml up -d
+#
+# Environment variable overrides (set in your shell or a sibling .env file):
+#   MONGO_USERNAME           - mongo root user             (default: admin)
+#   MONGO_PASSWORD           - mongo root password         (default: password123)
+#   DIAGEXPLORER_HOST_PORT   - host-side port for 2803     (default: 2803)
+#                              Override (e.g. 2903) if another process on
+#                              the host is already bound to 2803 -- for
+#                              instance a native DiagnosticExplorer.Service
+#                              running outside Docker.
+#   DIAGEXPLORER_IMAGE_NAME  - registry path of the image
+#                              (default: ghcr.io/cell001nz/diagnostic-explorer)
+#                              Override to pull from a fork's GHCR, e.g.
+#                              ghcr.io/destructivedude/diagnostic-explorer.
+#   DIAGEXPLORER_IMAGE_TAG   - which published image tag  (default: latest)
+#                              `latest` tracks main; pin to `v3.1.37` /
+#                              `sha-abc1234` for a specific build.
+
+name: diagnostic-explorer
+
+services:
+  mongodb:
+    image: mongo:7.0.14
+    container_name: diagnostic-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: diagnostic_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - diagnostic-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok", "mongodb://localhost:27017/admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  diagnostic-explorer:
+    # Published by .github/workflows/publish-docker-image.yml on each main /
+    # tag push. Override DIAGEXPLORER_IMAGE_NAME to pull from a fork's GHCR,
+    # and DIAGEXPLORER_IMAGE_TAG to pin a specific build (e.g. a semver tag
+    # `3.1.37` or sha tag `sha-abc1234`).
+    image: ${DIAGEXPLORER_IMAGE_NAME:-ghcr.io/cell001nz/diagnostic-explorer}:${DIAGEXPLORER_IMAGE_TAG:-latest}
+    container_name: diagnostic-service
+    restart: unless-stopped
+    ports:
+      - "${DIAGEXPLORER_HOST_PORT:-2803}:2803"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:2803
+      - DiagServiceSettings__RetroConnection=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/diagnostic_db?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - diagnostic-network
+
+volumes:
+  mongodb_data:
+  mongodb_config:
+
+networks:
+  diagnostic-network:
+    driver: bridge

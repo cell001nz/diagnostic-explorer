@@ -55,3 +55,9 @@ packages
 *.flv
 *.mov
 *.wmv
+
+# Claude Code per-developer settings
+.claude/
+
+# Generated NuGet packages
+nupkg/

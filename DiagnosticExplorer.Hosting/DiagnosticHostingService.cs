@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer.Log4Net;
+using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -21,14 +23,18 @@ public class DiagnosticHostingService
 
     private RegistrationHandler[] _registrationHandlers;
 
-    private DiagnosticHostingService(DiagnosticOptions options)
+    private Action<HttpConnectionOptions> _configureHttp;
+
+    private DiagnosticHostingService(DiagnosticOptions options, Action<HttpConnectionOptions> configureHttp = null)
     {
         _options = options;
+        _configureHttp = configureHttp;
     }
 
 #if NET5_0_OR_GREATER
 
-    public DiagnosticHostingService(IOptions<DiagnosticOptions> options) : this(options.Value)
+    public DiagnosticHostingService(IOptions<DiagnosticOptions> options, Action<HttpConnectionOptions> configureHttp = null)
+        : this(options.Value, configureHttp)
     {
         Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled} Uri [{_options.Uri}");
     }
@@ -65,7 +71,7 @@ public class DiagnosticHostingService
                 UserDomain = Environment.UserDomainName,
                 UserName = Environment.UserName,
                 MachineName = Environment.MachineName,
-                ProcessName = Process.GetCurrentProcess().ProcessName.Replace(".vshost", "")
+                ProcessName = ResolveProcessName()
             };
 
             _registrationHandlers = Regex.Split(_options.Uri, @"\s|;|,")
@@ -75,12 +81,26 @@ public class DiagnosticHostingService
                 .ToArray();
 
             foreach (RegistrationHandler handler in _registrationHandlers)
-                handler.Start();
+                handler.Start(_configureHttp);
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex);
         }
+    }
+
+    // The entry assembly name is a stabler identifier than the OS process
+    // name for .NET apps: `dotnet MyApp.dll` reports "dotnet" as the
+    // process, but the entry assembly is still "MyApp". Falls back to the
+    // process name when there is no managed entry assembly (rare -- mostly
+    // unmanaged hosts).
+    private static string ResolveProcessName()
+    {
+        string entryAssemblyName = Assembly.GetEntryAssembly()?.GetName().Name;
+        if (!string.IsNullOrEmpty(entryAssemblyName))
+            return entryAssemblyName;
+
+        return Process.GetCurrentProcess().ProcessName.Replace(".vshost", "");
     }
 
     public async Task StopHosting()
@@ -99,12 +119,12 @@ public class DiagnosticHostingService
     }
 
 
-    public static void Start(string url)
+    public static void Start(string url, Action<HttpConnectionOptions> configureHttp = null)
     {
         if (_instance == null)
         {
             DiagnosticOptions options = new(url);
-            _instance = new DiagnosticHostingService(options);
+            _instance = new DiagnosticHostingService(options, configureHttp);
             _instance.StartHosting();
 
         }

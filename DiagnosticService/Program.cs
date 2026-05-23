@@ -14,10 +14,10 @@ public static class Program
             options.ServiceName = "DiagnosticExplorer";
         });
 
-        builder.Configuration.AddJsonFile(Expand(@"Config\settings.json"));
+        builder.Configuration.AddJsonFile(Expand(Path.Combine("Config", "settings.json")));
 
         builder.Services.Configure<DiagServiceSettings>(builder.Configuration.GetSection(nameof(DiagServiceSettings)));
-        builder.Services.AddDiagnosticExplorer();
+        builder.Services.AddDiagnosticExplorer(builder.Configuration);
 
         var services = builder.Services;
 
@@ -53,7 +53,14 @@ public static class Program
 
         var settings = app.Services.GetService<IOptions<DiagServiceSettings>>().Value;
 
-        app.UseDeveloperExceptionPage();
+        if (app.Environment.IsDevelopment())
+            app.UseDeveloperExceptionPage();
+        else
+            app.UseExceptionHandler(errorApp => errorApp.Run(async context => {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("An unexpected error occurred.");
+            }));
 
         app.UseRouting();
         app.UseCors(x => x.SetIsOriginAllowed(x => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
