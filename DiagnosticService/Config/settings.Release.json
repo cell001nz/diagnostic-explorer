@@ -4,13 +4,13 @@
     "UseSpaProxy": false,
     "SpaDirectory": "diagnostics-web",
     "Urls": [
-      "http://*:2803",
-      "http://*:6001"
+      "http://*:2804",
+      "http://*:6002"
     ]
   },
 
   "DiagnosticExplorer": {
-    "Uri": "http://localhost:6001/diagnostics",
+    "Uri": "http://localhost:6002/diagnostics",
     "Enabled": "true"
   }
 }

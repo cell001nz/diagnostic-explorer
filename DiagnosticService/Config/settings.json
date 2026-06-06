@@ -8,7 +8,7 @@
   },
 
   "DiagnosticExplorer": {
-    "Uri": "http://diagnostics:2803/diagnostics",
+    "Uri": "http://diagnostics:2804/diagnostics",
     "Enabled": "true"
   }
 }
