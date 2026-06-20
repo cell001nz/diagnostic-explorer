@@ -15,8 +15,8 @@ public interface IWebHub
 {
     Task Subscribe(string processId);
     Task RemoveProcess(string processId);
-    Task<OperationResponse> SetProperty(SetPropertyRequest request);
-    Task<OperationResponse> ExecuteOperation(OperationRequest request);
+    Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request);
+    Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request);
     Task StartRetroSearch(RetroQuery query);
     Task<long> RetroDelete(string[] recordList);
     Task CancelRetroSearch(int searchId);
@@ -59,14 +59,14 @@ public class WebHub : Hub<IWebHubClient>, IWebHub
         return Task.CompletedTask;
     }
 
-    public async Task<OperationResponse> SetProperty(SetPropertyRequest request)
+    public async Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request)
     {
-        return await _realtimeManager.SetProperty(request);
+        return await _realtimeManager.SetProperty(processId, request);
     }
 
-    public async Task<OperationResponse> ExecuteOperation(OperationRequest request)
+    public async Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request)
     {
-        return await _realtimeManager.ExecuteOperation(request);
+        return await _realtimeManager.ExecuteOperation(processId, request);
     }
 
     public Task StartRetroSearch(RetroQuery query)

@@ -179,19 +179,19 @@ public class RealtimeManager : IHostedService
         }
     }
 
-    public async Task<OperationResponse> SetProperty(SetPropertyRequest request)
+    public async Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request)
     {
         try
         {
-            DiagProcess? p = GetProcess(request.ProcessId);
+            DiagProcess? p = GetProcess(processId);
             if (p == null)
-                return OperationResponse.Error($"Process {request.ProcessId} not found");
+                return OperationResponse.Error($"Process {processId} not found");
 
             IDiagnosticClient? client = GetSubscription(p)?.DiagnosticClient;
             if (client == null)
-                return OperationResponse.Error($"Process {request.ProcessId} is not connected");
+                return OperationResponse.Error($"Process {processId} is not connected");
 
-            return await client.SetProperty(request.Path, request.Value);
+            return await client.SetProperty(request);
         }
         catch (Exception ex)
         {
@@ -199,19 +199,19 @@ public class RealtimeManager : IHostedService
         }
     }
 
-    public async Task<OperationResponse> ExecuteOperation(OperationRequest request)
+    public async Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request)
     {
         try
         {
-            DiagProcess? p = GetProcess(request.ProcessId);
+            DiagProcess? p = GetProcess(processId);
             if (p == null)
-                return OperationResponse.Error($"Process {request.ProcessId} not found");
+                return OperationResponse.Error($"Process {processId} not found");
 
             IDiagnosticClient? client = GetSubscription(p)?.DiagnosticClient;
             if (client == null)
-                return OperationResponse.Error($"Process {request.ProcessId} is not connected");
+                return OperationResponse.Error($"Process {processId} is not connected");
 
-            return await client.ExecuteOperation(request.Path, request.Operation, request.Arguments);
+            return await client.ExecuteOperation(request);
         }
         catch (Exception ex)
         {

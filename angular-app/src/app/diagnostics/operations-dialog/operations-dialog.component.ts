@@ -114,7 +114,6 @@ export class OperationsDialogComponent implements OnInit {
 
     async onExecute(vm: OperationViewModel) {
         const request: OperationRequest = {
-            processId: this.processId(),
             path: this.path(),
             operation: vm.operation.signature,
             arguments: vm.paramValues.map((v) => this.getParamDisplayValue(v))
@@ -134,7 +133,7 @@ export class OperationsDialogComponent implements OnInit {
                     reject(new Error('Operation timed out'));
                 }, 10000)
             );
-            response = await Promise.race([this.#hubService.executeOperation(request), timeout]);
+            response = await Promise.race([this.#hubService.executeOperation(this.processId(), request), timeout]);
         } catch (err: any) {
             response = {
                 isSuccess: false,

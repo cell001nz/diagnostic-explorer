@@ -44,11 +44,12 @@ export class DiagnosticsNavComponent {
     cm.show(event);
   }
 
-  private switchToRetro(): void {
+  private async switchToRetro(): Promise<void> {
     if (!this.selectedProcess)
       return;
 
     this.#retroModel.prepareProcessSearch(this.selectedProcess);
-    void this.#router.navigate(['/retro']);
+    await this.#router.navigate(['/retro']);
+    await this.#retroModel.search();
   }
 }

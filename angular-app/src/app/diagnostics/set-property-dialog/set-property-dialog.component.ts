@@ -49,7 +49,6 @@ export class SetPropertyDialogComponent implements OnInit {
 
     async onSetProperty() {
         const request = new SetPropertyRequest();
-        request.processId = this.processId();
         request.path = this.text();
         request.value = this.editValue();
 
@@ -61,7 +60,7 @@ export class SetPropertyDialogComponent implements OnInit {
       
         let response: OperationResponse;
         try {
-            response = await this.#hubService.setPropertyValue(request);
+            response = await this.#hubService.setPropertyValue(this.processId(), request);
         } catch (err: any) {
             response = {
                 isSuccess: false,

@@ -47,14 +47,14 @@ public class DiagnosticClientHandler : IDiagnosticClient
         return ProtobufUtil.Decompress<DiagnosticResponse>(data);
     }
 
-    public Task<OperationResponse> SetProperty(string path, string value)
+    public Task<OperationResponse> SetProperty(SetPropertyRequest request)
     {
-        return Client.SetProperty(Guid.NewGuid().ToString("N"), path, value);
+        return Client.SetProperty(Guid.NewGuid().ToString("N"), request.Path, request.Value);
     }
 
-    public Task<OperationResponse> ExecuteOperation(string path, string operation, string[] arguments)
+    public Task<OperationResponse> ExecuteOperation(OperationRequest request)
     {
-        return Client.ExecuteOperation(Guid.NewGuid().ToString("N"), path, operation, arguments);
+        return Client.ExecuteOperation(Guid.NewGuid().ToString("N"), request.Path, request.Operation, request.Arguments);
     }
 
     public async Task SubscribeEvents()

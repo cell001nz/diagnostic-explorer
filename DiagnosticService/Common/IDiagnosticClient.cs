@@ -7,8 +7,8 @@ namespace DiagnosticExplorer;
 public interface IDiagnosticClient
 {
     Task<DiagnosticResponse> GetDiagnostics(CancellationToken cancel);
-    Task<OperationResponse> SetProperty(string path, string? value);
-    Task<OperationResponse> ExecuteOperation(string path, string operation, string[] arguments);
+    Task<OperationResponse> SetProperty(SetPropertyRequest request);
+    Task<OperationResponse> ExecuteOperation(OperationRequest request);
     Task SubscribeEvents();
     Task UnsubscribeEvents();
 

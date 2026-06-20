@@ -111,14 +111,14 @@ export class DiagHubService implements OnDestroy {
         await hub.invoke('Subscribe', processId);
     }
     
-    async setPropertyValue(request: SetPropertyRequest): Promise<OperationResponse> {
+    async setPropertyValue(processId: string, request: SetPropertyRequest): Promise<OperationResponse> {
         let hub = await this.getHubConnection();
-        return hub.invoke<OperationResponse>(`SetProperty`, request);
+        return hub.invoke<OperationResponse>(`SetProperty`, processId, request);
     }
 
-    async executeOperation(request: OperationRequest): Promise<OperationResponse> {
+    async executeOperation(processId: string, request: OperationRequest): Promise<OperationResponse> {
         let hub = await this.getHubConnection();
-        return hub.invoke<OperationResponse>(`ExecuteOperation`, request);
+        return hub.invoke<OperationResponse>(`ExecuteOperation`, processId, request);
     }
 
     async removeProcess(id: string): Promise<void> {
