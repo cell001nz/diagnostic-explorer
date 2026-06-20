@@ -1,0 +1,13 @@
+:host ::ng-deep tr.selected-process,
+:host ::ng-deep tr.selected-process > td {
+    background-color: #343439 !important;
+}
+
+:host ::ng-deep tr.online-process > td {
+    color: #5c9a0c;
+}
+
+:host ::ng-deep tr.online-process.selected-process > td {
+    color: #84cc16;
+}
+

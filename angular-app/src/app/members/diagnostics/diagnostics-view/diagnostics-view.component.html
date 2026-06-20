@@ -19,7 +19,7 @@
         @if (realtime && process()) {
             
             @if (processModel().categories().length) {
-           <p-tabs [(value)]="processModel().activeCatName" class="h-full max-h-[calc(100vh-120px)]">
+           <p-tabs [value]="processModel().activeCatName()" (valueChange)="onCategoryChange($event)" class="h-full max-h-[calc(100vh-120px)]">
                <p-tablist>
                  @for (cat of processModel().categories(); track cat.name()) {
                     <p-tab [value]="cat.name()">

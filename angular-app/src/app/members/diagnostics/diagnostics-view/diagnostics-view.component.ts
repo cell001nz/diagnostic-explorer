@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, effect, inject, input, OnDestroy, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, signal} from '@angular/core';
 import {
   concat,
   distinctUntilChanged,
@@ -8,7 +8,7 @@ import {
 } from "rxjs";
 import {rxResource, takeUntilDestroyed, toObservable} from "@angular/core/rxjs-interop";
 import {DecimalPipe, JsonPipe} from "@angular/common";
-import {ActivatedRoute} from "@angular/router";
+import {ActivatedRoute, Router} from "@angular/router";
 import {ErrMsgPipe} from "@pipes/err-msg.pipe";
 import {DiagHubService} from "@services/diag-hub.service";
 import {DiagnosticModelFactory} from "@model/DiagnosticModelFactory";
@@ -40,6 +40,7 @@ const REFRESH_INTERVAL = 5_000;
 })
 export class DiagnosticsViewComponent implements OnDestroy {
   route = inject(ActivatedRoute);
+  #router = inject(Router);
   processId = input.required<string>();
   #hubService = inject(DiagHubService);
   realtime = inject(RealtimeModel)
@@ -47,10 +48,17 @@ export class DiagnosticsViewComponent implements OnDestroy {
   process = computed(() => this.realtime.allProcesses().find(p => p.id === this.processId()));
   processModel = signal<ProcessModel>(new ProcessModel());
 
+  #desiredCat = this.route.snapshot.queryParamMap.get('cat') ?? this.realtime.selectedCategory();
+  #catRestored = false;
+
   constructor() {
     // effect(() => console.log('ProcessId changed ', this.processId(), typeof this.processId()));
     // effect(() => console.log('Process changed ', this.process()));
-    
+
+    toObservable(this.processId)
+        .pipe(takeUntilDestroyed())
+        .subscribe(id => this.realtime.selectedProcessId.set(id));
+
     toObservable(this.process)
         .pipe(
             filter(p => !!p),
@@ -80,7 +88,10 @@ export class DiagnosticsViewComponent implements OnDestroy {
     
     this.#hubService.diagsArrived$
         .pipe(filter(d => d.processId === this.processId()), takeUntilDestroyed())
-        .subscribe(d => this.processModel().update(d.response));
+        .subscribe(d => {
+          this.processModel().update(d.response);
+          this.#syncCategory();
+        });
     
     timer(0, 1_000)
         .pipe(takeUntilDestroyed())
@@ -99,6 +110,36 @@ export class DiagnosticsViewComponent implements OnDestroy {
   }
   
   selectedEvent = signal<EventModel | null>(null);
+
+  onCategoryChange(cat: string | number | undefined): void {
+    if (cat == null)
+      return;
+    const name = String(cat);
+    this.processModel().activeCatName.set(name);
+    this.#writeCategory(name);
+  }
+
+  // Restore the category from the URL once categories have loaded, then keep the URL in sync.
+  #syncCategory(): void {
+    const model = this.processModel();
+    if (!this.#catRestored && this.#desiredCat && model.categories().some(c => c.name() === this.#desiredCat)) {
+      model.activeCatName.set(this.#desiredCat);
+      this.#catRestored = true;
+    }
+    const cat = model.activeCatName();
+    if (cat)
+      this.#writeCategory(cat);
+  }
+
+  #writeCategory(cat: string): void {
+    this.realtime.selectedCategory.set(cat);
+    void this.#router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {cat},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 
   onEventSelected(event: EventModel): void {
     // Deselect previous

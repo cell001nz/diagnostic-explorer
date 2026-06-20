@@ -59,7 +59,7 @@
                         (mousedown)="onRowMouseDown(event)"
                         (mouseover)="onRowMouseOver(event)">
                         <td class="p-2">{{ event.id }}</td>
-                        <td class="p-2 whitespace-nowrap">{{ event.date | date:'yyyy-MM-dd HH:mm:ss':'UTC' }} UTC</td>
+                        <td class="p-2 whitespace-nowrap">{{ event.date | date:'yyyy-MM-dd HH:mm:ss' }}</td>
                         <td class="p-2">{{ event.level | levelToString }}</td>
                         <td class="p-2">{{ event.message }}</td>
                     </tr>

@@ -1,4 +1,5 @@
 
+    <p-contextMenu #cm [model]="menuItems"></p-contextMenu>
     <p-table [value]="processes()" [scrollable]="true" scrollHeight="100%" size="small">
         <ng-template #header>
             <tr>
@@ -8,7 +9,8 @@
             </tr>
         </ng-template>
         <ng-template #body let-process let-ri="rowIndex">
-            <tr [routerLink]="process.id" class="cursor-pointer" [class.text-lime-500!]="process.state == 'Online'"
+            <tr [routerLink]="process.id" routerLinkActive="selected-process" class="cursor-pointer " [class.online-process]="process.state == 'Online'"
+                (contextmenu)="onContextMenu($event, process, cm)"
                 pTooltip="Sending: {{process.isSending}} last online: {{process.lastOnline | dateDiff}}">
                 <td class="text-nowrap">{{ process.name }}</td>
                 <td class="text-nowrap">{{ process.machineName }}</td>

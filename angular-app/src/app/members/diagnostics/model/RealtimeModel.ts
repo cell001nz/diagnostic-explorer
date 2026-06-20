@@ -10,6 +10,8 @@ export class RealtimeModel {
 
     allProcesses = signal<DiagProcess[]>([]);
     filteredProcesses = computed(() => this.allProcesses());
+    selectedProcessId = signal<string | null>(null);
+    selectedCategory = signal<string | null>(null);
     #hubService = inject(DiagHubService);
 
     constructor() {

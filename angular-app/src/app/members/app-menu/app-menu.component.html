@@ -1,7 +1,8 @@
 <nav class="nav-menu">
     <a
         class="nav-item"
-        routerLink="realtime"
+        [routerLink]="realtimeLink"
+        [queryParams]="realtimeQueryParams"
         routerLinkActive="active"
         ariaCurrentWhenActive="page">
         <span class="nav-icon"><i class="bi bi-broadcast"></i></span>

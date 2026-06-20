@@ -80,6 +80,16 @@
         display: block;
     }
 
+    /* Hide the default sliding active bar (mispositioned for vertical tabs) */
+    .p-tablist-active-bar {
+        display: none !important;
+    }
+
+    /* Highlight the active tab with a left border instead */
+    .p-tab-active {
+        border-left: 3px solid #84cc16 !important;
+    }
+
 
 
     .p-tabpanels {

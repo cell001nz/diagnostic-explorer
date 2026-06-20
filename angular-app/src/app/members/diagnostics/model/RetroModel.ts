@@ -139,6 +139,16 @@ export class RetroModel {
         await this.search();
     }
 
+    prepareProcessSearch(item: DiagProcess): void {
+        this.reset();
+        this.process.set(item.name);
+        this.user.set(item.userName);
+        this.machine.set(item.machineName);
+        this.date.set(today());
+        this.time.set(new Date().getHours());
+        this.hours.set(1);
+    }
+
     async search(): Promise<void> {
         if (this.currentSearchId()) {
             const searchId = this.currentSearchId();
