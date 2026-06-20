@@ -26,86 +26,85 @@ using System;
 using System.ComponentModel;
 using DiagnosticExplorer;
 
-namespace WidgetSample
+namespace WidgetSample;
+
+//Widget extends DiagnosticManager in order to register itself with diagnostics
+public class Gadget : INotifyPropertyChanged
 {
-	//Widget extends DiagnosticManager in order to register itself with diagnostics
-	public class Gadget : INotifyPropertyChanged
+	private static Random _rand = new Random();
+	public event PropertyChangedEventHandler PropertyChanged;
+
+	public Gadget(int id)
 	{
-		private static Random _rand = new Random();
-		public event PropertyChangedEventHandler PropertyChanged;
+		Id = id;
 
-		public Gadget(int id)
-		{
-			Id = id;
+		Name = GetRandom(_names);
+		Purpose = GetRandom(_purposes);
+		DiagnosticManager.Register(this, string.Format("Gadget {0}", Id), "Gadgets");
+	}
 
-			Name = GetRandom(_names);
-			Purpose = GetRandom(_purposes);
-			DiagnosticManager.Register(this, string.Format("Gadget {0}", Id), "Gadgets");
-		}
-
-		[DiagnosticMethod]
-		public void Randomise()
-		{
-			Name = GetRandom(_names);
-			Purpose = GetRandom(_purposes);
-		}
+	[DiagnosticMethod]
+	public void Randomise()
+	{
+		Name = GetRandom(_names);
+		Purpose = GetRandom(_purposes);
+	}
 		
-		[DiagnosticMethod]
-		public void Clear()
+	[DiagnosticMethod]
+	public void Clear()
+	{
+		Name = null;
+		Purpose = null;
+	}
+
+	private void OnPropertyChanged(string propertyName)
+	{
+		if (PropertyChanged != null)
+			PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+	}
+
+	private string GetRandom(string[] items)
+	{
+		int index = _rand.Next(0, items.Length);
+		return items[index];
+	}
+
+	private static string[] _names = new[]
+		{"Gadget X", "Gadget Y", "Gadget Z", "Gadget W"};
+
+	private static string[] _purposes = new[]
+		{"Technical", "Muckabout", "Stuff"};
+
+	public override string ToString()
+	{
+		return string.Format("Gadget {0}", Id);
+	}
+
+	public int Id { get; private set; }
+
+	private string _name;
+
+	[Property(AllowSet = true)]
+	public string Name
+	{
+		get { return _name; }
+		set
 		{
-			Name = null;
-			Purpose = null;
+			_name = value;
+			OnPropertyChanged("Name");
 		}
+	}
 
-		private void OnPropertyChanged(string propertyName)
+	private string _purpose;
+
+	[Property(AllowSet = true)]
+	public string Purpose
+	{
+		get { return _purpose; }
+		set
 		{
-			if (PropertyChanged != null)
-				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-		}
-
-		private string GetRandom(string[] items)
-		{
-			int index = _rand.Next(0, items.Length);
-			return items[index];
-		}
-
-		private static string[] _names = new[]
-		                                 	{"Gadget X", "Gadget Y", "Gadget Z", "Gadget W"};
-
-		private static string[] _purposes = new[]
-		                                    	{"Technical", "Muckabout", "Stuff"};
-
-		public override string ToString()
-		{
-			return string.Format("Gadget {0}", Id);
-		}
-
-		public int Id { get; private set; }
-
-		private string _name;
-
-		[Property(AllowSet = true)]
-		public string Name
-		{
-			get { return _name; }
-			set
-			{
-				_name = value;
-				OnPropertyChanged("Name");
-			}
-		}
-
-		private string _purpose;
-
-		[Property(AllowSet = true)]
-		public string Purpose
-		{
-			get { return _purpose; }
-			set
-			{
-				_purpose = value;
-				OnPropertyChanged("Purpose");
-			}
+			_purpose = value;
+			OnPropertyChanged("Purpose");
 		}
 	}
 }

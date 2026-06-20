@@ -1,0 +1,18 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "diagnostics-angular": {
+      "appLocation": ".",
+      "outputLocation": "dist/diag-exp/browser",
+      "appBuildCommand": "npm run build",
+      "run": "npm start",
+      "appDevserverUrl": "http://localhost:4200",
+      "apiDevserverUrl": "http://localhost:7071",
+      "appName": "diagnosticexplorerswa",
+      "resourceGroupName": "diagnosticexplorer",
+      "subscriptionId": "subscription-id-here",
+      "resourceGroup": "diagnosticexplorer",
+      "env": "production"
+    }
+  }
+}

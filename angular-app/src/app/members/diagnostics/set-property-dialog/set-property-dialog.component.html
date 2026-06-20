@@ -1,0 +1,51 @@
+
+<div class="flex flex-col gap-3 min-h-[200px] h-full" (keyup)="handleKeyUp($event)">
+    <span class="text-lg font-semibold">Set Property</span>
+    <span class="text-xs text-gray-400">{{ text() }}</span>
+
+    <p-floatlabel variant="on" class="w-full">
+        <input pInputText id="on_label" class="w-full h-14" [ngModel]="editValue()" (ngModelChange)="editValue.set($event)" autocomplete="off" />
+        <label for="on_label">Value</label>
+    </p-floatlabel>
+
+    <!-- Status & Result -->
+    @if (status() !== 'idle') {
+        <div class="mt-1 p-3 rounded border text-sm"
+             [class.border-blue-500]="status() === 'executing'"
+             [class.bg-blue-900/20]="status() === 'executing'"
+             [class.border-green-500]="status() === 'success'"
+             [class.bg-green-900/20]="status() === 'success'"
+             [class.border-red-500]="status() === 'error'"
+             [class.bg-red-900/20]="status() === 'error'"
+             [class.border-yellow-500]="status() === 'timeout'"
+             [class.bg-yellow-900/20]="status() === 'timeout'">
+            <div class="font-semibold mb-1"
+                 [class.text-blue-400]="status() === 'executing'"
+                 [class.text-green-400]="status() === 'success'"
+                 [class.text-red-400]="status() === 'error'"
+                 [class.text-yellow-400]="status() === 'timeout'">
+                {{ statusMessage() }}
+            </div>
+            @if (operationResult(); as res) {
+                @if (res.result) {
+                    <div class="text-gray-300 text-xs mt-1 max-h-[200px] overflow-y-auto">
+                        <span class="text-gray-500">Result:</span> {{ res.result }}
+                    </div>
+                }
+                @if (res.message) {
+                    <div class="text-gray-300 text-xs mt-1">
+                        <span class="text-gray-500">Message:</span> {{ truncateMessage(res.message) }}
+                    </div>
+                }
+                @if (res.detail) {
+                    <div class="text-gray-400 text-xs mt-1 whitespace-pre-wrap max-h-[200px] overflow-y-auto">{{ res.detail }}</div>
+                }
+            }
+        </div>
+    }
+
+    <div class="flex justify-end gap-2 mt-auto pt-3 border-t border-gray-700">
+        <button pButton size="small" severity="secondary" (click)="onClose()">Close</button>
+        <button pButton size="small" severity="success" [disabled]="busy()" (click)="onSetProperty()">Set</button>
+    </div>
+</div>

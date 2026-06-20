@@ -25,30 +25,25 @@
 using System;
 using System.Linq;
 
-namespace DiagnosticExplorer
+namespace DiagnosticExplorer;
+
+[AttributeUsage(AttributeTargets.Property)]
+public class DatePropertyAttribute : PropertyAttribute
 {
-	[AttributeUsage(AttributeTargets.Property)]
-	public class DatePropertyAttribute : PropertyAttribute
+	public DatePropertyAttribute() : this(null)
 	{
-		public DatePropertyAttribute() : this(null)
-		{
-		}
-
-		public DatePropertyAttribute(string name) : this(name, null)
-		{
-		}
-
-		public DatePropertyAttribute(string name, string category) : base(name, category)
-		{
-			ExposeDate = true;
-			ExposeElapsed = false;
-			ExposeTimeUntil = false;
-		}
-
-		public bool ExposeDate { get; set; }
-
-		public bool ExposeElapsed { get; set; }
-		public bool IsUTC { get; set; }
-		public bool ExposeTimeUntil { get; set; }
 	}
+
+	public DatePropertyAttribute(string name, string category = null) : base(name, category)
+	{
+		ExposeDate = true;
+		ExposeElapsed = false;
+		ExposeTimeUntil = false;
+	}
+
+	public bool ExposeDate { get; set; }
+
+	public bool ExposeElapsed { get; set; }
+	public bool IsUTC { get; set; }
+	public bool ExposeTimeUntil { get; set; }
 }

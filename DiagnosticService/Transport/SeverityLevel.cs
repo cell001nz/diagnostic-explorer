@@ -1,16 +1,16 @@
 ﻿namespace Diagnostics.Service.Common.Transport;
 
+/// <summary>
+/// Mirrors Microsoft.Extensions.Logging.LogLevel ordinals, the canonical
+/// numeric level scheme used across the backend and web clients.
+/// </summary>
 public enum SeverityLevel
 {
-    All = 0,
-    Trace = 20000,
-    Debug = 30000,
-    Info = 40000,
-    Notice = 50000,
-    Warn = 60000,
-    Error = 70000,
-    Severe = 80000,
-    Critical = 90000,
-    Fatal = 110000,
-    Emergency = 120000
+    Trace = 0,
+    Debug = 1,
+    Information = 2,
+    Warning = 3,
+    Error = 4,
+    Critical = 5,
+    None = 6
 }

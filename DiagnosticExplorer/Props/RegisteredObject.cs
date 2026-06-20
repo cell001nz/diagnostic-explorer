@@ -27,36 +27,35 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
-namespace DiagnosticExplorer
+namespace DiagnosticExplorer;
+
+public class RegisteredObject
 {
-	public class RegisteredObject
+	private WeakReference _objectRef;
+	public string BagName { get; set; }
+	public string BagCategory { get; set; }
+
+	public object Object
 	{
-		private WeakReference _objectRef;
-		public string BagName { get; set; }
-		public string BagCategory { get; set; }
-
-		public object Object
-		{
-			get { return _objectRef.Target; }
-		}
-
-		public RegisteredObject(object obj, string bagCategory, string bagName)
-		{
-			_objectRef = new WeakReference(obj);
-			BagName = bagName;
-			BagCategory = bagCategory;
-		}
+		get { return _objectRef.Target; }
 	}
 
-	public static class RegisteredObjectExtensions
+	public RegisteredObject(object obj, string bagCategory, string bagName)
 	{
-		private static readonly StringComparer _ignoreCase = StringComparer.CurrentCultureIgnoreCase;
+		_objectRef = new WeakReference(obj);
+		BagName = bagName;
+		BagCategory = bagCategory;
+	}
+}
 
-		public static RegisteredObject FindByCategoryAndName(this IEnumerable<RegisteredObject> list, string category, string name)
-		{
-			if (list == null) throw new ArgumentNullException(nameof(list));
+public static class RegisteredObjectExtensions
+{
+	private static readonly StringComparer _ignoreCase = StringComparer.CurrentCultureIgnoreCase;
 
-			return list.FirstOrDefault(x => _ignoreCase.Equals(x.BagCategory, category) && _ignoreCase.Equals(x.BagName, name));
-		}
+	public static RegisteredObject FindByCategoryAndName(this IEnumerable<RegisteredObject> list, string category, string name)
+	{
+		if (list == null) throw new ArgumentNullException(nameof(list));
+
+		return list.FirstOrDefault(x => _ignoreCase.Equals(x.BagCategory, category) && _ignoreCase.Equals(x.BagName, name));
 	}
 }

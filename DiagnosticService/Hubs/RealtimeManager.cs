@@ -183,13 +183,13 @@ public class RealtimeManager : IHostedService
     {
         try
         {
-            DiagProcess? p = GetProcess(request.Id);
+            DiagProcess? p = GetProcess(request.ProcessId);
             if (p == null)
-                return OperationResponse.Error($"Process {request.Id} not found");
+                return OperationResponse.Error($"Process {request.ProcessId} not found");
 
             IDiagnosticClient? client = GetSubscription(p)?.DiagnosticClient;
             if (client == null)
-                return OperationResponse.Error($"Process {request.Id} is not connected");
+                return OperationResponse.Error($"Process {request.ProcessId} is not connected");
 
             return await client.SetProperty(request.Path, request.Value);
         }
@@ -199,17 +199,17 @@ public class RealtimeManager : IHostedService
         }
     }
 
-    public async Task<OperationResponse> ExecuteOperation(ExecuteOperationRequest request)
+    public async Task<OperationResponse> ExecuteOperation(OperationRequest request)
     {
         try
         {
-            DiagProcess? p = GetProcess(request.Id);
+            DiagProcess? p = GetProcess(request.ProcessId);
             if (p == null)
-                return OperationResponse.Error($"Process {request.Id} not found");
+                return OperationResponse.Error($"Process {request.ProcessId} not found");
 
             IDiagnosticClient? client = GetSubscription(p)?.DiagnosticClient;
             if (client == null)
-                return OperationResponse.Error($"Process {request.Id} is not connected");
+                return OperationResponse.Error($"Process {request.ProcessId} is not connected");
 
             return await client.ExecuteOperation(request.Path, request.Operation, request.Arguments);
         }
@@ -243,7 +243,7 @@ public class RealtimeManager : IHostedService
             {
                 DiagProcess[] found = Processes.Where(x =>
                         _ic.Equals(x.MachineName, registration.MachineName)
-                        && _ic.Equals(x.ProcessName, registration.ProcessName)
+                        && _ic.Equals(x.Name, registration.ProcessName)
                         && x.ConnectionId == null
                         && x.RegistrationMode == regMode
                         && (string.IsNullOrEmpty(x.UserName) ||
@@ -261,13 +261,13 @@ public class RealtimeManager : IHostedService
                 process = new DiagProcess();
                 process.Id = Guid.NewGuid().ToString("N");
                 process.MachineName = registration.MachineName;
-                process.ProcessName = registration.ProcessName;
+                process.Name = registration.ProcessName;
                 _processes.TryAdd(process.Id, process);
             }
 
 
             process.UserName = registration.UserName;
-            process.ProcessId = registration.ProcessId;
+            process.PID = registration.ProcessId;
             process.State = OnlineState.Online;
             process.LastOnline = DateTime.UtcNow;
             process.ConnectionId = connectionId;
@@ -319,7 +319,7 @@ public class RealtimeManager : IHostedService
         //Group all items by process, instance and host
         DiagProcess[][] procs = (from x in Processes
             where x.RegistrationMode != RegistrationMode.Manual
-            group x by new {x.ProcessName, Host = x.MachineName?.ToLower()}
+            group x by new { ProcessName = x.Name, Host = x.MachineName?.ToLower()}
             into grp
             select grp.ToArray()).ToArray();
 
@@ -361,7 +361,7 @@ public class RealtimeManager : IHostedService
 
     public DiagProcess? GetProcess(string id)
     {
-        return _processes.TryGetValue(id, out var value) ? value : null;
+        return _processes.GetValueOrDefault(id);
     }
 
    

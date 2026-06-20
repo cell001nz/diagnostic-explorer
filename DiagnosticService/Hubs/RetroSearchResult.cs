@@ -10,5 +10,5 @@ public class RetroSearchResult
     public int SearchId { get; set; }
     public decimal Progress { get; set; }
     public string Info { get; set; }
-    public IList<RetroMsg> Results { get; set; } = Array.Empty<RetroMsg>();
+    public IList<RetroMsg> Results { get; set; } = [];
 }

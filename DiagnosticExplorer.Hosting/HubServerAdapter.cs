@@ -26,14 +26,13 @@ internal class HubServerAdapter : IDiagnosticHubClient
     {
         _hubConn = hubConn;
 
-        _hubConn.On<string>(nameof(IDiagnosticHubClient.GetDiagnostics),
-            async (requestId) => await GetDiagnostics(requestId));
+        _hubConn.On<byte[]>(nameof(IDiagnosticHubClient.GetDiagnostics), GetDiagnostics);
 
-        _hubConn.On<string, string, string>(nameof(IDiagnosticHubClient.SetProperty),
-            async (requestId, context, value) => await SetProperty(requestId, context, value));
+        _hubConn.On<string, string, string, OperationResponse>(nameof(IDiagnosticHubClient.SetProperty),
+            (requestId, path, value) => SetProperty(requestId, path, value));
 
-        _hubConn.On<string, string, string, string[]>(nameof(IDiagnosticHubClient.ExecuteOperation),
-            async (requestId, path, operation, args) => await ExecuteOperation(requestId, path, operation, args));
+        _hubConn.On<string, string, string, string[], OperationResponse>(nameof(IDiagnosticHubClient.ExecuteOperation),
+            (requestId, path, operation, args) => ExecuteOperation(requestId, path, operation, args));
 
         _hubConn.On(nameof(IDiagnosticHubClient.SubscribeEvents),
             async () => await SubscribeEvents());
@@ -84,65 +83,51 @@ internal class HubServerAdapter : IDiagnosticHubClient
     }
 
 
-    public Task GetDiagnostics(string requestId)
+    public Task<byte[]> GetDiagnostics()
     {
-        return Task.Run(async () => {
-            RpcResult<byte[]> result = null;
+        return Task.Run(() =>
+        {
             try
             {
                 DiagnosticResponse response = DiagnosticManager.GetDiagnostics();
-                byte[] compress = ProtobufUtil.Compress(response, 1024);
-
-                result = RpcResult<byte[]>.Success(requestId, compress);
+                return ProtobufUtil.Compress(response, 1024);
             }
             catch (Exception ex)
             {
                 _log.Error(ex);
-                result = RpcResult<byte[]>.Fail(requestId, ex);
-            }
-
-            await _hubConn.InvokeCoreAsync<string>(nameof(IDiagnosticHubServer.GetDiagnosticsReturn), new object[] { result });
-        });
-    }
-
-    public Task SetProperty(string requestId, string path, string value)
-    {
-        return Task.Run(async () => {
-            RpcResult<OperationResponse> result = null;
-
-            try
-            {
-                OperationResponse response = DiagnosticManager.SetProperty(path, value);
-                result = RpcResult<OperationResponse>.Success(requestId, response);
-            }
-            catch (Exception ex)
-            {
-                result = RpcResult<OperationResponse>.Fail(requestId, ex);
-            }
-            finally
-            {
-                await _hubConn.InvokeCoreAsync<string>(nameof(IDiagnosticHubServer.SetPropertyReturn), new object[] { result });
+                throw;
             }
         });
     }
 
-    public Task ExecuteOperation(string requestId, string path, string operation, string[] args)
+    public Task<OperationResponse> SetProperty(string requestId, string path, string value)
     {
-        return Task.Run(async () => {
-            RpcResult<OperationResponse> result = null;
-
+        return Task.Run(() =>
+        {
             try
             {
-                OperationResponse response = DiagnosticManager.ExecuteOperation(path, operation, args);
-                result = RpcResult<OperationResponse>.Success(requestId, response);
+                return DiagnosticManager.SetProperty(path, value);
             }
             catch (Exception ex)
             {
-                result = RpcResult<OperationResponse>.Fail(requestId, ex);
+                _log.Error(ex);
+                return OperationResponse.Error(ex.Message, ex.ToString());
             }
-            finally
+        });
+    }
+
+    public async Task<OperationResponse> ExecuteOperation(string requestId, string path, string operation, string[] args)
+    {
+        return await Task.Run(async () =>
+        {
+            try
             {
-                await _hubConn.InvokeCoreAsync<string>(nameof(IDiagnosticHubServer.ExecuteOperationReturn), new object[] { result });
+                return await DiagnosticManager.ExecuteOperation(path, operation, args);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex);
+                return OperationResponse.Error(ex.Message, ex.ToString());
             }
         });
     }

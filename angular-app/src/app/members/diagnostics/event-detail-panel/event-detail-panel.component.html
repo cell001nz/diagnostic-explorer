@@ -1,0 +1,45 @@
+﻿<div class="event-detail-panel">
+
+    <!-- Header row -->
+    <div class="event-detail-header">
+        <div class="event-detail-meta">
+            <span class="event-detail-meta-item">
+                <span class="event-detail-label">Date</span>
+                <span class="event-detail-value">{{ event().date | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+            </span>
+            <span class="event-detail-meta-item">
+                <span class="event-detail-label">Level</span>
+                <span class="event-detail-value event-detail-level">{{ event().level | levelToString }}</span>
+            </span>
+            <span class="event-detail-meta-item">
+                <span class="event-detail-label">Sink</span>
+                <span class="event-detail-value">{{ event().sinkName }}</span>
+            </span>
+            @if (event().machine) {
+                <span class="event-detail-meta-item">
+                    <span class="event-detail-label">Machine</span>
+                    <span class="event-detail-value">{{ event().machine }}</span>
+                </span>
+            }
+            @if (event().user) {
+                <span class="event-detail-meta-item">
+                    <span class="event-detail-label">User</span>
+                    <span class="event-detail-value">{{ event().user }}</span>
+                </span>
+            }
+            <span class="event-detail-meta-item flex-1">
+                <span class="event-detail-label">Message</span>
+                <span class="event-detail-value text-white">{{ event().message }}</span>
+            </span>
+        </div>
+
+        <button class="event-detail-close" title="Close" (click)="closed.emit()">
+            <i class="pi pi-times"></i>
+        </button>
+    </div>
+
+    <!-- Detail text area -->
+    <textarea class="event-detail-body" readonly [value]="event().detail || event().message"></textarea>
+
+</div>
+

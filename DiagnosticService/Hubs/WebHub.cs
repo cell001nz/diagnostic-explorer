@@ -11,7 +11,18 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Diagnostics.Service.Common.Hubs;
 
-public class WebHub : Hub<IWebHubClient>
+public interface IWebHub
+{
+    Task Subscribe(string processId);
+    Task RemoveProcess(string processId);
+    Task<OperationResponse> SetProperty(SetPropertyRequest request);
+    Task<OperationResponse> ExecuteOperation(OperationRequest request);
+    Task StartRetroSearch(RetroQuery query);
+    Task<long> RetroDelete(string[] recordList);
+    Task CancelRetroSearch(int searchId);
+}
+
+public class WebHub : Hub<IWebHubClient>, IWebHub
 {
     private static readonly ILog _log = LogManager.GetLogger(typeof(WebHub));
     private readonly RealtimeManager _realtimeManager;
@@ -53,7 +64,7 @@ public class WebHub : Hub<IWebHubClient>
         return await _realtimeManager.SetProperty(request);
     }
 
-    public async Task<OperationResponse> ExecuteOperation(ExecuteOperationRequest request)
+    public async Task<OperationResponse> ExecuteOperation(OperationRequest request)
     {
         return await _realtimeManager.ExecuteOperation(request);
     }

@@ -25,51 +25,45 @@
 using System;
 using System.Linq;
 
-namespace DiagnosticExplorer
+namespace DiagnosticExplorer;
+
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+public class PropertyAttribute : Attribute
 {
-	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-	public class PropertyAttribute : Attribute
+	public PropertyAttribute() {}
+
+	public PropertyAttribute(string name, string category = null, string description = null)
 	{
-		public PropertyAttribute() {}
-
-		public PropertyAttribute(string name) : this(name, null)
-		{
-		}
-
-		public PropertyAttribute(string name, string category) : this(name, category, null)
-		{
-			
-		}
-
-		public PropertyAttribute(string name, string category, string description)
-		{
-			Ignore = false;
-			Name = name;
-			Category = category;
-			Description = description;
-		}
-
-		public bool Ignore { get; set; }
-
-		public string Name { get; set; }
-
-		public string FormatString { get; set; }
-
-		public string Category { get; set; }
-
-		public string Description { get; set; }
-
-		private bool _allowSet;
-		public bool AllowSet
-		{
-			get { return _allowSet; }
-			set
-			{
-				_allowSet = value;
-				AllowSetSpecified = true;
-			}
-		}
-
-		internal bool AllowSetSpecified { get; private set; }
+		Ignore = false;
+		Name = name;
+		Category = category;
+		Description = description;
 	}
+
+	public bool Ignore { get; set; }
+
+	public string Name { get; set; }
+
+	public string FormatString { get; set; }
+
+	public string Category
+	{
+		get => string.IsNullOrWhiteSpace(field) ? "General" : field;
+		set => field = value;
+	}
+
+	public string Description { get; set; }
+
+	private bool _allowSet;
+	public bool AllowSet
+	{
+		get { return _allowSet; }
+		set
+		{
+			_allowSet = value;
+			AllowSetSpecified = true;
+		}
+	}
+
+	internal bool AllowSetSpecified { get; private set; }
 }

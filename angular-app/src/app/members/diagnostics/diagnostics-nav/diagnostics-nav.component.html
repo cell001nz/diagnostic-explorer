@@ -1,0 +1,18 @@
+
+    <p-table [value]="processes()" [scrollable]="true" scrollHeight="100%" size="small">
+        <ng-template #header>
+            <tr>
+                <th class="w-full">Process</th>
+                <th class="w-auto">Machine</th>
+                <th class="w-auto">User</th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-process let-ri="rowIndex">
+            <tr [routerLink]="process.id" class="cursor-pointer" [class.text-lime-500!]="process.state == 'Online'"
+                pTooltip="Sending: {{process.isSending}} last online: {{process.lastOnline | dateDiff}}">
+                <td class="text-nowrap">{{ process.name }}</td>
+                <td class="text-nowrap">{{ process.machineName }}</td>
+                <td class="text-nowrap">{{ process.userName }}</td>
+            </tr>
+        </ng-template>
+    </p-table>

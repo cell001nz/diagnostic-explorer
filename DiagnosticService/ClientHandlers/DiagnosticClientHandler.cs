@@ -13,18 +13,17 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace DiagWebService.ClientHandlers;
 
-public class DiagnosticClientHandler : HubProxyBase, IDiagnosticClient
+public class DiagnosticClientHandler : IDiagnosticClient
 {
-    private readonly IDiagnosticHubClient _client;
+    private readonly IHubContext<DiagnosticHub, IDiagnosticHubClient> _hubContext;
     private readonly HubCallerContext _callerContext;
     public event EventHandler Disconnected;
     public Subject<SystemEvent[]> EventsSet { get; } = new();
     public Subject<SystemEvent[]> EventsStreamed { get; } = new();
 
-    public DiagnosticClientHandler(HubCallerContext callerContext, IDiagnosticHubClient client, AsyncResultBucket responses)
-        : base(responses)
+    public DiagnosticClientHandler(HubCallerContext callerContext, IHubContext<DiagnosticHub, IDiagnosticHubClient> hubContext)
     {
-        _client = client;
+        _hubContext = hubContext;
         _callerContext = callerContext;
         ConnectionId = callerContext.ConnectionId;
         _callerContext.ConnectionAborted.Register(() => Disconnected?.Invoke(this, EventArgs.Empty));
@@ -32,30 +31,40 @@ public class DiagnosticClientHandler : HubProxyBase, IDiagnosticClient
 
     public string ConnectionId { get; }
 
+    /// <summary>
+    /// Resolves a fresh strongly-typed proxy for this connection on every call.
+    /// We must never cache <c>Clients.Caller</c>: while a connection runs
+    /// <c>OnConnectedAsync</c> it is a "NotAllowed" proxy, and invoking a client
+    /// result on it later throws "Client results inside OnConnectedAsync Hub methods
+    /// are not allowed". Resolving via <see cref="IHubContext{THub,T}"/> always yields
+    /// an invoke-allowed proxy.
+    /// </summary>
+    private IDiagnosticHubClient Client => _hubContext.Clients.Client(ConnectionId);
+
     public async Task<DiagnosticResponse> GetDiagnostics(CancellationToken cancel)
     {
-        byte[] data = await SendRequest<byte[]>(cancel, requestId => _client.GetDiagnostics(requestId));
+        byte[] data = await Client.GetDiagnostics();
         return ProtobufUtil.Decompress<DiagnosticResponse>(data);
     }
 
     public Task<OperationResponse> SetProperty(string path, string value)
     {
-        return SendRequest<OperationResponse>(CancellationToken.None, requestId => _client.SetProperty(requestId, path, value));
+        return Client.SetProperty(Guid.NewGuid().ToString("N"), path, value);
     }
 
     public Task<OperationResponse> ExecuteOperation(string path, string operation, string[] arguments)
     {
-        return SendRequest<OperationResponse>(CancellationToken.None, requestId => _client.ExecuteOperation(requestId, path, operation, arguments));
+        return Client.ExecuteOperation(Guid.NewGuid().ToString("N"), path, operation, arguments);
     }
 
     public async Task SubscribeEvents()
     {
-        await _client.SubscribeEvents();
+        await Client.SubscribeEvents();
     }
 
     public async Task UnsubscribeEvents()
     {
-        await _client.UnsubscribeEvents();
+        await Client.UnsubscribeEvents();
     }
 
     public void SetEvents(SystemEvent[] events)

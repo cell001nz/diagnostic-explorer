@@ -26,89 +26,58 @@ using System;
 using log4net.Appender;
 using log4net.Core;
 
-namespace DiagnosticExplorer.Log4Net
+namespace DiagnosticExplorer.Log4Net;
+
+public class DiagnosticAppender : AppenderSkeleton
 {
-	public class DiagnosticAppender : AppenderSkeleton
+	private EventSink _sink;
+	private const int MaxMsgLength = 150;
+	private const string appenderKey = "DiagnosticAppenderHandled";
+
+	public DiagnosticAppender()
 	{
-		private EventSink _sink;
-		private const int MaxMsgLength = 150;
-		private const string appenderKey = "DiagnosticAppenderHandled";
+		SinkName = "System";
+		SinkCategory = "System";
+		ExcludeAlreadyLogged = true;
+	}
 
-		public DiagnosticAppender()
+	public bool ExcludeAlreadyLogged { get; set; }
+
+	public string SinkName { get; set; }
+
+	public string SinkCategory { get; set; }
+
+	protected override void Append(LoggingEvent loggingEvent)
+	{
+		_sink ??= EventSinkRepo.Default.GetSink(SinkName, SinkCategory);
+
+		if (ExcludeAlreadyLogged)
 		{
-			SinkName = "System";
-			SinkCategory = "System";
-			ExcludeAlreadyLogged = true;
+			if (loggingEvent.Properties.Contains(appenderKey))
+				return;
+
+			loggingEvent.Properties[appenderKey] = true;
 		}
 
-		public bool ExcludeAlreadyLogged { get; set; }
+		string detail = RenderLoggingEvent(loggingEvent);
+		if (!ReferenceEquals(loggingEvent.MessageObject, loggingEvent.ExceptionObject))
+			detail += Environment.NewLine + loggingEvent.ExceptionObject;
 
-		public string SinkName { get; set; }
+		string message = GetMessage(loggingEvent);
 
-		public string SinkCategory { get; set; }
+		_sink.LogEvent(loggingEvent.Level.ToMicrosoftOrdinal(), message, detail);
+	}
 
-		protected override void Append(LoggingEvent loggingEvent)
-		{
-            _sink ??= EventSinkRepo.Default.GetSink(SinkName, SinkCategory);
-
-			if (ExcludeAlreadyLogged)
-			{
-				if (loggingEvent.Properties.Contains(appenderKey))
-					return;
-
-				loggingEvent.Properties[appenderKey] = true;
-			}
-
-			string detail = RenderLoggingEvent(loggingEvent);
-			if (!ReferenceEquals(loggingEvent.MessageObject, loggingEvent.ExceptionObject))
-				detail += Environment.NewLine + loggingEvent.ExceptionObject;
-
-			string message = GetMessage(loggingEvent);
-
-			_sink.LogEvent(loggingEvent.Level.Value, message, detail);
-		}
-
-		private string GetMessage(LoggingEvent loggingEvent)
-		{
-			string message = loggingEvent.RenderedMessage;
-			int index = message.IndexOf("\n");
-			if (index != -1)
-				message = message.Substring(0, index);
+	private string GetMessage(LoggingEvent loggingEvent)
+	{
+		string message = loggingEvent.RenderedMessage;
+		int index = message.IndexOf("\n");
+		if (index != -1)
+			message = message.Substring(0, index);
 				
-			if (message.Length > MaxMsgLength)
-				message = message.Substring(0, MaxMsgLength) + "...";
+		if (message.Length > MaxMsgLength)
+			message = message.Substring(0, MaxMsgLength) + "...";
 
-			return message;
-		}
-
-		private EventSeverity GetSeverity(Level level)
-		{
-			switch (level.Name.ToUpper())
-			{
-				case "ALL":
-				case "TRACE":
-				case "DEBUG":
-				case "FINE":
-				case "FINER":
-				case "FINEST":
-				case "INFO":
-                case "VERBOSE":
-				case "OFF":
-					return EventSeverity.Low;
-
-				case "WARN":
-					return EventSeverity.Medium;
-
-				case "CRITICAL":
-				case "EMERGENCY":
-				case "ERROR":
-				case "FATAL":
-				case "SEVERE":
-					return EventSeverity.High;
-
-				default:
-					return EventSeverity.High;
-			}
-		}
+		return message;
 	}
 }

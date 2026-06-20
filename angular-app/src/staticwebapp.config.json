@@ -1,0 +1,49 @@
+{
+  "navigationFallback": {
+    "rewrite": "index.html",
+    "exclude": [
+      "/*.{png,jpg,gif,ico,svg}",
+      "/images/*.{png,jpg,gif,ico,svg}",
+      "/css/*",
+      "/api/*"
+    ]
+  },
+  "routes": [   
+    {
+      "route": "/admin/*",
+      "allowedRoles": [
+        "admin"       
+      ]
+    },
+    {
+      "route": "/api/diagnostics/*",
+      "allowedRoles": [
+        "anonymous"
+      ]
+    },
+    {
+      "route": "/api/Account/Status",
+      "allowedRoles": [
+        "anonymous"
+      ]
+    },
+    {
+      "route": "/api/*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    },
+    {
+      "route": "/app/*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    }
+  ],
+  "responseOverrides": {
+     "401": {
+      "redirect": "/login?post_login_redirect_uri=.referrer",
+      "statusCode": 302
+  }
+  }
+}

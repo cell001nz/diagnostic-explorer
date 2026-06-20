@@ -1,0 +1,66 @@
+<!--<div class="h-full">-->
+@for (bag of category().bags(); track bag.name()) {
+    <p-panel [toggleable]="true" [collapsed]="bag.isCollapsed()" class="mb-4 no-toggle-panel">
+         <ng-template #header>
+             <div class="flex-1 cursor-pointer select-none" (click)="bag.toggleCollapsed()">
+                 {{bag.name()}}
+                 @if (bag.operationSet()) {
+                     <span class="text-yellow-500 ml-1 cursor-pointer"
+                           title="Has executable operations"
+                           (click)="showOperationsDialog(bag.getOperationSet()!, bag.getOperationPath()); $event.stopPropagation()">&#9733;</span>
+                 }
+             </div>
+         </ng-template>
+        @for (subBag of bag.subBags(); track subBag.name()) {
+            
+            <div class="mb-4 last:mb-0">
+                <p-fieldset [toggleable]="false">
+                    <ng-template #header>
+                        <div>
+                            {{subBag.name()}}
+                            @if (subBag.operationSet()) {
+                                <span class="text-yellow-500 ml-1 cursor-pointer" title="Has executable operations"
+                                      (click)="showOperationsDialog(subBag.getOperationSet()!, subBag.getOperationPath()); $event.stopPropagation()">&#9733;</span>
+                            }
+                        </div>
+                    </ng-template>
+                    
+                    <div class="ml-4 grid grid-cols-[200px_1fr] lg:grid-cols-[200px_1fr_200px_1fr] gap-x-2 gap-y-2 ">
+                    @for (prop of subBag.properties(); track prop.name()) {
+                        
+                       <span class="text-blue-400 text-s my-1"
+                             [class.text-stone-500]="!prop.canSet()"
+                             [class.text-text-blue-400-500]="prop.canSet()"
+                                [class.cursor-pointer]="prop.canSet()"
+                             
+                             (click)="showSetPropertyDialog(prop)">{{ prop.name() }}
+                        @if (prop.operationSet())                         {
+                                <span class="text-yellow-500 ml-1 cursor-pointer" title="Has executable operations"
+                                      (click)="showOperationsDialog(prop.getOperationSet()!, prop.getOperationPath()); $event.stopPropagation()">&#9733;</span>
+                        }
+                        </span>                       
+                        
+                        
+<!--                    <button *ngIf="prop.canSet" class="text-blue-500 text-xs text-left"-->
+<!--                            (click)="showSetPropertyDialog(prop)">{{ prop.name }}-->
+<!--                    </button>-->
+<!--                    <span class="prop-value" (dblclick)="handleDoubleClick(prop, $event)"-->
+<!--                          [matTooltip]="prop.value" [matTooltipShowDelay]="0" matTooltipPosition="below"-->
+<!--                          matTooltipClass="tooltips">{{ prop.value }}</span>-->
+                        <span class="text-lime-500 text-s my-1">{{ prop.value() }}</span>
+                    }
+            </div>
+                    
+                </p-fieldset>      
+            </div>
+        }
+        
+    </p-panel>
+}
+
+
+@for (sink of category().eventSinks(); track sink.name) {
+    <app-event-sink-view [sink]="sink" (eventSelected)="eventSelected.emit($event)" />
+}
+
+<!--</div>-->

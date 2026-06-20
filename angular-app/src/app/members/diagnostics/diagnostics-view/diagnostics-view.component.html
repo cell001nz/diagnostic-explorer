@@ -1,0 +1,52 @@
+@if (process()) {
+<div class="grid grid-rows-[auto_1fr_auto] h-full">
+
+    <div>
+        
+        <p class="float-left" (click)="expandCollapse()">
+            {{process()?.machineName}} 
+            / {{process()?.name}}
+            <span class="text-xs">({{process()?.id}})</span>
+        </p>
+
+        <span class="text-lime-500 float-right opacity-70 hover:opacity-100">
+            <span class="mr-6">{{processModel().titleMessage()}}</span>
+        </span>
+    </div>
+
+    <div class="tabs-right overflow-hidden">
+        
+        @if (realtime && process()) {
+            
+            @if (processModel().categories().length) {
+           <p-tabs [(value)]="processModel().activeCatName" class="h-full max-h-[calc(100vh-120px)]">
+               <p-tablist>
+                 @for (cat of processModel().categories(); track cat.name()) {
+                    <p-tab [value]="cat.name()">
+                        <span class="alert-pill" [class]="cat.labelClass()"></span>
+                        {{ cat.name() }}
+                    </p-tab>
+                 }
+               </p-tablist>
+               <p-tabpanels>
+                @for (cat of processModel().categories(); track cat.name()) {
+                    <p-tabpanel [value]="cat.name()" class="">
+                        <div class=" overflow-y-auto">
+                            <app-category-view [category]="cat" [process]="process()!"
+                                               (eventSelected)="onEventSelected($event)" />
+                        </div>
+                    </p-tabpanel>   
+                }
+               </p-tabpanels>
+            </p-tabs>
+            }
+        }
+    </div>
+
+    @if (selectedEvent()) {
+        <div class="detail-panel-row">
+            <app-event-detail-panel [event]="selectedEvent()!" (closed)="closeDetail()" />
+        </div>
+    }
+</div>
+}

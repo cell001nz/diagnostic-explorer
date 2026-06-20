@@ -14,17 +14,20 @@ public class DiagnosticHub : Hub<IDiagnosticHubClient>, IDiagnosticHubServer
     private static readonly ILog _log = LogManager.GetLogger(typeof(DiagnosticHub));
     private readonly RealtimeManager _rtManager;
     private readonly RetroManager _retroManager;
-    private static readonly AsyncResultBucket _clientResponses = new();
+    private readonly IHubContext<DiagnosticHub, IDiagnosticHubClient> _hubContext;
 
-    public DiagnosticHub(RealtimeManager rtManager, RetroManager retroManager)
+    public DiagnosticHub(RealtimeManager rtManager, RetroManager retroManager, IHubContext<DiagnosticHub, IDiagnosticHubClient> hubContext)
     {
         _rtManager = rtManager;
         _retroManager = retroManager;
+        _hubContext = hubContext;
     }
 
     public override Task OnConnectedAsync()
     {
-        _rtManager.AddDiagnosticClient(new DiagnosticClientHandler(Context, Clients.Caller, _clientResponses));
+        // Pass the hub context (NOT Clients.Caller) so the handler can resolve a fresh,
+        // invoke-allowed proxy at call time and use SignalR client results.
+        _rtManager.AddDiagnosticClient(new DiagnosticClientHandler(Context, _hubContext));
         return base.OnConnectedAsync();
     }
 
@@ -85,23 +88,6 @@ public class DiagnosticHub : Hub<IDiagnosticHubClient>, IDiagnosticHubServer
         }
     }
 
-    public Task GetDiagnosticsReturn(RpcResult<byte[]> response)
-    {
-        _clientResponses.SetResult(response, response.Response);
-        return Task.CompletedTask;
-    }
-
-    public Task ExecuteOperationReturn(RpcResult<OperationResponse> response)
-    {
-        _clientResponses.SetResult(response, response.Response);
-        return Task.CompletedTask;
-    }
-
-    public Task SetPropertyReturn(RpcResult<OperationResponse> response)
-    {
-        _clientResponses.SetResult(response, response.Response);
-        return Task.CompletedTask;
-    }
 
     public Task SetEvents(SystemEvent[] events)
     {

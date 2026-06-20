@@ -27,138 +27,137 @@ using System.ComponentModel;
 using System.Drawing;
 using DiagnosticExplorer;
 
-namespace WidgetSample
+namespace WidgetSample;
+
+//Widget uses the DiagnosticManager.RegisterAsync method of registering itself with diagnostics
+public class Widget : IDisposable, INotifyPropertyChanged
 {
-	//Widget uses the DiagnosticManager.RegisterAsync method of registering itself with diagnostics
-	public class Widget : IDisposable, INotifyPropertyChanged
+	private static readonly Random _rand = new Random();
+	private static readonly string[] _names = new[] {"Widget X", "Widget Y", "Widget Z", "Widget W"};
+	private readonly int _id;
+	private DateTime _dateCreated;
+	private string _name;
+	private Point _size;
+
+	public Widget(int id)
 	{
-		private static readonly Random _rand = new Random();
-		private static readonly string[] _names = new[] {"Widget X", "Widget Y", "Widget Z", "Widget W"};
-		private readonly int _id;
-		private DateTime _dateCreated;
-		private string _name;
-		private Point _size;
+		_id = id;
 
-		public Widget(int id)
+		Randomise();
+		string bagName = $"Widget {_id}";
+		DiagnosticManager.Register(this, bagName, "Widgets");
+	}
+
+	public int Id
+	{
+		get { return _id; }
+	}
+
+	public string FullName => $"{Name}({_id})";
+
+	[DiagnosticMethod]
+	public void Randomise()
+	{
+		Name = _names[_rand.Next(0, _names.Length)];
+		DateCreated = DateTime.Now.AddMinutes(_rand.Next(0, 10000));
+		Size = new Point(_rand.Next(), _rand.Next());
+	}
+
+	[DiagnosticMethod]
+	public void Clear()
+	{
+		Name = null;
+		DateCreated = DateTime.Now;
+	}
+
+	[Property(Ignore = true)]
+	public string IgnoredProperty
+	{
+		get { return "This value will not be exposed in diagnostics"; }
+	}
+
+	[Property(AllowSet = true)]
+	public string Name
+	{
+		get { return _name; }
+		set
 		{
-			_id = id;
-
-			Randomise();
-			string bagName = $"Widget {_id}";
-			DiagnosticManager.Register(this, bagName, "Widgets");
+			_name = value;
+			OnPropertyChanged("Name");
 		}
+	}
 
-		public int Id
+	[Property(AllowSet = true, FormatString = "{0:d MMM yyyy HH:mm:ss}", Category = "Info")]
+	public DateTime DateCreated
+	{
+		get { return _dateCreated; }
+		set
 		{
-			get { return _id; }
+			_dateCreated = value;
+			OnPropertyChanged("DateCreated");
 		}
+	}
 
-        public string FullName => $"{Name}({_id})";
-
-		[DiagnosticMethod]
-		public void Randomise()
+	[Property(AllowSet = true, FormatString = "Located at {0}", Category = "Info")]
+	public Point Size
+	{
+		get { return _size; }
+		set
 		{
-			Name = _names[_rand.Next(0, _names.Length)];
-			DateCreated = DateTime.Now.AddMinutes(_rand.Next(0, 10000));
-			Size = new Point(_rand.Next(), _rand.Next());
+			_size = value;
+			OnPropertyChanged("Size");
 		}
+	}
 
-		[DiagnosticMethod]
-		public void Clear()
-		{
-			Name = null;
-			DateCreated = DateTime.Now;
-		}
+	#region IDisposable Members
 
-		[Property(Ignore = true)]
-		public string IgnoredProperty
-		{
-			get { return "This value will not be exposed in diagnostics"; }
-		}
+	public void Dispose()
+	{
+		Dispose(true);
+	}
 
-		[Property(AllowSet = true)]
-		public string Name
-		{
-			get { return _name; }
-			set
-			{
-				_name = value;
-				OnPropertyChanged("Name");
-			}
-		}
+	#endregion
 
-		[Property(AllowSet = true, FormatString = "{0:d MMM yyyy HH:mm:ss}", Category = "Info")]
-		public DateTime DateCreated
-		{
-			get { return _dateCreated; }
-			set
-			{
-				_dateCreated = value;
-				OnPropertyChanged("DateCreated");
-			}
-		}
+	#region INotifyPropertyChanged Members
 
-		[Property(AllowSet = true, FormatString = "Located at {0}", Category = "Info")]
-		public Point Size
-		{
-			get { return _size; }
-			set
-			{
-				_size = value;
-				OnPropertyChanged("Size");
-			}
-		}
+	public event PropertyChangedEventHandler PropertyChanged;
 
-		#region IDisposable Members
+	#endregion
 
-		public void Dispose()
-		{
-			Dispose(true);
-		}
+	~Widget()
+	{
+		Dispose(false);
+	}
 
-		#endregion
+	private void OnPropertyChanged(string propertyName)
+	{
+		if (PropertyChanged != null)
+			PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+	}
 
-		#region INotifyPropertyChanged Members
+	protected void Dispose(bool disposing)
+	{
+		if (disposing)
+			DiagnosticManager.Unregister(this);
+	}
 
-		public event PropertyChangedEventHandler PropertyChanged;
+	public override string ToString()
+	{
+		return string.Format("Widget {0} ({1})", Id, Size);
+	}
 
-		#endregion
+	[DiagnosticMethod]
+	public void Reset()
+	{
+		Name = null;
+		Size = new Point(0, 0);
+		DateCreated = new DateTime(2000, 1, 1);
+	}
 
-		~Widget()
-		{
-			Dispose(false);
-		}
-
-		private void OnPropertyChanged(string propertyName)
-		{
-			if (PropertyChanged != null)
-				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-		}
-
-		protected void Dispose(bool disposing)
-		{
-			if (disposing)
-				DiagnosticManager.Unregister(this);
-		}
-
-		public override string ToString()
-		{
-			return string.Format("Widget {0} ({1})", Id, Size);
-		}
-
-		[DiagnosticMethod]
-		public void Reset()
-		{
-			Name = null;
-			Size = new Point(0, 0);
-			DateCreated = new DateTime(2000, 1, 1);
-		}
-
-		[DiagnosticMethod]
-		public void Reset(string name, DateTime dateCreated)
-		{
-			Name = name;
-			DateCreated = dateCreated;
-		}
+	[DiagnosticMethod]
+	public void Reset(string name, DateTime dateCreated)
+	{
+		Name = name;
+		DateCreated = dateCreated;
 	}
 }

@@ -26,50 +26,49 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace DiagnosticExplorer
-{
-	internal class RateGetter : PropertyGetter
-	{
-		private readonly bool _exposeRate = true;
-		private readonly bool _exposeTotal = false;
+namespace DiagnosticExplorer;
 
-		public RateGetter(PropertyInfo prop, RatePropertyAttribute attr, bool isStatic) : base(prop, isStatic)
+internal class RateGetter : PropertyGetter
+{
+	private readonly bool _exposeRate = true;
+	private readonly bool _exposeTotal = false;
+
+	public RateGetter(PropertyInfo prop, RatePropertyAttribute attr, bool isStatic) : base(prop, isStatic)
+	{
+		if (attr != null)
 		{
-			if (attr != null)
-			{
-				_exposeRate = attr.ExposeRate;
-				_exposeTotal = attr.ExposeTotal;
-				Description = attr.Description;
-			}
+			_exposeRate = attr.ExposeRate;
+			_exposeTotal = attr.ExposeTotal;
+			Description = attr.Description;
+		}
+	}
+
+	public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+	{
+		RateCounter rateCounter = (RateCounter)GetFunc(obj);
+
+		if (_exposeRate)
+		{
+			double? rate = rateCounter == null ? (double?)null : rateCounter.Rate;
+			string val = rate == null ? "" : rate.Value.ToString("N2");
+			Property property = new Property(Name + "/sec", val, Description);
+			property.SourceProperty = PropInfo;
+			property.SourceObject = rateCounter;
+			property.ValueObject = rate;
+
+			bag.AddProperty(property, PrependToCategory(catPrepend));
 		}
 
-		public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+		if (_exposeTotal)
 		{
-			RateCounter rateCounter = (RateCounter)GetFunc(obj);
-
-			if (_exposeRate)
-			{
-				double? rate = rateCounter == null ? (double?)null : rateCounter.Rate;
-				string val = rate == null ? "" : rate.Value.ToString("N2");
-				Property property = new Property(Name + "/sec", val, Description);
-				property.SourceProperty = PropInfo;
-				property.SourceObject = rateCounter;
-				property.ValueObject = rate;
-
-				bag.AddProperty(property, PrependToCategory(catPrepend));
-			}
-
-			if (_exposeTotal)
-			{
-				ulong? total = rateCounter == null ? (ulong?) null : rateCounter.Total;
-				string val = total == null ? "" : total.ToString();
-				Property property = new Property("Total " + Name, val);
-				property.SourceProperty = PropInfo;
-				property.SourceObject = rateCounter;
-				property.ValueObject = total;
+			ulong? total = rateCounter == null ? (ulong?) null : rateCounter.Total;
+			string val = total == null ? "" : total.ToString();
+			Property property = new Property("Total " + Name, val);
+			property.SourceProperty = PropInfo;
+			property.SourceObject = rateCounter;
+			property.ValueObject = total;
 				
-				bag.AddProperty(property, PrependToCategory(catPrepend));
-			}
+			bag.AddProperty(property, PrependToCategory(catPrepend));
 		}
 	}
 }

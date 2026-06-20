@@ -26,7 +26,7 @@ internal class Program
         {
             // DiagnosticHostingService.Start("http://localhost:2803/diagnostics");
             // DiagnosticHostingService.Start("http://localhost:5000/diagnostics");
-            DiagnosticHostingService.Start("http://localhost:2804/diagnostics, http://localhost:6002/diagnostics");
+            DiagnosticHostingService.Start("http://localhost:2803/diagnostics, http://localhost:6001/diagnostics");
             // DiagnosticHostingService.Start("https://localhost:7097/diagnostics");
             // DiagnosticHostingService.Start("http://localhost/api/diagnostics");
             Console.WriteLine("Diagnostics started");

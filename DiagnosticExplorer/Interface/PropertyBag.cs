@@ -29,65 +29,64 @@ using System.Linq;
 using DiagnosticExplorer;
 using ProtoBuf;
 
-namespace DiagnosticExplorer
+namespace DiagnosticExplorer;
+
+[ProtoContract(UseProtoMembersOnly = true)]
+public class PropertyBag
 {
-	[ProtoContract(UseProtoMembersOnly = true)]
-	public class PropertyBag
+
+	public PropertyBag()
 	{
+		Categories = new List<Category>();
+	}
 
-		public PropertyBag()
+	public PropertyBag(string name) : this()
+	{
+		Name = name;
+	}
+
+	public PropertyBag(string name, string category) : this(name)
+	{
+		Category = category;
+	}
+
+	public void AddProperty(Property property, string category)
+	{
+		if (property == null) throw new ArgumentNullException(nameof(property));
+
+		Category cat = FindOrCreateCategory(category);
+		cat.Properties.Add(property);
+	}
+
+	public Category FindOrCreateCategory(string category)
+	{
+		Category cat = Categories.FindByName(category);
+		if (cat == null)
 		{
-			Categories = new List<Category>();
+			cat = new Category(category);
+			Categories.Add(cat);
 		}
-
-		public PropertyBag(string name) : this()
-		{
-			Name = name;
-		}
-
-		public PropertyBag(string name, string category) : this(name)
-		{
-			Category = category;
-		}
-
-		public void AddProperty(Property property, string category)
-		{
-			if (property == null) throw new ArgumentNullException(nameof(property));
-
-			Category cat = FindOrCreateCategory(category);
-			cat.Properties.Add(property);
-		}
-
-		public Category FindOrCreateCategory(string category)
-		{
-			Category cat = Categories.FindByName(category);
-			if (cat == null)
-			{
-				cat = new Category(category);
-				Categories.Add(cat);
-			}
-			return cat;
-		}
+		return cat;
+	}
 
 
-		[ProtoMember(1)]
-		public string Name { get; set; }
+	[ProtoMember(1)]
+	public string Name { get; set; }
 
-		[ProtoMember(2)]
-		public string Category { get; set; }
+	[ProtoMember(2)]
+	public string Category { get; set; }
 
-		[ProtoMember(3)]
-		public string OperationSet { get; set; }
+	[ProtoMember(3)]
+	public string OperationSet { get; set; }
 
-		[ProtoMember(4)]
-		public List<Category> Categories { get; set; }
+	[ProtoMember(4)]
+	public List<Category> Categories { get; set; }
 
-		public object SourceObject { get; set; }
+	public object SourceObject { get; set; }
 
-		public Property GetProperty(string name, string category = null)
-		{
-			Category cat = Categories.FindByName(category);
-			return cat?.Properties.FindByName(name);
-		}
+	public Property GetProperty(string name, string category = null)
+	{
+		Category cat = Categories.FindByName(category);
+		return cat?.Properties.FindByName(name);
 	}
 }

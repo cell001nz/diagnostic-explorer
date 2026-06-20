@@ -1,0 +1,7 @@
+/* You can add global styles to this file, and also import other style files */
+//@use "tailwindcss";
+@use './assets/layout/layout.scss';
+
+.no-toggle-panel .p-panel-toggle-button {
+    display: none !important;
+}

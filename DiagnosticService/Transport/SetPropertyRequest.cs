@@ -1,8 +1,9 @@
-﻿namespace Diagnostics.Service.Common.Transport;
+﻿
+namespace Diagnostics.Service.Common.Transport;
 
 public class SetPropertyRequest
 {
-    public string Id { get; set; }
+    public string ProcessId { get; set; }
 
     public string Path { get; set; }
 

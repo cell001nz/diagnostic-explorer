@@ -1,0 +1,75 @@
+﻿<p-panel [toggleable]="true" [collapsed]="sink().isCollapsed()" class="mb-4 no-toggle-panel">
+    <ng-template #header>
+        <div class="flex items-center w-full gap-2 min-w-0">
+            <!-- Sink name — click to collapse/expand -->
+            <div class="flex-1 cursor-pointer select-none truncate" (click)="sink().toggleCollapsed()">
+                {{sink().name}}
+            </div>
+
+            <!-- Flyout filter panel (inline, one row) -->
+            <div class="sink-filter-flyout" [class.sink-filter-flyout--open]="sink().filtersVisible()">
+                @if (sink().filtersVisible()) {
+                    <div class="sink-filter-controls" (click)="$event.stopPropagation()">
+                        <!-- Text filter -->
+                        <input pInputText
+                               class="sink-filter-input"
+                               placeholder="Filter…"
+                               [value]="sink().filterText()"
+                               (input)="onFilterTextChange($any($event.target).value)" />
+
+                        <!-- Level slider -->
+                        <div class="sink-level-slider-wrap" title="Min level: {{getLevelLabel(sink().minLevel())}}">
+                            <span class="sink-level-label mr-2">{{getLevelLabel(sink().minLevel())}}</span>
+                            <p-slider
+                                class="sink-level-slider mr-4"
+                                [min]="0" [max]="7" [step]="1"
+                                [ngModel]="sink().minLevel()"
+                                (onChange)="onMinLevelChange($any($event).value)"
+                                (click)="$event.stopPropagation()"></p-slider>
+                        </div>
+                    </div>
+                }
+
+                <!-- Toggle button -->
+                <button class="sink-filter-toggle"
+                        title="Filter events"
+                        (click)="sink().toggleFilters(); $event.stopPropagation()"
+                        [class.sink-filter-toggle--active]="sink().filtersVisible() || sink().filterText() || sink().minLevel() > 0">
+                    <i class="pi pi-filter"></i>
+                </button>
+            </div>
+        </div>
+    </ng-template>
+
+    <div class="h-[300px] overflow-y-auto border border-gray-700 rounded"
+         (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
+        <table class="w-full border-collapse text-sm">
+            <thead class="sticky top-0 bg-gray-800 z-10">
+                <tr>
+                    <th class="p-2 text-left w-20">Id</th>
+                    <th class="p-2 text-left w-44 whitespace-nowrap">Date</th>
+                    <th class="p-2 text-left w-20">Level</th>
+                    <th class="p-2 text-left">Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (event of sink().filteredEvents(); track event.id) {
+                    <tr class="border-b border-gray-700 event-row-{{event.level | levelToString | lowercase }} cursor-pointer"
+                        [class.event-row-selected]="event.isSelected"
+                        (mousedown)="onRowMouseDown(event)"
+                        (mouseover)="onRowMouseOver(event)">
+                        <td class="p-2">{{ event.id }}</td>
+                        <td class="p-2 whitespace-nowrap">{{ event.date | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+                        <td class="p-2">{{ event.level | levelToString }}</td>
+                        <td class="p-2">{{ event.message }}</td>
+                    </tr>
+                } @empty {
+                    <tr>
+                        <td colspan="4" class="p-4 text-center text-gray-500">No events</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</p-panel>
+

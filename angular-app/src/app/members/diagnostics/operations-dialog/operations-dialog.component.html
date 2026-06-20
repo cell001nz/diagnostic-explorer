@@ -1,0 +1,183 @@
+<div class="flex items-center justify-between mb-3 mt-4">
+    <span class="text-lg font-semibold">Operations</span>
+    <span class="text-xs text-gray-400">{{ path() }}</span>
+</div>
+@if (operationViewModels().length === 0) {
+    <div class="flex flex-col items-center gap-4 p-4">
+        <p class="text-gray-500">No operations available.</p>
+        <button pButton size="small" severity="secondary" (click)="onClose()">Close</button>
+    </div>
+} @else {
+    <div class="flex gap-4 min-h-[300px]">
+
+        <!-- Left: operation list -->
+        <div class="w-1/3 border-r border-gray-700 pr-3 overflow-y-auto"
+             [class.opacity-50]="busy()"
+             [class.pointer-events-none]="busy()">
+            <ul class="flex flex-col gap-1">
+                @for (vm of operationViewModels(); track vm.operation.signature) {
+                    <li class="px-3 py-2 rounded cursor-pointer text-sm transition-colors"
+                        [class.bg-blue-900]="selectedOperation() === vm"
+                        [class.text-white]="selectedOperation() === vm"
+                        [class.hover:bg-gray-800]="selectedOperation() !== vm"
+                        (click)="selectOperation(vm)">
+                        {{ vm.operation.signature }}
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <!-- Right: selected operation details -->
+        <div class="w-2/3 flex flex-col">
+            @if (selectedOperation(); as vm) {
+                <div class="flex-1 flex flex-col gap-3">
+                    <div>
+                        <span class="text-blue-400 font-semibold text-sm">{{ vm.operation.signature }}</span>
+                        @if (vm.operation.description) {
+                            <p class="text-gray-400 text-xs mt-1">{{ vm.operation.description }}</p>
+                        }
+                        @if (vm.operation.returnType) {
+                            <p class="text-gray-500 text-xs">Returns: {{ vm.operation.returnType }}</p>
+                        }
+                    </div>
+
+                    @if (vm.paramValues.length > 0) {
+                        <div class="flex flex-col gap-3 mt-2">
+                            @for (pv of vm.paramValues; track pv.param.name) {
+                                <div class="w-full">
+                                    @switch (pv.editorKind) {
+                                        @case ('int') {
+                                            <p-floatlabel variant="on" class="w-full">
+                                                <p-inputnumber
+                                                    [inputId]="'param_' + vm.operation.signature + '_' + pv.param.name"
+                                                    class="w-full"
+                                                    [styleClass]="'w-full'"
+                                                    [(ngModel)]="pv.numValue"
+                                                    [useGrouping]="false"
+                                                    mode="decimal"
+                                                    [maxFractionDigits]="0" />
+                                                <label [for]="'param_' + vm.operation.signature + '_' + pv.param.name">
+                                                    {{ pv.param.name }} ({{ pv.param.type }})
+                                                </label>
+                                            </p-floatlabel>
+                                        }
+                                        @case ('decimal') {
+                                            <p-floatlabel variant="on" class="w-full">
+                                                <p-inputnumber
+                                                    [inputId]="'param_' + vm.operation.signature + '_' + pv.param.name"
+                                                    class="w-full"
+                                                    [styleClass]="'w-full'"
+                                                    [(ngModel)]="pv.numValue"
+                                                    [useGrouping]="false"
+                                                    mode="decimal"
+                                                    [minFractionDigits]="1"
+                                                    [maxFractionDigits]="10" />
+                                                <label [for]="'param_' + vm.operation.signature + '_' + pv.param.name">
+                                                    {{ pv.param.name }} ({{ pv.param.type }})
+                                                </label>
+                                            </p-floatlabel>
+                                        }
+                                        @case ('date') {
+                                            <p-floatlabel variant="on" class="w-full">
+                                                <p-datepicker
+                                                    [inputId]="'param_' + vm.operation.signature + '_' + pv.param.name"
+                                                    [(ngModel)]="pv.dateValue"
+                                                    [styleClass]="'w-full'"
+                                                    [showTime]="false"
+                                                    dateFormat="yy-mm-dd"
+                                                    appendTo="body" />
+                                                <label [for]="'param_' + vm.operation.signature + '_' + pv.param.name">
+                                                    {{ pv.param.name }} ({{ pv.param.type }})
+                                                </label>
+                                            </p-floatlabel>
+                                        }
+                                        @case ('datetime') {
+                                            <p-floatlabel variant="on" class="w-full">
+                                                <p-datepicker
+                                                    [inputId]="'param_' + vm.operation.signature + '_' + pv.param.name"
+                                                    [(ngModel)]="pv.dateValue"
+                                                    [styleClass]="'w-full'"
+                                                    [showTime]="true"
+                                                    dateFormat="yy-mm-dd"
+                                                    appendTo="body" />
+                                                <label [for]="'param_' + vm.operation.signature + '_' + pv.param.name">
+                                                    {{ pv.param.name }} ({{ pv.param.type }})
+                                                </label>
+                                            </p-floatlabel>
+                                        }
+                                        @default {
+                                            <p-floatlabel variant="on" class="w-full">
+                                                <input pInputText
+                                                       [id]="'param_' + vm.operation.signature + '_' + pv.param.name"
+                                                       class="w-full"
+                                                       [(ngModel)]="pv.value"
+                                                       autocomplete="off" />
+                                                <label [for]="'param_' + vm.operation.signature + '_' + pv.param.name">
+                                                    {{ pv.param.name }} ({{ pv.param.type }})
+                                                </label>
+                                            </p-floatlabel>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <p class="text-gray-500 text-xs mt-2">No parameters required.</p>
+                    }
+                </div>
+
+                <!-- Status & Result -->
+                @if (status() !== 'idle') {
+                    <div class="mt-3 p-3 rounded border text-sm"
+                         [class.border-blue-500]="status() === 'executing'"
+                         [class.bg-blue-900/20]="status() === 'executing'"
+                         [class.border-green-500]="status() === 'success'"
+                         [class.bg-green-900/20]="status() === 'success'"
+                         [class.border-red-500]="status() === 'error'"
+                         [class.bg-red-900/20]="status() === 'error'"
+                         [class.border-yellow-500]="status() === 'timeout'"
+                         [class.bg-yellow-900/20]="status() === 'timeout'">
+                        <div class="font-semibold mb-1 flex items-center justify-between"
+                             [class.text-blue-400]="status() === 'executing'"
+                             [class.text-green-400]="status() === 'success'"
+                             [class.text-red-400]="status() === 'error'"
+                             [class.text-yellow-400]="status() === 'timeout'">
+                            <span>{{ statusMessage() }}</span>
+                            @if (result()?.result; as r) {
+                                <button type="button"
+                                        title="Copy to clipboard"
+                                        class="text-gray-500 hover:text-gray-300 transition-colors p-0.5 rounded cursor-pointer"
+                                        (click)="copyResult(r)">
+                                    <i class="pi pi-copy text-m"></i>
+                                </button>
+                            }
+                        </div>
+                        @if (result(); as res) {
+                            @if (res.result) {
+                                <div class="text-gray-300 text-xs mt-1">
+                                    <textarea readonly rows="4"
+                                              class="w-full mt-1 bg-transparent text-gray-300 text-m resize-none outline-none border-0 max-h-[250px] overflow-y-auto p-0"
+                                              >{{ res.result }}</textarea>
+                                </div>
+                            }
+                            @if (res.message) {
+                                <div class="text-gray-300 text-xs mt-1">
+                                    <span class="text-gray-500">Message:</span> {{ truncateMessage(res.message) }}
+                                </div>
+                            }
+                            @if (res.detail) {
+                                <div class="text-gray-400 text-xs mt-1 whitespace-pre-wrap max-h-[250px] overflow-y-auto">{{ res.detail }}</div>
+                            }
+                        }
+                    </div>
+                }
+
+                <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-700">
+                    <button pButton size="small" severity="secondary" (click)="onClose()">Close</button>
+                    <button pButton size="small" severity="success" [disabled]="busy()" (click)="onExecute(vm)">Execute</button>
+                </div>
+            }
+        </div>
+
+    </div>
+}

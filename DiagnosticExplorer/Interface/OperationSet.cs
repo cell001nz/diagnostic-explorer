@@ -2,21 +2,20 @@
 using System.Runtime.Serialization;
 using ProtoBuf;
 
-namespace DiagnosticExplorer
+namespace DiagnosticExplorer;
+
+[ProtoContract(UseProtoMembersOnly = true)]
+public class OperationSet
 {
-	[ProtoContract(UseProtoMembersOnly = true)]
-	public class OperationSet
+	public OperationSet()
 	{
-		public OperationSet()
-		{
-			Operations = new List<Operation>();
-		}
-
-		[ProtoMember(1)]
-		public string Id { get; set; }
-
-		[ProtoMember(2)]
-		public List<Operation> Operations { get; set; }
-
+		Operations = new List<Operation>();
 	}
+
+	[ProtoMember(1)]
+	public string Id { get; set; }
+
+	[ProtoMember(2)]
+	public List<Operation> Operations { get; set; }
+
 }

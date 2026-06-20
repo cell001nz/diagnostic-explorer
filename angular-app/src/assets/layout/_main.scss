@@ -1,0 +1,18 @@
+.layout-main-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    justify-content: space-between;
+    padding: 5rem 2rem 0 2rem;
+    transition: margin-left var(--layout-section-transition-duration);
+}
+
+.layout-main {
+    flex: 1 1 auto;
+    height: 100%;
+    //padding-bottom: 2rem;
+}
+
+.content-h-full {
+    height: calc(100vh - 6rem);
+}

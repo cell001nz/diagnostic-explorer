@@ -31,25 +31,23 @@ using System.Text.Json.Serialization;
 using DiagnosticExplorer.Util;
 
 
-namespace DiagnosticExplorer
+namespace DiagnosticExplorer;
+
+public class RegistrationResponse
 {
-
-	public class RegistrationResponse
+	public RegistrationResponse()
 	{
-        public RegistrationResponse()
-        {
-        }
-
-        public RegistrationResponse(TimeSpan renewTime)
-        {
-            RenewTimeSeconds = (int)renewTime.TotalSeconds;
-        }
-
-
-        [JsonConverter(typeof(JsonTimeSpanConverter))]
-        public TimeSpan RenewTime => TimeSpan.FromSeconds(RenewTimeSeconds);
-
-        public int RenewTimeSeconds { get; set; }
-
 	}
+
+	public RegistrationResponse(TimeSpan renewTime)
+	{
+		RenewTimeSeconds = (int)renewTime.TotalSeconds;
+	}
+
+
+	[JsonConverter(typeof(JsonTimeSpanConverter))]
+	public TimeSpan RenewTime => TimeSpan.FromSeconds(RenewTimeSeconds);
+
+	public int RenewTimeSeconds { get; set; }
+
 }

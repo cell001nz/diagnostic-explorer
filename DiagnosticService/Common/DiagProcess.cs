@@ -41,9 +41,9 @@ public class DiagProcess
 
     public string? InstanceId { get; set; }
 
-    public string? ProcessName { get; set; }
+    public string? Name { get; set; }
 
-    public int ProcessId { get; set; }
+    public int PID { get; set; }
 
     public string? MachineName { get; set; }
 
@@ -74,7 +74,7 @@ public class DiagProcess
     public override string ToString()
     {
         return
-            $"DiagProcess PID:{ProcessId} Process:{ProcessName}, State:{State}, LastOnline:{LastOnline}";
+            $"DiagProcess PID:{PID} Process:{Name}, State:{State}, LastOnline:{LastOnline}";
     }
 }
 
