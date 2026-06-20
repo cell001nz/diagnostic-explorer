@@ -4,34 +4,13 @@ import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { LayoutService } from '@services/layout.service';
 import {Toast} from "primeng/toast";
-import {AppMenuComponent} from "@app/members/app-menu/app-menu.component";
+import {AppMenuComponent} from "@app/app-menu/app-menu.component";
 
 @Component({
     selector: 'app-layout',
     standalone: true,
     imports: [CommonModule,  RouterModule, Toast, AppMenuComponent],
-    template: `<div class="layout-wrapper" [ngClass]="containerClass">
-        <p-toast />
-        <div class="flex w-full items-center layout-topbar text-xl gap-4 ">
-            <button class="cursor-pointer layout-menu-button" (click)="layoutService.onMenuToggle()">
-                <i class="pi pi-bars"></i>
-            </button>
-
-            <a class="flex-1 flex items-center gap-1" routerLink="/">
-                <i class="bi bi-bug text-xl hidden md:block"></i>
-                <span>Diagnostic Explorer</span>
-            </a>
-        </div>
-         <div class="layout-sidebar">
-            <app-menu></app-menu>
-        </div>
-        <div class="layout-main-container">
-            <div class="layout-main">
-                <router-outlet></router-outlet>
-            </div>
-        </div>
-        <div class="layout-mask animate-fadein"></div>
-    </div> `
+    templateUrl: './app.layout.html',
 })
 export class AppLayout {
     overlayMenuOpenSubscription: Subscription;

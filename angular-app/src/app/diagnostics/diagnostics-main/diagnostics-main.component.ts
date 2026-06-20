@@ -1,5 +1,5 @@
 import {Component, inject, input, OnDestroy} from '@angular/core';
-import {DiagnosticsNavComponent} from "@app/members/diagnostics/diagnostics-nav/diagnostics-nav.component";
+import {DiagnosticsNavComponent} from "@app/diagnostics/diagnostics-nav/diagnostics-nav.component";
 import {RouterOutlet} from "@angular/router";
 import {Divider} from "primeng/divider";
 

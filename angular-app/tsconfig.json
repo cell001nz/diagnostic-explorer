@@ -5,7 +5,7 @@
     "compilerOptions": {
         "baseUrl": "src",
         "paths": {
-          "@model/*": ["app/members/diagnostics/model/*"],
+          "@model/*": ["app/diagnostics/model/*"],
           "@domain/*": ["app/domain/*"],
           "@services/*": ["app/services/*"],
           "@pipes/*": ["app/pipes/*"],

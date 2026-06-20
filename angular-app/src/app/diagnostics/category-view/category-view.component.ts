@@ -5,11 +5,11 @@ import {PanelModule} from 'primeng/panel';
 import {Fieldset} from "primeng/fieldset";
 import {PropModel} from "@model/PropModel";
 import {DialogService} from "primeng/dynamicdialog";
-import {SetPropertyDialogComponent} from "@app/members/diagnostics/set-property-dialog/set-property-dialog.component";
-import {OperationsDialogComponent} from "@app/members/diagnostics/operations-dialog/operations-dialog.component";
+import {SetPropertyDialogComponent} from "@app/diagnostics/set-property-dialog/set-property-dialog.component";
+import {OperationsDialogComponent} from "@app/diagnostics/operations-dialog/operations-dialog.component";
 import {DiagProcess} from "@domain/DiagProcess";
 import {OperationSet} from "@domain/DiagResponse";
-import {EventSinkViewComponent} from "@app/members/diagnostics/event-sink-view/event-sink-view.component";
+import {EventSinkViewComponent} from "@app/diagnostics/event-sink-view/event-sink-view.component";
 import {EventModel} from "@model/EventModel";
 
 @Component({

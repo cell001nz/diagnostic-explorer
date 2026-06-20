@@ -14,10 +14,10 @@ import {DiagHubService} from "@services/diag-hub.service";
 import {DiagnosticModelFactory} from "@model/DiagnosticModelFactory";
 import {ProcessModel} from "@model/ProcessModel";
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from "primeng/tabs";
-import {CategoryViewComponent} from "@app/members/diagnostics/category-view/category-view.component";
+import {CategoryViewComponent} from "@app/diagnostics/category-view/category-view.component";
 import {DiagProcess} from "@domain/DiagProcess";
 import {EventModel} from "@model/EventModel";
-import {EventDetailPanelComponent} from "@app/members/diagnostics/event-detail-panel/event-detail-panel.component";
+import {EventDetailPanelComponent} from "@app/diagnostics/event-detail-panel/event-detail-panel.component";
 import { RealtimeModel } from '@model/RealtimeModel';
 
 const REFRESH_INTERVAL = 5_000;
