@@ -11,3 +11,14 @@
     color: #84cc16;
 }
 
+/* Only the (flexible) first column can get long, so truncate just that one
+   with an ellipsis. The Machine/User columns size to their content and stay
+   fully visible. A tooltip still shows the full process details. */
+:host ::ng-deep .p-datatable-tbody > tr > td:first-child,
+:host ::ng-deep .p-datatable-thead > tr > th:first-child {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+

@@ -2,40 +2,62 @@
 .event-row-verbose,
 .event-row-debug,
 .event-row-info {
-  background-color: rgb(46, 105, 72) !important;
+  background-color: rgb(9, 20, 14) !important;
+  color: rgb(120, 230, 160);
+  --row-glow: 90, 200, 140;
   user-select: none;
-  &:hover { background-color: rgb(52, 117, 80); }
+  &:hover { background-color: rgb(15, 30, 21) !important; }
 }
 
 .event-row-notice {
-  background-color: rgb(126, 84, 173);
+  background-color: rgb(16, 11, 24);
+  color: rgb(196, 156, 250);
+  --row-glow: 178, 136, 232;
   user-select: none;
-  &:hover { background-color: rgb(138, 96, 186); }
+  &:hover { background-color: rgb(24, 17, 36); }
 }
 
 .event-row-warn {
-  background-color: rgb(191, 130, 53);
+  background-color: rgb(24, 17, 7);
+  color: rgb(250, 196, 104);
+  --row-glow: 240, 182, 92;
   user-select: none;
-  &:hover { background-color: rgb(204, 143, 66); }
+  &:hover { background-color: rgb(34, 25, 11); }
 }
 
 .event-row-error {
-  background-color: rgb(176, 67, 67);
+  background-color: rgb(24, 9, 9);
+  color: rgb(245, 132, 132);
+  --row-glow: 235, 120, 120;
   user-select: none;
-  &:hover { background-color: rgb(189, 80, 80); }
+  &:hover { background-color: rgb(34, 14, 14); }
 }
 
 .event-row-critical,
 .event-row-fatal {
-  background-color: rgb(150, 58, 58);
+  background-color: rgb(28, 7, 7);
+  color: rgb(255, 112, 112);
+  --row-glow: 220, 100, 100;
   user-select: none;
-  &:hover { background-color: rgb(163, 71, 71); }
+  &:hover { background-color: rgb(38, 11, 11); }
+}
+
+// Phosphor glow: bright left accent bar + soft halo, using each row's own hue
+tbody tr[class*="event-row-"] {
+  box-shadow:
+    inset 3px 0 0 0 rgb(var(--row-glow)),
+    inset 0 0 16px -4px rgba(var(--row-glow), 0.7),
+    0 0 8px -2px rgba(var(--row-glow), 0.5);
+  text-shadow: 0 0 5px rgba(var(--row-glow), 0.5);
 }
 
 .event-row-selected {
-  outline: 2px solid #6366f1 !important;
+  box-shadow:
+    0 0 0 2px #6366f1,
+    0 0 10px 1px rgba(99, 102, 241, 0.85),
+    inset 0 0 14px rgba(99, 102, 241, 0.5) !important;
   outline-offset: -1px;
-  filter: brightness(1.4);
+  filter: brightness(1.25);
 }
 
 // Prevent text highlight while drag-selecting

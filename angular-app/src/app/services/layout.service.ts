@@ -26,8 +26,6 @@ interface MenuChangeEvent {
     providedIn: 'root'
 })
 export class LayoutService {
-    private static readonly MENU_COLLAPSED_KEY = 'menuDesktopCollapsed';
-
     _config: layoutConfig = {
         preset: 'Aura',
         primary: 'emerald',
@@ -37,7 +35,7 @@ export class LayoutService {
     };
 
     _state: LayoutState = {
-        staticMenuDesktopInactive: localStorage.getItem(LayoutService.MENU_COLLAPSED_KEY) === 'true',
+        staticMenuDesktopInactive: false,
         overlayMenuActive: false,
         configSidebarVisible: false,
         staticMenuMobileActive: false,
@@ -86,14 +84,6 @@ export class LayoutService {
             if (config) {
                 this.onConfigUpdate();
             }
-        });
-
-        // Persist the desktop menu collapse state across sessions.
-        effect(() => {
-            localStorage.setItem(
-                LayoutService.MENU_COLLAPSED_KEY,
-                String(!!this.layoutState().staticMenuDesktopInactive)
-            );
         });
     }
 

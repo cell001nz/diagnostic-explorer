@@ -1,12 +1,8 @@
 <div class="layout-wrapper" [ngClass]="containerClass">
     <p-toast />
     <div class="flex w-full items-center layout-topbar text-xl gap-4 ">
-        <button class="cursor-pointer layout-menu-button" (click)="layoutService.onMenuToggle()">
-            <i class="pi pi-bars"></i>
-        </button>
-
-        <a class="flex-1 flex items-center gap-1" routerLink="/">
-            <i class="bi bi-bug text-xl hidden md:block"></i>
+        <a class="flex-1 flex items-center gap-2" routerLink="/">
+            <i class="bi bi-file-bar-graph text-xl"></i>
             <span>Diagnostic Explorer</span>
         </a>
     </div>

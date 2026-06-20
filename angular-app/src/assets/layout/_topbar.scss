@@ -12,6 +12,19 @@
     transition: left var(--layout-section-transition-duration);
     display: flex;
     align-items: center;
+
+    a span {
+        color: var(--primary-color);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-shadow: 0 0 6px color-mix(in srgb, var(--primary-color) 55%, transparent),
+                     0 0 14px color-mix(in srgb, var(--primary-color) 25%, transparent);
+    }
+
+    a .bi-bug {
+        color: var(--primary-color);
+        text-shadow: 0 0 8px color-mix(in srgb, var(--primary-color) 45%, transparent);
+    }
 }
 
 
