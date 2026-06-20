@@ -1,1 +1,53 @@
-<p>retro-nav works!</p>
+<div class="text-sm h-full">
+    <div class="grid grid-cols-1 gap-4 m-4">
+
+        <p-select [options]="maxRecordsOptions" optionLabel="label" optionValue="value"
+                  [(ngModel)]="model.maxRecords" placeholder="Max Records"
+                  appendTo="body" styleClass="w-full"></p-select>
+
+        <p-select [options]="minLevelOptions" optionLabel="label" optionValue="value"
+                  [(ngModel)]="model.minLevel" placeholder="Min Level"
+                  appendTo="body" styleClass="w-full"></p-select>
+
+        <input pInputText placeholder="Machine" [(ngModel)]="model.machine" class="w-full"/>
+
+        <input pInputText placeholder="Process" [(ngModel)]="model.process" class="w-full"/>
+
+        <input pInputText placeholder="User" [(ngModel)]="model.user" class="w-full"/>
+
+        <input pInputText placeholder="Message" [(ngModel)]="model.message" class="w-full"/>
+
+        <p-datepicker [(ngModel)]="model.date" dateFormat="d M yy" [showIcon]="true"
+                      appendTo="body" placeholder="Date" styleClass="w-full"></p-datepicker>
+
+        <div class="grid grid-cols-3 gap-2">
+            <p-select [options]="times" optionLabel="label" optionValue="value"
+                      [(ngModel)]="model.time" placeholder="Time"
+                      appendTo="body" styleClass="w-full"></p-select>
+
+            <p-select [options]="timeZoneOptions" optionLabel="label" optionValue="value"
+                      [(ngModel)]="model.timeZone" placeholder="Zone"
+                      appendTo="body" styleClass="w-full"></p-select>
+
+            <p-select [options]="hoursOptions" optionLabel="label" optionValue="value"
+                      [(ngModel)]="model.hours" placeholder="Hours"
+                      appendTo="body" styleClass="w-full"></p-select>
+        </div>
+
+        <div class="w-full h-2 px-2">
+            @if (model.currentSearchId()) {
+                <p-progressbar mode="determinate" [value]="model.percentComplete() * 100"
+                               [showValue]="false" [style]="{height: '6px'}"></p-progressbar>
+            }
+        </div>
+
+        <div class="w-full flex flex-row justify-between">
+            <button pButton type="button" label="Reset" [outlined]="true" (click)="model.reset()"></button>
+            <button pButton type="button" label="Delete" [outlined]="true"
+                    [disabled]="!model.canDelete()" (click)="model.delete()"></button>
+            <button pButton type="button" [outlined]="true"
+                    [label]="model.currentSearchId() ? 'Cancel' : 'Search'" (click)="model.search()"></button>
+        </div>
+
+    </div>
+</div>

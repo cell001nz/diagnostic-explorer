@@ -1,1 +1,79 @@
-<p>retro-list works!</p>
+<div class="flex flex-col h-full retro-list">
+
+    <!-- Header -->
+    <div class="flex items-center gap-2 px-3 py-2 bg-neutral-800 border-b border-gray-700">
+        <span class="font-semibold">Retro Results</span>
+        <span class="text-xs opacity-50 flex-1 text-center whitespace-nowrap">{{ model.resultsMessage() }}</span>
+
+        <div class="flex items-center gap-2">
+            @if (filtersVisible()) {
+                <input pInputText class="text-xs h-8" placeholder="Filter…"
+                       [(ngModel)]="model.filterText"/>
+                <p-select [options]="filterLevelOptions" optionLabel="label" optionValue="value"
+                          [(ngModel)]="model.filterMinLevel" appendTo="body"
+                          styleClass="text-xs"></p-select>
+            }
+            <button class="retro-filter-toggle" title="Filter events"
+                    [class.retro-filter-toggle--active]="filtersVisible() || model.filterText() || model.filterMinLevel() > 0"
+                    (click)="toggleFilters()">
+                <i class="pi pi-filter"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Results table -->
+    <div class="flex-1 overflow-y-auto border-b border-gray-700"
+         (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
+        @if (model.displayResults().length === 0) {
+            <div class="p-4 text-center text-gray-500">No events</div>
+        } @else {
+            <table class="w-full border-collapse text-sm">
+                <thead class="sticky top-0 bg-gray-800 z-10">
+                    <tr>
+                        <th class="p-2 text-left w-44 whitespace-nowrap">Date</th>
+                        <th class="p-2 text-left w-20">Level</th>
+                        <th class="p-2 text-left w-32">Machine</th>
+                        <th class="p-2 text-left w-28">User</th>
+                        <th class="p-2 text-left w-40">Process</th>
+                        <th class="p-2 text-left">Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (item of model.displayResults(); track item.msgId) {
+                        <tr class="border-b border-gray-700 event-row-{{ item.level | levelToString | lowercase }} cursor-pointer"
+                            [class.event-row-selected]="item.isSelected"
+                            (mousedown)="onRowMouseDown(item)"
+                            (mouseover)="onRowMouseOver(item)">
+                            <td class="p-2 whitespace-nowrap">{{ item.date | date:'d MMM yyyy HH:mm:ss' }}</td>
+                            <td class="p-2">{{ item.level | levelToString }}</td>
+                            <td class="p-2 whitespace-nowrap">{{ item.machine }}</td>
+                            <td class="p-2 whitespace-nowrap">{{ item.user }}</td>
+                            <td class="p-2 whitespace-nowrap">{{ item.process }}</td>
+                            <td class="p-2 truncate max-w-0">{{ item.message }}</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Detail panel -->
+    @if (model.traceScopeVisible() && model.selectedEvent()) {
+        <div class="retro-detail">
+            <div class="retro-detail-tabs">
+                <button class="retro-detail-tab" [class.active]="detailTab() === 'detail'"
+                        (click)="detailTab.set('detail')">Detail</button>
+                <button class="retro-detail-tab" [class.active]="detailTab() === 'trace'"
+                        (click)="detailTab.set('trace')">Trace Scope</button>
+                <span class="flex-1"></span>
+                <button class="retro-detail-close" title="Close" (click)="model.hideTraceScope()">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+            <textarea class="retro-detail-body" readonly
+                      [value]="detailTab() === 'detail'
+                          ? (model.selectedEvent()!.message)
+                          : (model.selectedEvent()!.detail || model.selectedEvent()!.message)"></textarea>
+        </div>
+    }
+</div>

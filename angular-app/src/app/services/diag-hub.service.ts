@@ -6,7 +6,7 @@ import { DiagProcess } from '@domain/DiagProcess';
 import { Observable, Subject, firstValueFrom } from 'rxjs';
 import { LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
 import { DiagnosticResponse, SystemEvent } from '@domain/DiagResponse';
-import { RetroQuery } from '@model/RetroQuery';
+import { RetroQuery, RetroSearchResult } from '@model/RetroQuery';
 
 const TAB_ID_KEY = 'tabIdStorageKey';
 
@@ -24,6 +24,9 @@ export class DiagHubService implements OnDestroy {
     clearEvents$ = new Subject<{ processId: string }>();
     streamEvents$ = new Subject<{ processId: string; events: SystemEvent[] }>();
     loadEvents$ = new Subject<LoadEventData>();
+    retroResults$ = new Subject<RetroSearchResult>();
+    retroSearchEnd$ = new Subject<number>();
+    retroSearchError$ = new Subject<{ searchId: number; error: string; detail: string }>();
     tabId = '';
 
     constructor() {
@@ -62,6 +65,15 @@ export class DiagHubService implements OnDestroy {
                 hub.on('StreamEvents', (processId: string, events: SystemEvent[]) => {
                      console.log('StreamEvents', processId, events);
                     this.streamEvents$.next({ processId, events });
+                });
+                hub.on('ProcessSearchResults', (result: RetroSearchResult) => {
+                    this.retroResults$.next(result);
+                });
+                hub.on('ProcessSearchEnd', (searchId: number) => {
+                    this.retroSearchEnd$.next(searchId);
+                });
+                hub.on('ProcessSearchError', (searchId: number, error: string, detail: string) => {
+                    this.retroSearchError$.next({ searchId, error, detail });
                 });
                 console.log('Hub connection configured');
                 hub.onclose((error) => this.handleConnectionClosed(error));
