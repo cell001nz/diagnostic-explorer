@@ -5,7 +5,7 @@
         <div class="event-detail-meta">
             <span class="event-detail-meta-item">
                 <span class="event-detail-label">Date</span>
-                <span class="event-detail-value">{{ event().date | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                <span class="event-detail-value">{{ event().date | date:'yyyy-MM-dd HH:mm:ss':'UTC' }} UTC</span>
             </span>
             <span class="event-detail-meta-item">
                 <span class="event-detail-label">Level</span>

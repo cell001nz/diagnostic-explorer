@@ -1,0 +1,27 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="Mixed Platforms" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Readme/">
+    <File Path="Copying.lesser.txt" />
+    <File Path="Copying.txt" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="CreateDatabase.sql" />
+  </Folder>
+  <Project Path="angular-app/angular-app.esproj">
+    <BuildType Project="Debug" />
+    <Platform Project="AnyCPU" />
+    <Build />
+  </Project>
+  <Project Path="ConsoleApp/ConsoleApp.csproj" />
+  <Project Path="DiagnosticExplorer.Hosting/DiagnosticExplorer.Hosting.csproj" />
+  <Project Path="DiagnosticExplorer/DiagnosticExplorer.csproj">
+    <Build Solution="*|x86" Project="false" />
+  </Project>
+  <Project Path="DiagnosticService/Diagnostic.Service.csproj" />
+  <Project Path="WidgetSample/WidgetSample.csproj" />
+</Solution>

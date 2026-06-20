@@ -132,9 +132,8 @@ public class MongoRetroLogger : IRetroLogger
 
         while (await searchResult.MoveNextAsync(cancel))
         {
-            foreach (var item in searchResult.Current)
-                item.Date = item.Date.ToLocalTime();
-
+            // Dates are stored and returned as UTC. No conversion to local time is performed;
+            // the only local/UTC conversion in the system lives in the Angular retro date selector.
             yield return searchResult.Current.ToArray();
         }
     }
@@ -144,6 +143,16 @@ public class MongoRetroLogger : IRetroLogger
         MongoClient client = new(ConnectionString);
         IMongoDatabase database = client.GetDatabase("Diagnostics");
         IMongoCollection<DiagnosticMsg> collection = database.GetCollection<DiagnosticMsg>("Log");
+
+        // Dates originate as DateTime.UtcNow but cross the client->server boundary via
+        // protobuf-net, which does not preserve DateTime.Kind. They arrive here as
+        // DateTimeKind.Unspecified, which would cause the MongoDB driver to treat them as
+        // local time and apply a spurious local->UTC conversion on insert. Re-assert UTC so
+        // the numeric value is stored verbatim.
+        foreach (DiagnosticMsg item in msg)
+            if (item.Date.Kind != DateTimeKind.Utc)
+                item.Date = DateTime.SpecifyKind(item.Date, DateTimeKind.Utc);
+
         await collection.InsertManyAsync(msg, options: null, cancel);
     }
 }

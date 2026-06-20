@@ -4,7 +4,6 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {CategoryModel} from './CategoryModel';
 import {EventModel} from './EventModel';
 import {customMerge} from "@util/merge";
-import {format} from "date-fns";
 import {ObservableDisposable} from "@model/ObservableDisposable";
 import {Subject} from "rxjs";
 import {DiagnosticModelFactory} from "@model/DiagnosticModelFactory";
@@ -33,7 +32,7 @@ export class ProcessModel implements ObservableDisposable {
     }
     
     public update(response: DiagnosticResponse) {
-        this.titleMessage.set('Received ' + format(new Date(), 'HH:mm:ss'));
+        this.titleMessage.set('Received ' + new Date().toISOString().substring(11, 19) + ' UTC');
         this.serverDate.set(new Date(response.serverDate));
 
         const bagCats: { [key: string]: PropertyBag[] }

@@ -44,7 +44,7 @@
                             [class.event-row-selected]="item.isSelected"
                             (mousedown)="onRowMouseDown(item)"
                             (mouseover)="onRowMouseOver(item)">
-                            <td class="p-2 whitespace-nowrap">{{ item.date | date:'d MMM yyyy HH:mm:ss' }}</td>
+                            <td class="p-2 whitespace-nowrap">{{ item.date | date:'d MMM yyyy HH:mm:ss':'UTC' }} UTC</td>
                             <td class="p-2">{{ item.level | levelToString }}</td>
                             <td class="p-2 whitespace-nowrap">{{ item.machine }}</td>
                             <td class="p-2 whitespace-nowrap">{{ item.user }}</td>

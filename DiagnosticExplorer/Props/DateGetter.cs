@@ -53,19 +53,21 @@ internal class DateGetter : PropertyGetter
         }
 
         var value = GetFunc(obj);
-        DateTime? dateVal = value is DateTimeOffset off ? off.LocalDateTime : (DateTime?) value;
-        if (dateVal != null && dateVal.Value.Kind == DateTimeKind.Utc)
-            dateVal = dateVal.Value.ToLocalTime();
+        // All dates are represented in UTC. Normalise to a UTC DateTime so elapsed/until
+        // calculations are made against DateTime.UtcNow without any local-time conversion.
+        DateTime? dateVal = value is DateTimeOffset off ? off.UtcDateTime : (DateTime?) value;
+        if (dateVal != null && dateVal.Value.Kind == DateTimeKind.Local)
+            dateVal = dateVal.Value.ToUniversalTime();
 
         if (_exposeElapsed)
         {
-            string val = dateVal == null ? "" : FormatTimeSpan(DateTime.Now.Subtract(dateVal.Value));
+            string val = dateVal == null ? "" : FormatTimeSpan(DateTime.UtcNow.Subtract(dateVal.Value));
             Property property = new Property("Time since " + Name, val);
             bag.AddProperty(property, PrependToCategory(catPrepend));
         }
         if (_exposeTimeUntil)
         {
-            string val = dateVal == null ? "" : FormatTimeSpan(dateVal.Value.Subtract(DateTime.Now));
+            string val = dateVal == null ? "" : FormatTimeSpan(dateVal.Value.Subtract(DateTime.UtcNow));
             Property property = new Property("Time until " + Name, val);
             bag.AddProperty(property, PrependToCategory(catPrepend));
         }
