@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #111827;
-  border-top: 2px solid #4f46e5;
+  background: var(--surface-ground);
+  border-top: 2px solid #84cc16;
 }
 
 .event-detail-header {
@@ -11,15 +11,15 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  background: #1f2937;
-  border-bottom: 1px solid #374151;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--surface-border);
   flex-shrink: 0;
 }
 
 .event-detail-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   gap: 16px;
   flex: 1;
   min-width: 0;
@@ -27,14 +27,14 @@
 
 .event-detail-meta-item {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 5px;
   white-space: nowrap;
 }
 
 .event-detail-label {
   font-size: 0.65rem;
-  color: #6b7280;
+  color: var(--text-color-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   user-select: none;
@@ -42,12 +42,35 @@
 
 .event-detail-value {
   font-size: 0.8rem;
-  color: #d1d5db;
+  color: var(--text-color);
 }
 
 .event-detail-level {
-  color: #a78bfa;
   font-weight: 600;
+}
+
+.level-unknown,
+.level-verbose,
+.level-debug,
+.level-info {
+  color: rgb(0, 179, 68);
+}
+
+.level-notice {
+  color: rgb(192, 116, 255);
+}
+
+.level-warn {
+  color: rgb(255, 140, 0);
+}
+
+.level-error {
+  color: rgb(248, 81, 73);
+}
+
+.level-critical,
+.level-fatal {
+  color: rgb(255, 64, 64);
 }
 
 .event-detail-close {
@@ -59,22 +82,22 @@
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--text-color-secondary);
   cursor: pointer;
   flex-shrink: 0;
   transition: color 0.15s, background 0.15s;
 
   &:hover {
-    color: #f9fafb;
-    background: #374151;
+    color: var(--text-color);
+    background: var(--surface-hover);
   }
 }
 
 .event-detail-body {
   flex: 1;
   width: 100%;
-  background: #0f172a;
-  color: #86efac;
+  background: #000;
+  color: #84cc16;
   font-family: 'Consolas', 'Fira Code', monospace;
   font-size: 0.78rem;
   line-height: 1.5;

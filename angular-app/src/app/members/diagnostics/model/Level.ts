@@ -1,23 +1,23 @@
 ﻿export class Level {
-    public static Verbose = 0;
+    // Microsoft.Extensions.Logging.LogLevel ordinals
+    public static Trace = 0;
     public static Debug = 1;
-    public static Info = 2;
-    public static Notice = 3;
-    public static Warn = 4;
-    public static Error = 5;
-    public static Critical = 6;
-    public static Fatal = 7;
+    public static Information = 2;
+    public static Warning = 3;
+    public static Error = 4;
+    public static Critical = 5;
+    public static None = 6;
 
     public static LevelToString(value: number): string {
-        if (value == this.Verbose) return 'Verbose';
-        if (value == this.Debug) return 'Debug';
-        if (value == this.Info) return 'Info';
-        if (value == this.Notice) return 'Notice';
-        if (value == this.Warn) return 'Warn';
-        if (value == this.Error) return 'Error';
-        if (value == this.Critical) return 'Critical';
-        if (value == this.Fatal) return 'Fatal';
-
-        return 'Unknown';
+        switch (value) {
+            case Level.Trace: return 'Trace';
+            case Level.Debug: return 'Debug';
+            case Level.Information: return 'Info';
+            case Level.Warning: return 'Warn';
+            case Level.Error: return 'Error';
+            case Level.Critical: return 'Critical';
+            case Level.None: return 'None';
+            default: return 'Unknown';
+        }
     }
 }

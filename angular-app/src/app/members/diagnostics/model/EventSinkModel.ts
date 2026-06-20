@@ -24,7 +24,7 @@ export class EventSinkModel {
     filtersVisible = signal(false);
     /** Text filter applied to event messages */
     filterText = signal('');
-    /** Minimum level to show (0 = Verbose … 7 = Fatal) */
+    /** Minimum level to show (0 = Trace … 6 = None) */
     minLevel = signal(0);
 
     /** Convenience: the label for the current minLevel value */

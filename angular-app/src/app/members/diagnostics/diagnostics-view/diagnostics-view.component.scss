@@ -1,5 +1,35 @@
 .detail-panel-row {
   height: 200px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.detail-divider {
+  height: 8px;
+  flex-shrink: 0;
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-card);
+  border-top: 1px solid var(--surface-border);
+  transition: background 0.15s;
+
+  &:hover,
+  &:active {
+    background: #84cc16;
+  }
+
+  .detail-divider-grip {
+    width: 40px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--text-color-secondary);
+  }
+
+  &:hover .detail-divider-grip,
+  &:active .detail-divider-grip {
+    background: #000;
+  }
 }
 

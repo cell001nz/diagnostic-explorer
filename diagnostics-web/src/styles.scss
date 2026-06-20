@@ -98,10 +98,6 @@ body {
   @apply bg-lime-700;
 }
 
-.event-level-verbose {
-  @apply bg-lime-700;
-}
-
 .event-level-trace {
   @apply bg-lime-600;
 }
@@ -114,10 +110,6 @@ body {
   @apply bg-lime-400;
 }
 
-.event-level-notice {
-  @apply bg-purple-400;
-}
-
 .event-level-warn {
   @apply bg-amber-400;
 }
@@ -126,23 +118,11 @@ body {
   @apply bg-red-300;
 }
 
-.event-level-severe {
-  @apply bg-red-400;
-}
-
 .event-level-critical {
   @apply bg-red-500;
 }
 
-.event-level-alert {
-  @apply bg-red-600;
-}
-
-.event-level-fatal {
-  @apply bg-red-700;
-}
-
-.event-level-emergency {
+.event-level-none {
   @apply bg-red-800;
 }
 

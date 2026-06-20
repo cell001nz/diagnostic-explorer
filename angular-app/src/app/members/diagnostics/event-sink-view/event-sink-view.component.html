@@ -22,7 +22,7 @@
                             <span class="sink-level-label mr-2">{{getLevelLabel(sink().minLevel())}}</span>
                             <p-slider
                                 class="sink-level-slider mr-4"
-                                [min]="0" [max]="7" [step]="1"
+                                [min]="0" [max]="6" [step]="1"
                                 [ngModel]="sink().minLevel()"
                                 (onChange)="onMinLevelChange($any($event).value)"
                                 (click)="$event.stopPropagation()"></p-slider>

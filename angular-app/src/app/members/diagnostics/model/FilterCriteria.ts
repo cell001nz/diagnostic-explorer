@@ -64,14 +64,14 @@ export class FilterCriteria {
 
         return evt => {
             const levelNum = evt.level;
-            
-            if (!info && levelNum <= Level.Info)
+
+            // Notice folded into Information under the Microsoft scheme
+            const showInfo = info || notice;
+
+            if (!showInfo && levelNum <= Level.Information)
                 return false;
 
-            if (!notice && levelNum > Level.Info && levelNum <= Level.Notice)
-                return false;
-
-            if (!warn && levelNum > Level.Notice && levelNum <= Level.Warn)
+            if (!warn && levelNum === Level.Warning)
                 return false;
 
             if (!error && levelNum >= Level.Error)

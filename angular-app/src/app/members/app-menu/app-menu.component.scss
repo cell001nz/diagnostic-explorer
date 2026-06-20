@@ -1,5 +1,6 @@
 :host {
     display: block;
+    --nav-accent: #84cc16;
 }
 
 .nav-menu {
@@ -38,7 +39,7 @@
         width: 3px;
         height: 60%;
         border-radius: 0 3px 3px 0;
-        background: var(--primary-color);
+        background: var(--nav-accent);
         transition: transform 0.2s ease;
     }
 
@@ -79,16 +80,16 @@
     }
 
     &.active {
-        background-color: color-mix(in srgb, var(--primary-color) 18%, transparent);
-        color: var(--primary-color);
-        box-shadow: 0 4px 14px color-mix(in srgb, var(--primary-color) 22%, transparent);
+        background-color: color-mix(in srgb, var(--nav-accent) 18%, transparent);
+        color: var(--nav-accent);
+        box-shadow: 0 4px 14px color-mix(in srgb, var(--nav-accent) 22%, transparent);
 
         &::before {
             transform: translateY(-50%) scaleY(1);
         }
 
         .nav-icon {
-            color: var(--primary-color);
+            color: var(--nav-accent);
         }
     }
 }

@@ -9,7 +9,8 @@
             </span>
             <span class="event-detail-meta-item">
                 <span class="event-detail-label">Level</span>
-                <span class="event-detail-value event-detail-level">{{ event().level | levelToString }}</span>
+                <span class="event-detail-value event-detail-level"
+                      [class]="'level-' + (event().level | levelToString | lowercase)">{{ event().level | levelToString }}</span>
             </span>
             <span class="event-detail-meta-item">
                 <span class="event-detail-label">Sink</span>

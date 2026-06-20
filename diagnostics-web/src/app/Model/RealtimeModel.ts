@@ -1,4 +1,4 @@
-﻿import {DiagProcess} from './DiagProcess';
+﻿﻿import {DiagProcess} from './DiagProcess';
 import {of, Subscription, timer} from 'rxjs';
 import {Null} from '../util/Null';
 import {Watch} from '../util/Watch';
@@ -328,11 +328,11 @@ export class RealtimeModel {
     }
 
     private setEventLevel(evt: SystemEvent): void {
-        if (!evt.level) {
+        if (evt.level == null) {
             evt.level = evt.severity === 'Low'
-                ? Level.INFO
+                ? Level.INFORMATION
                 : evt.severity === 'Medium'
-                    ? Level.WARN
+                    ? Level.WARNING
                     : Level.ERROR
         }
     }

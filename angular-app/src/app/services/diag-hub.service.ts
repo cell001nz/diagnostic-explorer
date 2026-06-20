@@ -43,24 +43,21 @@ export class DiagHubService implements OnDestroy {
                 await hub.start();
                 hub.on('say', (message) => console.log('Hub message', message));
                 hub.on('SetProcesses', (processes: DiagProcess[]) => {
-                    console.log('DiagHubService.ReceiveProcess', processes);
+                    // console.log('DiagHubService.ReceiveProcess', processes);
                     this.processesArrived$.next(processes);
                 });
                 hub.on('UpdateProcess', (process: DiagProcess) => {
-                    console.log('DiagHubService.UpdateProcess', process);
+                    // console.log('DiagHubService.UpdateProcess', process);
                     this.processArrived$.next(process);
                 });
                 hub.on('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
-                    console.log('Diagnostics arrived', processId, response);
+                    // console.log('Diagnostics arrived', processId, response);
                     this.diagsArrived$.next({ processId, response });
                 });
-                hub.on('ClearEvents', (processId: string) => {
-                     console.log('ClearEvents', processId);
-                    this.clearEvents$.next({ processId });
-                });
-                hub.on('LoadEvents', (data: LoadEventData) => {
-                    //  console.log('StreamEvents', processId, events);
-                    this.loadEvents$.next(data);
+                hub.on('SetEvents', (processId: string, events: SystemEvent[]) => {
+                     console.log('SetEvents', processId, events);
+                     this.clearEvents$.next({ processId});
+                    this.streamEvents$.next({ processId, events });
                 });
                 hub.on('StreamEvents', (processId: string, events: SystemEvent[]) => {
                      console.log('StreamEvents', processId, events);

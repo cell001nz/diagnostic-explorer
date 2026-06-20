@@ -14,15 +14,15 @@
 }
 
 .event-row-warn {
-  background-color: rgb(173, 83, 0);
+  background-color: rgb(255, 140, 0);
   user-select: none;
-  &:hover { background-color: rgb(173, 104, 0); }
+  &:hover { background-color: rgb(235, 128, 0); }
 }
 
 .event-row-error {
-  background-color: rgb(255, 95, 95);
+  background-color: rgb(220, 38, 38);
   user-select: none;
-  &:hover { background-color: rgb(255, 87, 87); }
+  &:hover { background-color: rgb(200, 30, 30); }
 }
 
 .event-row-critical,

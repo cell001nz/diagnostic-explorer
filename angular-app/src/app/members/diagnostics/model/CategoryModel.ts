@@ -16,6 +16,7 @@ export class CategoryModel {
     eventSinks = signal<EventSinkModel[]>([]);
     realtimeModel: ProcessModel;
     labelClass = signal('');
+    pulseId = signal(0);
     worstSev = 0;
     worstSevDate = new Date();
 
@@ -63,6 +64,8 @@ export class CategoryModel {
             this.worstSev = maxLevel;
             this.worstSevDate = new Date();
             this.labelClass.set(this.worstSev === 0 ? '' : 'event-level-' + Level.LevelToString(this.worstSev).toLocaleLowerCase());
+            if (this.worstSev > 0)
+                this.pulseId.update(id => id + 1);
         }
 
         const grouped = _.groupBy(evts, evt => evt.sinkName);

@@ -15,18 +15,11 @@
             <mat-label [class.default-value-label]="model.minLevel === 0">Min Level</mat-label>
             <mat-select [(value)]="model.minLevel">
                 <mat-option [value]="0">All</mat-option>
-                <mat-option [value]="10000">Verbose</mat-option>
-                <mat-option [value]="20000">Trace</mat-option>
-                <mat-option [value]="30000">Debug</mat-option>
-                <mat-option [value]="40000">Info</mat-option>
-                <mat-option [value]="50000">Notice</mat-option>
-                <mat-option [value]="60000">Warn</mat-option>
-                <mat-option [value]="70000">Error</mat-option>
-                <mat-option [value]="80000">Severe</mat-option>
-                <mat-option [value]="90000">Critical</mat-option>
-                <mat-option [value]="100000">Alert</mat-option>
-                <mat-option [value]="110000">Fatal</mat-option>
-                <mat-option [value]="120000">Emergency</mat-option>
+                <mat-option [value]="1">Debug</mat-option>
+                <mat-option [value]="2">Info</mat-option>
+                <mat-option [value]="3">Warn</mat-option>
+                <mat-option [value]="4">Error</mat-option>
+                <mat-option [value]="5">Critical</mat-option>
             </mat-select>
         </mat-form-field>
 

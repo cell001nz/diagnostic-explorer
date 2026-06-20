@@ -1,4 +1,4 @@
-﻿import {Null} from '../util/Null';
+﻿﻿import {Null} from '../util/Null';
 import * as _ from 'lodash';
 import {Watch} from '../util/Watch';
 import {IFilterableEvent} from './IFilterableEvent';
@@ -65,13 +65,13 @@ export class FilterCriteria {
         }
 
         return evt => {
-            if (!info && evt.level <= Level.INFO)
+            // Notice folded into Information under the Microsoft scheme
+            const showInfo = info || notice;
+
+            if (!showInfo && evt.level <= Level.INFORMATION)
                 return false;
 
-            if (!notice && evt.level > Level.INFO && evt.level <= Level.NOTICE)
-                return false;
-
-            if (!warn && evt.level > Level.NOTICE && evt.level <= Level.WARN)
+            if (!warn && evt.level === Level.WARNING)
                 return false;
 
             if (!error && evt.level >= Level.ERROR)

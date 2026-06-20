@@ -3,6 +3,17 @@
 @import 'primeicons/primeicons.css';
 @import "bootstrap-icons/font/bootstrap-icons.css";
 
+@keyframes pill-fade-odd {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+@keyframes pill-fade-even {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+.pill-pulse-odd  { animation: pill-fade-odd  2s ease-out forwards; }
+.pill-pulse-even { animation: pill-fade-even 2s ease-out forwards; }
+
 @source './**/*.{html,ts,scss,css}';
 @custom-variant dark (&:where([class="app-dark"], [class="app-dark"] *));
 
@@ -20,6 +31,10 @@
 
 .tabs-right {
     
+    --p-tabs-tab-active-color: #84cc16;
+    --p-tabs-tab-active-border-color: #84cc16;
+    --p-tabs-active-bar-background: #84cc16;
+
     .p-tablist-nav-button {
         display: none;
     }
@@ -86,25 +101,21 @@
 }
 
 .event-level-unknown,
-.event-level-verbose,
+.event-level-trace,
 .event-level-debug,
 .event-level-info {
     background-color: rgb(0, 122, 46);
 }
 
-.event-level-notice {
-    background-color: rgb(161, 29, 255);
-}
-
 .event-level-warn {
-    background-color: rgb(173, 83, 0);
+    background-color: rgb(255, 140, 0);
 }
 
 .event-level-error {
-    background-color: rgb(255, 95, 95);
+    background-color: rgb(220, 38, 38);
 }
 
 .event-level-critical,
-.event-level-fatal {
+.event-level-none {
     background-color: rgb(166, 0, 0);
 }

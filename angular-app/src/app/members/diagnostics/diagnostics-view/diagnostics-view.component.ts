@@ -48,8 +48,8 @@ export class DiagnosticsViewComponent implements OnDestroy {
   processModel = signal<ProcessModel>(new ProcessModel());
 
   constructor() {
-    effect(() => console.log('ProcessId changed ', this.processId(), typeof this.processId()));
-    effect(() => console.log('Process changed ', this.process()));
+    // effect(() => console.log('ProcessId changed ', this.processId(), typeof this.processId()));
+    // effect(() => console.log('Process changed ', this.process()));
     
     toObservable(this.process)
         .pipe(
@@ -117,6 +117,34 @@ export class DiagnosticsViewComponent implements OnDestroy {
     const prev = this.selectedEvent();
     if (prev) prev.isSelected = false;
     this.selectedEvent.set(null);
+  }
+
+  detailHeight = signal(200);
+
+  #resizeStartY = 0;
+  #resizeStartHeight = 0;
+
+  #onResizeMove = (e: MouseEvent) => {
+    const delta = this.#resizeStartY - e.clientY;
+    const next = Math.min(Math.max(this.#resizeStartHeight + delta, 80), window.innerHeight - 160);
+    this.detailHeight.set(next);
+  };
+
+  #onResizeEnd = () => {
+    document.removeEventListener('mousemove', this.#onResizeMove);
+    document.removeEventListener('mouseup', this.#onResizeEnd);
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  };
+
+  startResize(event: MouseEvent): void {
+    event.preventDefault();
+    this.#resizeStartY = event.clientY;
+    this.#resizeStartHeight = this.detailHeight();
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'row-resize';
+    document.addEventListener('mousemove', this.#onResizeMove);
+    document.addEventListener('mouseup', this.#onResizeEnd);
   }
   
   
