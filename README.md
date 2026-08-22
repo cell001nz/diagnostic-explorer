@@ -45,10 +45,10 @@ worker, desktop app, or service that needs a local inspection endpoint.
 
 The package targets `net8.0`, `net6.0`, and `net48`:
 
-| Target | Standalone host | Existing host integration | Server transport |
-| --- | --- | --- | --- |
-| `net8.0` / `net6.0` | Yes | ASP.NET Core/Kestrel | ASP.NET Core SignalR |
-| `net48` | Yes, root path only | No | OWIN/SignalR 2 |
+| Target              | Standalone host     | Existing host integration | Server transport     |
+| ------------------- | ------------------- | ------------------------- | -------------------- |
+| `net8.0` / `net6.0` | Yes                 | ASP.NET Core/Kestrel      | ASP.NET Core SignalR |
+| `net48`             | Yes, root path only | No                        | OWIN/SignalR 2       |
 
 The Angular viewer is embedded in the package, so consumers do not need
 Node.js or a separate web application deployment.
@@ -150,20 +150,20 @@ will proxy SPA requests while continuing to host the SignalR endpoints.
 
 ```
 DiagnosticExplorer/          netstandard2.0 core library
-                             - PropertyBag, TraceScope, OperationSet,
-                               protobuf transport types, log4net forwarding
+- PropertyBag, TraceScope, OperationSet, protobuf transport types
+DiagnosticExplorer.Log4Net/  netstandard2.0 log4net integration package
+- Configurable diagnostic and resilient appenders
 DiagnosticExplorer.Hosting/  net8.0 / net6.0 / net48 hosting integration
-                             - AddDiagnosticExplorer DI extension,
-                               DiagnosticHostingService, RegistrationHandler
+- AddDiagnosticExplorer DI extension, DiagnosticHostingService, RegistrationHandler
 DiagnosticExplorer.SelfHost/ net8.0 / net6.0 / net48 local diagnostics viewer
-                                           - Kestrel or OWIN host plus embedded Angular SPA
+- Kestrel or OWIN host plus embedded Angular SPA
 DiagnosticService/           Standalone ASP.NET Core viewer service
-                             - SignalR hubs at /diagnostics and /web-hub
-                             - Hosts the SPA or proxies to its dev server
+- SignalR hubs at /diagnostics and /web-hub
+- Hosts the SPA or proxies to its dev server
 diag-web/                     Angular SPA for browsing registered programs
-                             - Select a program to view live diagnostics
+- Select a program to view live diagnostics
 WidgetSample/                WinForms diagnostic-client example
-                             - Registers with the service and publishes data
+- Registers with the service and publishes data
 ConsoleApp/                  Smaller CLI demo
 SelfHostSample/              Standalone local-viewer console sample
 ```
@@ -174,6 +174,20 @@ Add the package reference:
 
 ```xml
 <PackageReference Include="DiagnosticExplorer.Hosting" Version="3.1.38" />
+```
+
+To forward log4net events to DiagnosticExplorer, add the optional integration
+package and configure its appenders in `log4net.config`:
+
+```xml
+<PackageReference Include="DiagnosticExplorer.Log4Net" Version="3.1.38" />
+```
+
+Use the `DiagnosticExplorer.Log4Net` assembly in appender type names, for
+example:
+
+```xml
+<appender name="Diagnostics" type="DiagnosticExplorer.Log4Net.DiagnosticAppender, DiagnosticExplorer.Log4Net" />
 ```
 
 Wire into a `Host.CreateDefaultBuilder` pipeline:

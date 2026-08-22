@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
+		<ProjectReference Include="..\DiagnosticExplorer.Log4Net\DiagnosticExplorer.Log4Net.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -2,22 +2,22 @@
 
 // Diagnostic Explorer, a .Net diagnostic toolset
 // Copyright (C) 2010 Cameron Elliot
-// 
+//
 // This file is part of Diagnostic Explorer.
-// 
+//
 // Diagnostic Explorer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // Diagnostic Explorer is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public License
 // along with Diagnostic Explorer.  If not, see <http://www.gnu.org/licenses/>.
-// 
+//
 // http://diagexplorer.sourceforge.net/
 
 #endregion
@@ -29,13 +29,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using log4net;
-using System.Linq;
 using DiagnosticExplorer.Util;
 
 namespace DiagnosticExplorer;
@@ -46,7 +45,7 @@ using ATraceItem = TraceItem<TraceScope>;
 public class TraceScope : IDisposable
 {
     private static AsyncLocal<ScopeStack> _scopeStack = new();
- 		
+
     private DateTime _created = DateTime.UtcNow;
     private DateTime? _disposed;
     private List<ATraceItem> _traceItems = new();
@@ -77,13 +76,17 @@ public class TraceScope : IDisposable
     {
         Setup(name, traceMethod, false);
     }
-	
+
     public TraceScope(string name, Action<string> traceMethod, bool forceTrace)
     {
         Setup(name, traceMethod, forceTrace);
     }
 
-    public TraceScope(Action<string> traceMethod, bool forceTrace, [CallerMemberName] string name = null)
+    public TraceScope(
+        Action<string> traceMethod,
+        bool forceTrace,
+        [CallerMemberName] string name = null
+    )
     {
         Setup(name, traceMethod, forceTrace);
     }
@@ -99,7 +102,7 @@ public class TraceScope : IDisposable
 
         ScopeStack scopeStack = _scopeStack.Value ?? ScopeStack.Empty;
         _isRoot = scopeStack.Current == null;
-            
+
         TraceScope current = scopeStack.Current;
         current?.AddTraceItem(new ATraceItem(this));
         _scopeStack.Value = scopeStack.Push(this);
@@ -112,14 +115,19 @@ public class TraceScope : IDisposable
     }
 
     #endregion
-        
+
 
     public void StartAutoTraceTimer(TimeSpan time)
     {
         if (_autoTraceTimer != null)
             _autoTraceTimer.Dispose();
 
-        _autoTraceTimer = new Timer(AutoTraceAfterTimeout, null, (int)time.TotalMilliseconds, Timeout.Infinite);
+        _autoTraceTimer = new Timer(
+            AutoTraceAfterTimeout,
+            null,
+            (int)time.TotalMilliseconds,
+            Timeout.Infinite
+        );
     }
 
     private void AutoTraceAfterTimeout(object state)
@@ -130,7 +138,6 @@ public class TraceScope : IDisposable
     }
 
     public static TraceScope Current => _scopeStack.Value?.Current;
-
 
     public string Name { get; set; }
     public bool IsHidden { get; set; }
@@ -147,9 +154,7 @@ public class TraceScope : IDisposable
         _traceMethods[timeMillis] = traceMethod;
     }
 
-	
     public TimeSpan Age => DateTime.UtcNow.Subtract(_created);
-
 
     public override string ToString()
     {
@@ -164,9 +169,15 @@ public class TraceScope : IDisposable
         return sb.ToString();
     }
 
-    public void ToString(IndentedTextWriter writer, DateTime scopeStart, ref DateTime lastMessage, int indent)
+    public void ToString(
+        IndentedTextWriter writer,
+        DateTime scopeStart,
+        ref DateTime lastMessage,
+        int indent
+    )
     {
-        if (IsHidden) return;
+        if (IsHidden)
+            return;
 
         using (_traceItemsLock.ReadGuard())
         {
@@ -183,7 +194,13 @@ public class TraceScope : IDisposable
                 {
                     if (item.TraceScope == null)
                     {
-                        WriteString(writer, item.Message, item.Created, scopeStart, ref lastMessage);
+                        WriteString(
+                            writer,
+                            item.Message,
+                            item.Created,
+                            scopeStart,
+                            ref lastMessage
+                        );
                     }
                     else if (FullTraceRequired(item))
                     {
@@ -191,7 +208,13 @@ public class TraceScope : IDisposable
                     }
                     else
                     {
-                        WriteBeginEndScope(item.TraceScope, writer, scopeStart, ref lastMessage, true);
+                        WriteBeginEndScope(
+                            item.TraceScope,
+                            writer,
+                            scopeStart,
+                            ref lastMessage,
+                            true
+                        );
                     }
                 }
                 writer.Indent -= indent;
@@ -203,53 +226,90 @@ public class TraceScope : IDisposable
 
     private bool FullTraceRequired(ATraceItem item)
     {
-        if (item.TraceScope == null) return false;
-        if (item.TraceScope._forceTrace) return false;
-        if (item.TraceScope.SuppressDetailThreshold == null) return true;
+        if (item.TraceScope == null)
+            return false;
+        if (item.TraceScope._forceTrace)
+            return false;
+        if (item.TraceScope.SuppressDetailThreshold == null)
+            return true;
 
         TimeSpan thresh = item.TraceScope.SuppressDetailThreshold.Value;
         TimeSpan duration = item.TraceScope._disposed.Value - item.TraceScope._created;
         return duration >= thresh;
     }
 
-    private void WriteBeginScope(IndentedTextWriter writer, DateTime scopeStart, ref DateTime lastMessage)
+    private void WriteBeginScope(
+        IndentedTextWriter writer,
+        DateTime scopeStart,
+        ref DateTime lastMessage
+    )
     {
-        if (Name == null) return;
+        if (Name == null)
+            return;
 
         string message = $"BEGIN {Name}";
         if (_disposed != null)
-            message = string.Format("{0} ({1:N3} seconds)", message, _disposed.Value.Subtract(_created).TotalSeconds);
+            message = string.Format(
+                "{0} ({1:N3} seconds)",
+                message,
+                _disposed.Value.Subtract(_created).TotalSeconds
+            );
 
         WriteString(writer, message, _created, scopeStart, ref lastMessage);
     }
 
-    private void WriteEndScope(IndentedTextWriter writer, DateTime scopeStart, ref DateTime lastMessage)
+    private void WriteEndScope(
+        IndentedTextWriter writer,
+        DateTime scopeStart,
+        ref DateTime lastMessage
+    )
     {
-        if (Name == null) return;
-        if (_disposed == null) return;
+        if (Name == null)
+            return;
+        if (_disposed == null)
+            return;
 
-        string message = string.Format("END {0} ({1:N3} seconds)", Name, _disposed.Value.Subtract(_created).TotalSeconds);
+        string message = string.Format(
+            "END {0} ({1:N3} seconds)",
+            Name,
+            _disposed.Value.Subtract(_created).TotalSeconds
+        );
 
         WriteString(writer, message, _disposed.Value, scopeStart, ref lastMessage);
     }
 
-    private static void WriteBeginEndScope(TraceScope scope, IndentedTextWriter writer,
-        DateTime scopeStart, ref DateTime lastMessage, bool suppressed)
+    private static void WriteBeginEndScope(
+        TraceScope scope,
+        IndentedTextWriter writer,
+        DateTime scopeStart,
+        ref DateTime lastMessage,
+        bool suppressed
+    )
     {
-        if (scope.Name == null) return;
-        if (scope._disposed == null) return;
+        if (scope.Name == null)
+            return;
+        if (scope._disposed == null)
+            return;
 
         TimeSpan duration = scope._disposed.Value.Subtract(scope._created);
 
-        string message = string.Format("BEGIN/END{0} {1} ({2:N3} seconds)",
+        string message = string.Format(
+            "BEGIN/END{0} {1} ({2:N3} seconds)",
             suppressed ? "*" : "",
             scope.Name,
-            duration.TotalSeconds);
+            duration.TotalSeconds
+        );
 
         WriteString(writer, message, scope._disposed.Value, scopeStart, ref lastMessage);
     }
 
-    private static void WriteString(IndentedTextWriter writer, string message, DateTime itemDate, DateTime scopeStart, ref DateTime lastMessage)
+    private static void WriteString(
+        IndentedTextWriter writer,
+        string message,
+        DateTime itemDate,
+        DateTime scopeStart,
+        ref DateTime lastMessage
+    )
     {
         double age = itemDate.Subtract(scopeStart).TotalSeconds;
         double split = itemDate.Subtract(lastMessage).TotalSeconds;
@@ -277,7 +337,6 @@ public class TraceScope : IDisposable
     {
         if (disposing)
         {
-
             if (_autoTraceTimer != null)
             {
                 _autoTraceTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -303,14 +362,16 @@ public class TraceScope : IDisposable
         try
         {
             Action<string> action = GetTraceMethod(Age.TotalMilliseconds);
-            if (action == null) return;
-            if (!_isRoot && !_forceTrace) return;
+            if (action == null)
+                return;
+            if (!_isRoot && !_forceTrace)
+                return;
 
             action(ToString());
         }
         catch (Exception ex)
         {
-            LogManager.GetLogger(GetType()).Error(ex.Message, ex);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -360,8 +421,6 @@ public class TraceScope : IDisposable
         if (condition)
             Trace(message);
     }
-		
-	
-		
+
     #endregion
 }

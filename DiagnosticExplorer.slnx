@@ -9,11 +9,11 @@
   </Folder>
   <Project Path="ConsoleApp/ConsoleApp.csproj" />
   <Project Path="DiagnosticExplorer.Hosting/DiagnosticExplorer.Hosting.csproj" />
+  <Project Path="DiagnosticExplorer.Log4Net/DiagnosticExplorer.Log4Net.csproj" />
   <Project Path="DiagnosticExplorer.SelfHost/DiagnosticExplorer.SelfHost.csproj" />
   <Project Path="DiagnosticExplorer/DiagnosticExplorer.csproj">
     <Build Solution="*|x86" Project="false" />
   </Project>
   <Project Path="DiagnosticService/Diagnostic.Service.csproj" />
-  <Project Path="SelfHostSample/SelfHostSample.csproj" />
   <Project Path="WidgetSample/WidgetSample.csproj" />
 </Solution>

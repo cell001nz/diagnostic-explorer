@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>DiagnosticExplorer.Log4Net</AssemblyName>
+    <RootNamespace>DiagnosticExplorer.Log4Net</RootNamespace>
+    <Version>3.1.38</Version>
+    <AssemblyVersion>3.1.38.0</AssemblyVersion>
+    <FileVersion>3.1.38.0</FileVersion>
+    <LangVersion>latest</LangVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Description>log4net appenders and integration for DiagnosticExplorer.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
+    <PackageReference Include="log4net" Version="3.3.1" />
+  </ItemGroup>
+
+</Project>
