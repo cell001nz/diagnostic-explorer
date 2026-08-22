@@ -1,9 +1,3 @@
-[CmdletBinding()]
-param(
-    [ValidateSet('Debug', 'Release')]
-    [string] $Configuration = 'Debug'
-)
-
 $ErrorActionPreference = 'Stop'
 
 Set-Location $PSScriptRoot
@@ -28,13 +22,3 @@ Copy-Item -Recurse -Force diag-web\dist\self-host\browser\* DiagnosticExplorer.S
 
 Remove-Item -Recurse -Force DiagnosticExplorer.SelfHost\wwwroot\net48\*
 Copy-Item -Recurse -Force diag-web\dist\self-host-net48\browser\* DiagnosticExplorer.SelfHost\wwwroot\net48
-
-dotnet restore DiagnosticExplorer.slnx
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet restore failed with exit code $LASTEXITCODE."
-}
-
-dotnet build DiagnosticExplorer.slnx --no-restore --configuration $Configuration -p:GeneratePackageOnBuild=false
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet build failed with exit code $LASTEXITCODE."
-}

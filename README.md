@@ -182,8 +182,10 @@ SelfHostSample/              Standalone local-viewer console sample
 ## Publishing NuGet packages
 
 The [NuGet publishing workflow](.github/workflows/publish-nuget-packages.yml)
-publishes release packages on `v*.*.*` tags or through manual dispatch. It
-uses NuGet trusted publishing and does not require a stored API key.
+publishes release packages on `v*.*.*` tags or through manual dispatch. A tag
+such as `v5.0.1` publishes NuGet packages at version `5.0.1`; manual dispatch
+requires the version as an input. It uses NuGet trusted publishing and does
+not require a stored API key.
 
 Before its first run, create a NuGet.org trusted-publishing policy with:
 

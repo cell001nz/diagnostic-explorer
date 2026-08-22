@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      package-version:
+        description: NuGet package version to publish
+        required: true
+        type: string
 
 concurrency:
   group: nuget-publish
@@ -35,9 +40,26 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix diag-web
 
+      - name: Determine package version
+        id: version
+        shell: pwsh
+        run: |
+          $version = if ('${{ github.event_name }}' -eq 'push') {
+            '${{ github.ref_name }}'.TrimStart('v')
+          }
+          else {
+            '${{ inputs.package-version }}'
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
+            throw "Package version '$version' must be valid SemVer, such as 5.0.1 or 5.1.0-preview.1."
+          }
+
+          "package-version=$version" >> $env:GITHUB_OUTPUT
+
       - name: Build release packages
         shell: pwsh
-        run: ./Build.ps1
+        run: ./Build.ps1 -PackageVersion '${{ steps.version.outputs.package-version }}'
 
       # This exchanges GitHub's OIDC token for a short-lived NuGet API key.
       - name: NuGet login
