@@ -36,11 +36,10 @@ The self-host package must not use `DiagnosticHostingService` or `RegistrationHa
 
 ## Package And Framework Support
 
-The package is `DiagnosticExplorer.SelfHost` and targets `net6.0`, `net8.0`, and `net48`.
+The package is `DiagnosticExplorer.SelfHost` and targets `net8.0` and `net48`.
 
 | Target   | Standalone integration | Existing web-host integration | Server transport     |
 | -------- | ---------------------- | ----------------------------- | -------------------- |
-| `net6.0` | Yes                    | Yes, ASP.NET Core/Kestrel     | ASP.NET Core SignalR |
 | `net8.0` | Yes                    | Yes, ASP.NET Core/Kestrel     | ASP.NET Core SignalR |
 | `net48`  | Yes, root path only    | Not in the first release      | OWIN and SignalR 2   |
 
@@ -67,11 +66,12 @@ using DiagnosticSelfHost diagnostics = await DiagnosticSelfHostingService.StartA
 
 `StartAsync` returns a host handle. `StopAsync` waits for the listener and diagnostic subscriptions to stop. `Dispose` initiates that same cleanup without blocking the calling thread, which makes it safe to call from a UI shutdown handler. Starting an equivalent listener twice must fail clearly; disposal and stop operations must be safe to repeat.
 
-Configure the standalone listener with `DiagnosticExplorer:SelfHostUrl`:
+Configure the standalone listener with `DiagnosticExplorer:SelfHostUrl`. Set `DiagnosticExplorer:Enabled` to `false` to disable all diagnostic registration, event writes, and hosting:
 
 ```json
 {
   "DiagnosticExplorer": {
+    "Enabled": true,
     "SelfHostUrl": "http://127.0.0.1:1234"
   }
 }
@@ -85,7 +85,7 @@ embeds the SPA assets; consumers do not install Node.js or build Angular files.
 For applications that already own an ASP.NET Core pipeline, the package provides registration and endpoint-mapping extensions instead of creating a second Kestrel server:
 
 ```csharp
-builder.Services.AddDiagnosticSelfHost(options =>
+builder.Services.AddDiagnosticSelfHost(builder.Configuration, options =>
 {
   options.PathBase = "/diagnostics";
 });

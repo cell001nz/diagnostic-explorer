@@ -1,10 +1,11 @@
 {
   "WidgetSample": {
     "Logging": {
-      "Provider": "NLOG"
+      "Provider": "MEL"
     }
   },
   "DiagnosticExplorer": {
+    "Enabled": true,
     "RemoteUrl": "http://localhost:2803/diagnostics",
     "SelfHostUrl": "http://localhost:45000",
     "Routing": {

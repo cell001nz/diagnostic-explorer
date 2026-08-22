@@ -43,12 +43,12 @@ instrumented process itself. It connects directly to that process and does
 not register with or depend on `DiagnosticService`. Use it for a console app,
 worker, desktop app, or service that needs a local inspection endpoint.
 
-The package targets `net8.0`, `net6.0`, and `net48`:
+The package targets `net8.0` and `net48`:
 
-| Target              | Standalone host     | Existing host integration | Server transport     |
-| ------------------- | ------------------- | ------------------------- | -------------------- |
-| `net8.0` / `net6.0` | Yes                 | ASP.NET Core/Kestrel      | ASP.NET Core SignalR |
-| `net48`             | Yes, root path only | No                        | OWIN/SignalR 2       |
+| Target   | Standalone host     | Existing host integration | Server transport     |
+| -------- | ------------------- | ------------------------- | -------------------- |
+| `net8.0` | Yes                 | ASP.NET Core/Kestrel      | ASP.NET Core SignalR |
+| `net48`  | Yes, root path only | No                        | OWIN/SignalR 2       |
 
 The Angular viewer is embedded in the package, so consumers do not need
 Node.js or a separate web application deployment.
@@ -71,11 +71,12 @@ using DiagnosticSelfHost host = await DiagnosticSelfHostingService.StartAsync(
 Console.WriteLine($"Open {host.Url} in a browser.");
 ```
 
-Configure the standalone local listener with `DiagnosticExplorer:SelfHostUrl`:
+Configure the standalone local listener with `DiagnosticExplorer:SelfHostUrl`. Set `DiagnosticExplorer:Enabled` to `false` to disable diagnostic object registration, event-sink writes, and diagnostic hosting:
 
 ```json
 {
   "DiagnosticExplorer": {
+    "Enabled": true,
     "SelfHostUrl": "http://127.0.0.1:1234"
   }
 }
@@ -102,7 +103,7 @@ CORS policy, and shutdown lifecycle:
 ```csharp
 using DiagnosticExplorer.SelfHost;
 
-builder.Services.AddDiagnosticSelfHost(options =>
+builder.Services.AddDiagnosticSelfHost(builder.Configuration, options =>
 {
   options.PathBase = "/diagnostics";
 });
@@ -163,9 +164,9 @@ DiagnosticExplorer/          netstandard2.0 core library
 - PropertyBag, TraceScope, OperationSet, protobuf transport types
 DiagnosticExplorer.Log4Net/  netstandard2.0 log4net integration package
 - Configurable diagnostic and resilient appenders
-DiagnosticExplorer.Hosting/  net8.0 / net6.0 / net48 hosting integration
+DiagnosticExplorer.Hosting/  net8.0 / net48 hosting integration
 - AddDiagnosticExplorer DI extension, DiagnosticHostingService, RegistrationHandler
-DiagnosticExplorer.SelfHost/ net8.0 / net6.0 / net48 local diagnostics viewer
+DiagnosticExplorer.SelfHost/ net8.0 / net48 local diagnostics viewer
 - Kestrel or OWIN host plus embedded Angular SPA
 DiagnosticService/           Standalone ASP.NET Core viewer service
 - SignalR hubs at /diagnostics and /web-hub

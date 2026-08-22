@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-
 namespace DiagnosticExplorer;
 
 public class DiagnosticHostingService
@@ -39,7 +38,6 @@ public class DiagnosticHostingService
         Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled} Uri [{_options.Uri}");
     }
 
-
     public async Task StartAsync(CancellationToken cancel)
     {
         Debug.WriteLine($"DiagnosticHostingService starting {_options.Enabled} Uri [{_options.Uri}");
@@ -54,27 +52,30 @@ public class DiagnosticHostingService
     {
         return StopHosting();
     }
-
 #endif
-
 
     private void StartHosting()
     {
+        if (!DiagnosticManager.Enabled)
+            return;
+
         try
         {
             DiagnosticRetroAppender.SetLoggingAction(LogEvent);
             SystemStatus.Register();
 
-            Registration registration = new() {
+            Registration registration = new()
+            {
                 ProcessId = Process.GetCurrentProcess().Id,
                 InstanceId = Guid.NewGuid().ToString("N"),
                 UserDomain = Environment.UserDomainName,
                 UserName = Environment.UserName,
                 MachineName = Environment.MachineName,
-                ProcessName = ResolveProcessName()
+                ProcessName = ResolveProcessName(),
             };
 
-            _registrationHandlers = Regex.Split(_options.Uri, @"\s|;|,")
+            _registrationHandlers = Regex
+                .Split(_options.Uri, @"\s|;|,")
                 .Select(hubUrl => hubUrl.Trim())
                 .Where(hubUrl => !string.IsNullOrWhiteSpace(hubUrl))
                 .Select(hubUrl => new RegistrationHandler(hubUrl, registration))
@@ -118,15 +119,16 @@ public class DiagnosticHostingService
         _registrationHandlers = null;
     }
 
-
     public static void Start(string url, Action<HttpConnectionOptions> configureHttp = null)
     {
+        if (!DiagnosticManager.Enabled)
+            return;
+
         if (_instance == null)
         {
             DiagnosticOptions options = new(url);
             _instance = new DiagnosticHostingService(options, configureHttp);
             _instance.StartHosting();
-
         }
     }
 
@@ -134,12 +136,10 @@ public class DiagnosticHostingService
     {
         if (_instance != null)
         {
-
             await _instance.StopHosting();
             _instance = null;
         }
     }
-
 
     public static void LogEvent(DiagnosticMsg evt)
     {

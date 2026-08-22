@@ -8,7 +8,11 @@ $packageOutput = Join-Path $PSScriptRoot 'artifacts\packages'
 $apiKey = $env:NUGET_API_KEY
 
 if ([string]::IsNullOrWhiteSpace($apiKey)) {
-    throw 'Set the NUGET_API_KEY environment variable before publishing packages.'
+    $secureApiKey = Read-Host 'NuGet API key' -AsSecureString
+    $apiKey = [System.Net.NetworkCredential]::new('', $secureApiKey).Password
+    if ([string]::IsNullOrWhiteSpace($apiKey)) {
+        throw 'A NuGet API key is required to publish packages.'
+    }
 }
 
 if (-not (Test-Path $packageOutput)) {

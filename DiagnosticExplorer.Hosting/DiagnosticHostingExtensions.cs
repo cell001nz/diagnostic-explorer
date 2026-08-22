@@ -16,7 +16,13 @@ namespace DiagnosticExplorer
             Action<HttpConnectionOptions> configureHttp = null
         )
         {
-            services.Configure<DiagnosticOptions>(options => options.Uri = config[DiagnosticOptions.RemoteUrlConfigurationKey]);
+            bool enabled = config.GetValue<bool?>(DiagnosticOptions.EnabledConfigurationKey) ?? true;
+            DiagnosticManager.Enabled = enabled;
+            services.Configure<DiagnosticOptions>(options =>
+            {
+                options.Enabled = enabled;
+                options.Uri = config[DiagnosticOptions.RemoteUrlConfigurationKey];
+            });
             services.AddHostedService(sp => new DiagnosticHostingService(sp.GetService<IOptions<DiagnosticOptions>>(), configureHttp));
             return services;
         }

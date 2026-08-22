@@ -35,6 +35,7 @@ For an ASP.NET Core application, configure the service endpoint and register the
 ```json
 {
   "DiagnosticExplorer": {
+    "Enabled": true,
     "RemoteUrl": "http://localhost:2803/diagnostics"
   }
 }
@@ -63,6 +64,7 @@ Open `host.Url` in a browser. Dispose the host or await `StopAsync()` during shu
 ```json
 {
   "DiagnosticExplorer": {
+    "Enabled": true,
     "SelfHostUrl": "http://127.0.0.1:1234"
   }
 }
@@ -73,7 +75,7 @@ For an existing ASP.NET Core application:
 ```csharp
 using DiagnosticExplorer.SelfHost;
 
-builder.Services.AddDiagnosticSelfHost();
+builder.Services.AddDiagnosticSelfHost(builder.Configuration);
 
 var app = builder.Build();
 app.MapDiagnosticSelfHost();

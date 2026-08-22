@@ -17,11 +17,12 @@ The framework-specific package references the core `DiagnosticExplorer` package.
 
 ## Shared Routing Configuration
 
-Put routes under an application-owned `DiagnosticExplorer:Routing` section. Remote service connection settings use `DiagnosticExplorer:RemoteUrl`; standalone self-host listener settings use `DiagnosticExplorer:SelfHostUrl`. Both are unrelated to logging routing.
+Put routes under an application-owned `DiagnosticExplorer:Routing` section. Remote service connection settings use `DiagnosticExplorer:RemoteUrl`; standalone self-host listener settings use `DiagnosticExplorer:SelfHostUrl`. Both are unrelated to logging routing. Set `DiagnosticExplorer:Enabled` to `false` to suppress all routed and direct event-sink writes, object registration, and diagnostics hosting.
 
 ```json
 {
   "DiagnosticExplorer": {
+    "Enabled": true,
     "RemoteUrl": "http://localhost:2803/diagnostics",
     "Routing": {
       "MatchMode": "AllMatches",

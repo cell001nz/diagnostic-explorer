@@ -61,6 +61,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private Timer _scopeTimer;
     private Task _scopeTask;
     private static DiagnosticSelfHost _selfHost;
+    private static Task _selfHostStartTask;
     private bool _shutdownInProgress;
 
     private const bool _serverDiags = true;
@@ -123,8 +124,28 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static void StartSelfHostedDiagnostics()
     {
-        _selfHost = DiagnosticSelfHostingService.StartAsync(LoadConfiguration()).GetAwaiter().GetResult();
-        Debug.WriteLine($"Self-hosted diagnostics started at {_selfHost.Url}");
+        if (_selfHost != null || _selfHostStartTask != null)
+            return;
+
+        _selfHostStartTask = StartSelfHostedDiagnosticsAsync();
+    }
+
+    private static async Task StartSelfHostedDiagnosticsAsync()
+    {
+        try
+        {
+            _selfHost = await DiagnosticSelfHostingService.StartAsync(LoadConfiguration());
+            if (_selfHost.IsEnabled)
+                Debug.WriteLine($"Self-hosted diagnostics started at {_selfHost.Url}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            _selfHostStartTask = null;
+        }
     }
 
     private static void StartRemoteDiagnostics()
@@ -190,6 +211,10 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static async Task StopSelfHostedDiagnosticsAsync()
     {
+        Task selfHostStartTask = _selfHostStartTask;
+        if (selfHostStartTask != null)
+            await selfHostStartTask;
+
         if (_selfHost == null)
             return;
 

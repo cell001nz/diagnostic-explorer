@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <DiagnosticExplorerPackageVersion>3.1.38</DiagnosticExplorerPackageVersion>
-    <DiagnosticExplorerAssemblyVersion>3.1.38.0</DiagnosticExplorerAssemblyVersion>
-    <DiagnosticExplorerFileVersion>3.1.38.0</DiagnosticExplorerFileVersion>
+    <DiagnosticExplorerPackageVersion>5.0.0.0</DiagnosticExplorerPackageVersion>
+    <DiagnosticExplorerAssemblyVersion>5.0.0.0</DiagnosticExplorerAssemblyVersion>
+    <DiagnosticExplorerFileVersion>5.0.0.0</DiagnosticExplorerFileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">

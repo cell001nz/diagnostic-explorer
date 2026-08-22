@@ -16,7 +16,12 @@ public static class DiagnosticSelfHostingService
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
-        SelfHostOptions options = new() { Url = configuration[SelfHostOptions.SelfHostUrlConfigurationKey] ?? SelfHostOptions.DefaultUrl };
+        SelfHostOptions options = new()
+        {
+            Enabled = configuration.GetValue<bool?>(DiagnosticManager.EnabledConfigurationKey) ?? true,
+            Url = configuration[SelfHostOptions.SelfHostUrlConfigurationKey] ?? SelfHostOptions.DefaultUrl,
+        };
+        DiagnosticManager.Enabled = options.Enabled;
         return StartAsync(options.Url, options, cancellationToken);
     }
 
@@ -28,6 +33,9 @@ public static class DiagnosticSelfHostingService
     )
     {
         SelfHostOptions resolvedOptions = options ?? new SelfHostOptions();
+        if (!DiagnosticManager.Enabled || !resolvedOptions.Enabled)
+            return DiagnosticSelfHost.Disabled();
+
         string listenerUrl = string.IsNullOrWhiteSpace(url) ? resolvedOptions.Url : url;
         if (string.IsNullOrWhiteSpace(listenerUrl))
             listenerUrl = SelfHostOptions.DefaultUrl;
@@ -52,17 +60,23 @@ public sealed class DiagnosticSelfHost : IDisposable
     private readonly Func<Task> _stop;
     private int _stopped;
 
-    internal DiagnosticSelfHost(string url, Func<Task> stop)
+    internal DiagnosticSelfHost(string url, Func<Task> stop, bool isEnabled = true)
     {
         Url = url;
         _stop = stop;
+        IsEnabled = isEnabled;
     }
+
+    internal static DiagnosticSelfHost Disabled() => new(null, () => Task.CompletedTask, false);
 
     /// <summary>Raised once the host has stopped.</summary>
     public event EventHandler Stopped;
 
     /// <summary>Gets the listener URL.</summary>
     public string Url { get; }
+
+    /// <summary>Gets whether a local listener was started.</summary>
+    public bool IsEnabled { get; }
 
     /// <summary>Stops the listener and releases its diagnostic subscriptions.</summary>
     public async Task StopAsync()

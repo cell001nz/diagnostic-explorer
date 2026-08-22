@@ -3,6 +3,7 @@
 public class DiagnosticOptions
 {
     public const string RemoteUrlConfigurationKey = "DiagnosticExplorer:RemoteUrl";
+    public const string EnabledConfigurationKey = DiagnosticManager.EnabledConfigurationKey;
 
     public DiagnosticOptions() { }
 

@@ -167,6 +167,9 @@ public class EventSink : IDisposable
 
     private void AddSingleEvent(SystemEvent evt)
     {
+        if (!DiagnosticManager.Enabled)
+            return;
+
         Events.Enqueue(evt);
         _repo.RegisterEvent(evt);
         if (Events.Count > MaxMessages)

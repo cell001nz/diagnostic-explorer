@@ -9,10 +9,13 @@ public sealed class SelfHostOptions
     public const string SelfHostUrlConfigurationKey = "DiagnosticExplorer:SelfHostUrl";
 
     /// <summary>The default loopback listener used when no URL is supplied.</summary>
-    public const string DefaultUrl = "http://127.0.0.1:1234";
+    public const string DefaultUrl = "http://127.0.0.1:40001";
 
     /// <summary>Gets or sets the URL at which the standalone viewer listens.</summary>
     public string Url { get; set; } = DefaultUrl;
+
+    /// <summary>Gets or sets whether local diagnostics are enabled.</summary>
+    public bool Enabled { get; set; } = true;
 
     /// <summary>Gets or sets the relative base path for the viewer.</summary>
     public string PathBase { get; set; } = "/";

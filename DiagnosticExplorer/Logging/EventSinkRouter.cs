@@ -17,16 +17,11 @@ public sealed class EventSinkRouter
         if (options == null)
             throw new ArgumentNullException(nameof(options));
         if (!Enum.IsDefined(typeof(EventSinkRouteMatchMode), options.MatchMode))
-            throw new ArgumentOutOfRangeException(
-                nameof(options),
-                "The configured match mode is invalid."
-            );
+            throw new ArgumentOutOfRangeException(nameof(options), "The configured match mode is invalid.");
 
         _sinkRepo = sinkRepo ?? EventSinkRepo.Default;
         _matchMode = options.MatchMode;
-        _routes =
-            options.Routes?.Select((route, index) => new CompiledRoute(route, index)).ToArray()
-            ?? Array.Empty<CompiledRoute>();
+        _routes = options.Routes?.Select((route, index) => new CompiledRoute(route, index)).ToArray() ?? Array.Empty<CompiledRoute>();
     }
 
     public bool IsEnabled(string category, LogLevel level)
@@ -38,6 +33,8 @@ public sealed class EventSinkRouter
     {
         if (logEvent == null)
             throw new ArgumentNullException(nameof(logEvent));
+        if (!global::DiagnosticExplorer.DiagnosticManager.Enabled)
+            return 0;
 
         List<CompiledRoute> routes = FindMatchingRoutes(logEvent.Category, logEvent.Level);
         if (routes.Count == 0)
@@ -53,9 +50,7 @@ public sealed class EventSinkRouter
                 if (!destinations.Add(key))
                     continue;
 
-                _sinkRepo
-                    .GetSink(destination.SinkName, destination.SinkCategory)
-                    .LogEvent((int)logEvent.Level, logEvent.Message, logEvent.Detail);
+                _sinkRepo.GetSink(destination.SinkName, destination.SinkCategory).LogEvent((int)logEvent.Level, logEvent.Message, logEvent.Detail);
                 writes++;
             }
         }
@@ -88,13 +83,7 @@ public sealed class EventSinkRouter
                 return routes;
 
             case EventSinkRouteMatchMode.MostSpecific:
-                return new[]
-                {
-                    routes
-                        .OrderByDescending(route => route.Specificity)
-                        .ThenBy(route => route.Order)
-                        .First(),
-                };
+                return new[] { routes.OrderByDescending(route => route.Specificity).ThenBy(route => route.Order).First() };
 
             case EventSinkRouteMatchMode.FirstMatch:
                 return new[] { routes[0] };
@@ -112,35 +101,18 @@ public sealed class EventSinkRouter
                 throw new ArgumentException("A route cannot be null.", nameof(route));
             if (string.IsNullOrWhiteSpace(route.CategoryPattern))
                 throw new ArgumentException("A route category pattern is required.", nameof(route));
-            if (
-                route.CategoryPattern != "*"
-                && route.CategoryPattern.EndsWith(".", StringComparison.Ordinal)
-            )
-                throw new ArgumentException(
-                    "A route category pattern cannot end with a period.",
-                    nameof(route)
-                );
+            if (route.CategoryPattern != "*" && route.CategoryPattern.EndsWith(".", StringComparison.Ordinal))
+                throw new ArgumentException("A route category pattern cannot end with a period.", nameof(route));
             if (route.MinLevel > route.MaxLevel)
-                throw new ArgumentException(
-                    "A route minimum level cannot exceed its maximum level.",
-                    nameof(route)
-                );
+                throw new ArgumentException("A route minimum level cannot exceed its maximum level.", nameof(route));
             if (route.Destinations == null || route.Destinations.Count == 0)
-                throw new ArgumentException(
-                    "A route must define at least one destination.",
-                    nameof(route)
-                );
+                throw new ArgumentException("A route must define at least one destination.", nameof(route));
             if (
                 route.Destinations.Any(destination =>
-                    destination == null
-                    || string.IsNullOrWhiteSpace(destination.SinkName)
-                    || string.IsNullOrWhiteSpace(destination.SinkCategory)
+                    destination == null || string.IsNullOrWhiteSpace(destination.SinkName) || string.IsNullOrWhiteSpace(destination.SinkCategory)
                 )
             )
-                throw new ArgumentException(
-                    "Each route destination requires a sink name and category.",
-                    nameof(route)
-                );
+                throw new ArgumentException("Each route destination requires a sink name and category.", nameof(route));
 
             CategoryPattern = route.CategoryPattern.Trim();
             MinLevel = route.MinLevel;

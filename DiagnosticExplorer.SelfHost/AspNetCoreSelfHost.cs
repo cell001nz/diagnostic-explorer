@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DiagnosticExplorer.SelfHost;
@@ -14,6 +15,21 @@ namespace DiagnosticExplorer.SelfHost;
 /// <summary>Registers self-host diagnostics services in an ASP.NET Core application.</summary>
 public static class DiagnosticSelfHostServiceCollectionExtensions
 {
+    public static IServiceCollection AddDiagnosticSelfHost(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        Action<SelfHostOptions> configure = null
+    )
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return services.AddDiagnosticSelfHost(options =>
+        {
+            options.Enabled = configuration.GetValue<bool?>(DiagnosticManager.EnabledConfigurationKey) ?? true;
+            configure?.Invoke(options);
+            DiagnosticManager.Enabled = options.Enabled;
+        });
+    }
+
     public static IServiceCollection AddDiagnosticSelfHost(this IServiceCollection services, Action<SelfHostOptions> configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -36,6 +52,9 @@ public static class DiagnosticSelfHostEndpointRouteBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         SelfHostOptions options = endpoints.ServiceProvider.GetRequiredService<SelfHostOptions>();
+        if (!DiagnosticManager.Enabled || !options.Enabled)
+            return endpoints;
+
         string basePath = pathBase ?? options.GetNormalizedPathBase();
         if (string.IsNullOrWhiteSpace(basePath))
             basePath = string.Empty;
@@ -113,7 +132,7 @@ internal static class DiagnosticSelfHostFactory
 
         WebApplication app = builder.Build();
         app.MapDiagnosticSelfHost();
-        await Task.Run(() => app.StartAsync(cancellationToken)).ConfigureAwait(false);
+        await app.StartAsync(cancellationToken).ConfigureAwait(false);
 
         SelfHostManager manager = app.Services.GetRequiredService<SelfHostManager>();
         return new DiagnosticSelfHost(
@@ -121,17 +140,13 @@ internal static class DiagnosticSelfHostFactory
             async () =>
             {
                 manager.Dispose();
-                await Task.Run(async () =>
-                    {
-                        using CancellationTokenSource stopToken = new(TimeSpan.FromSeconds(2));
-                        try
-                        {
-                            await app.StopAsync(stopToken.Token).ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException) when (stopToken.IsCancellationRequested) { }
-                        await app.DisposeAsync().ConfigureAwait(false);
-                    })
-                    .ConfigureAwait(false);
+                using CancellationTokenSource stopToken = new(TimeSpan.FromSeconds(2));
+                try
+                {
+                    await app.StopAsync(stopToken.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (stopToken.IsCancellationRequested) { }
+                await app.DisposeAsync().ConfigureAwait(false);
             }
         );
     }
