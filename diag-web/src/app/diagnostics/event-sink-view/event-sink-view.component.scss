@@ -2,11 +2,11 @@
 .event-row-verbose,
 .event-row-debug,
 .event-row-info {
-  background-color: rgb(9, 20, 14) !important;
-  color: rgb(120, 230, 160);
-  --row-glow: 90, 200, 140;
+  background-color: rgb(8, 18, 21) !important;
+  color: rgb(122, 210, 216);
+  --row-glow: 76, 170, 180;
   user-select: none;
-  &:hover { background-color: rgb(15, 30, 21) !important; }
+  &:hover { background-color: rgb(12, 26, 30) !important; }
 }
 
 .event-row-notice {
@@ -42,22 +42,23 @@
   &:hover { background-color: rgb(38, 11, 11); }
 }
 
-// Phosphor glow: bright left accent bar + soft halo, using each row's own hue
+// Phosphor glow: restrained left accent + subtle halo, using each row's own hue
 tbody tr[class*="event-row-"] {
   box-shadow:
-    inset 3px 0 0 0 rgb(var(--row-glow)),
-    inset 0 0 16px -4px rgba(var(--row-glow), 0.7),
-    0 0 8px -2px rgba(var(--row-glow), 0.5);
-  text-shadow: 0 0 5px rgba(var(--row-glow), 0.5);
+    inset 2px 0 0 0 rgb(var(--row-glow)),
+    inset 0 0 10px -5px rgba(var(--row-glow), 0.35),
+    0 0 5px -3px rgba(var(--row-glow), 0.18);
+  text-shadow: 0 0 3px rgba(var(--row-glow), 0.18);
 }
 
 .event-row-selected {
   box-shadow:
-    0 0 0 2px #6366f1,
-    0 0 10px 1px rgba(99, 102, 241, 0.85),
-    inset 0 0 14px rgba(99, 102, 241, 0.5) !important;
-  outline-offset: -1px;
-  filter: brightness(1.25);
+    inset 2px 0 0 0 rgb(var(--row-glow)),
+    inset 0 1px 0 rgba(140, 220, 226, 0.45),
+    inset 0 -1px 0 rgba(140, 220, 226, 0.45),
+    inset 0 0 12px -6px rgba(112, 205, 214, 0.32) !important;
+  background-image: linear-gradient(90deg, rgba(112, 205, 214, 0.14), transparent 45%);
+  filter: brightness(1.08);
 }
 
 // Prevent text highlight while drag-selecting

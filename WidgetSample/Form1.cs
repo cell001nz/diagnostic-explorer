@@ -2,22 +2,22 @@
 
 // Diagnostic Explorer, a .Net diagnostic toolset
 // Copyright (C) 2010 Cameron Elliot
-// 
+//
 // This file is part of Diagnostic Explorer.
-// 
+//
 // Diagnostic Explorer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // Diagnostic Explorer is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public License
 // along with Diagnostic Explorer.  If not, see <http://www.gnu.org/licenses/>.
-// 
+//
 // http://diagexplorer.sourceforge.net/
 
 #endregion
@@ -34,6 +34,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DiagnosticExplorer;
+using DiagnosticExplorer.SelfHost;
 using log4net;
 using log4net.Config;
 using log4net.Core;
@@ -61,7 +62,11 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private Task _autoLogTask;
     private Timer _scopeTimer;
     private Task _scopeTask;
+    private static DiagnosticSelfHost _selfHost;
+    private bool _shutdownInProgress;
 
+    private const bool _serverDiags = true;
+    private const bool _selfHostDiags = true;
 
     public Form1()
     {
@@ -82,7 +87,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
                     });
         */
         StartDiagnostics();
-        Closed += StopDiagnostics;
+        FormClosing += StopDiagnosticsOnClosing;
 
         //Exposure the remoting interface
         _gadgets = new BindingList<Gadget>();
@@ -105,8 +110,13 @@ public partial class Form1 : Form, INotifyPropertyChanged
         _counterTimer = new Timer(IncrementCount, null, 400, 400);
         _listTestTimer = new Timer(MungeNumbersList, null, 100, 100);
 
-        txtContent.DataBindings.Add("Text", this, "InfoText", false, DataSourceUpdateMode.OnPropertyChanged);
-
+        txtContent.DataBindings.Add(
+            "Text",
+            this,
+            "InfoText",
+            false,
+            DataSourceUpdateMode.OnPropertyChanged
+        );
 
         _scopeTimer = new Timer(x => DoScopeTimerCode(), null, 500, 500);
         _scopeTask = RunScopeTask();
@@ -114,18 +124,84 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static void StartDiagnostics()
     {
-        Debug.WriteLine($"Starting diagnostics with ????????????????????????????");
-        DiagnosticHostingService.Start(ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri"));
+        // To use the in-process viewer, uncomment this line and comment out StartRemoteDiagnostics().
+        if (_selfHostDiags)
+            StartSelfHostedDiagnostics();
+
+        if (_serverDiags)
+            StartRemoteDiagnostics();
     }
 
-    private void StopDiagnostics(object sender, EventArgs e)
+    private static void StartSelfHostedDiagnostics()
     {
-        Debug.WriteLine($"Calling StopDiagnostics");
-        DiagnosticHostingService.Stop();
+        _selfHost = DiagnosticSelfHostingService
+            .StartAsync("http://localhost:12345")
+            .GetAwaiter()
+            .GetResult();
+        Debug.WriteLine($"Self-hosted diagnostics started at {_selfHost.Url}");
     }
 
-    [ExtendedProperty] public Widget NullWidget => null;
+    private static void StartRemoteDiagnostics()
+    {
+        DiagnosticHostingService.Start(
+            ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri")
+        );
+    }
 
+    private async void StopDiagnosticsOnClosing(object sender, FormClosingEventArgs e)
+    {
+        if (_shutdownInProgress)
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        _shutdownInProgress = true;
+        e.Cancel = true;
+
+        try
+        {
+            await DiagnosticHostingService.Stop();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        try
+        {
+            await StopSelfHostedDiagnosticsAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            FormClosing -= StopDiagnosticsOnClosing;
+            BeginInvoke(Close);
+        }
+    }
+
+    private async void StopDiagnostics(object sender, EventArgs e)
+    {
+        if (_selfHostDiags)
+            await StopSelfHostedDiagnosticsAsync();
+        else
+            await DiagnosticHostingService.Stop();
+    }
+
+    private static async Task StopSelfHostedDiagnosticsAsync()
+    {
+        if (_selfHost == null)
+            return;
+
+        DiagnosticSelfHost selfHost = _selfHost;
+        _selfHost = null;
+        await selfHost.StopAsync();
+    }
+
+    [ExtendedProperty]
+    public Widget NullWidget => null;
 
     //		[CollectionProperty(CollectionMode.List, Category="Numbers")]
     public List<int> UpdateList { get; }
@@ -133,27 +209,35 @@ public partial class Form1 : Form, INotifyPropertyChanged
     [Property(Category = "Gadgets", Description = "Max Gadeget Id")]
     public int GadgetIdCount { get; private set; }
 
-    [Property(Category = "Widgets")] 
+    [Property(Category = "Widgets")]
     public int WidgetIdCount { get; private set; }
 
     [Property(AllowSet = true)]
     public string InfoText
     {
         get { return _infoText; }
-        set {
+        set
+        {
             _infoText = value;
-            if (PropertyChanged != null) PropertyChanged(this, new PropertyChangedEventArgs("InfoText"));
+            if (PropertyChanged != null)
+                PropertyChanged(this, new PropertyChangedEventArgs("InfoText"));
         }
     }
 
-    [Property(AllowSet = true)] public int SetMePlease { get; set; }
+    [Property(AllowSet = true)]
+    public int SetMePlease { get; set; }
 
-    [Property(AllowSet = false)] public int Counter2 { get; set; }
+    [Property(AllowSet = false)]
+    public int Counter2 { get; set; }
 
     [RateProperty(Category = "Widgets", ExposeRate = false, ExposeTotal = true)]
     public RateCounter WidgetEvents { get; } = new RateCounter(5);
 
-    [RateProperty(Category = "Gadgets", ExposeTotal = true, Description = "The rate of gadget events received")]
+    [RateProperty(
+        Category = "Gadgets",
+        ExposeTotal = true,
+        Description = "The rate of gadget events received"
+    )]
     public RateCounter GadgetEvents { get; } = new RateCounter(5);
 
     [CollectionProperty(CollectionMode.List, Category = "All Gadgets")]
@@ -220,8 +304,15 @@ public partial class Form1 : Form, INotifyPropertyChanged
     }
 
     [DiagnosticMethod]
-    public string LogLotsOfStuff(string msg1, string msg2, string msg3, string msg4, string msg5, string msg6,
-        string msg7)
+    public string LogLotsOfStuff(
+        string msg1,
+        string msg2,
+        string msg3,
+        string msg4,
+        string msg5,
+        string msg6,
+        string msg7
+    )
     {
         string[] vals = { msg1, msg2, msg3, msg4, msg5, msg6, msg7 };
         string[] toLog = vals.Where(x => !string.IsNullOrEmpty(x)).ToArray();
@@ -231,34 +322,60 @@ public partial class Form1 : Form, INotifyPropertyChanged
     }
 
     [DiagnosticMethod]
-    public int GetRandomInt1() { return _rand.Next(); }
+    public int GetRandomInt1()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt2() { return _rand.Next(); }
+    public int GetRandomInt2()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt3() { return _rand.Next(); }
+    public int GetRandomInt3()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt4() { return _rand.Next(); }
+    public int GetRandomInt4()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt5() { return _rand.Next(); }
+    public int GetRandomInt5()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt6() { return _rand.Next(); }
+    public int GetRandomInt6()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt7() { return _rand.Next(); }
+    public int GetRandomInt7()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
-    public int GetRandomInt8() { return _rand.Next(); }
-
+    public int GetRandomInt8()
+    {
+        return _rand.Next();
+    }
 
     [DiagnosticMethod]
     public string RandomText()
     {
-        return string.Join(Environment.NewLine, Enumerable.Range(1, _rand.Next(5, 100)).Select(_ => RandomLine()).ToArray());
+        return string.Join(
+            Environment.NewLine,
+            Enumerable.Range(1, _rand.Next(5, 100)).Select(_ => RandomLine()).ToArray()
+        );
     }
 
     [DiagnosticMethod]
@@ -267,18 +384,25 @@ public partial class Form1 : Form, INotifyPropertyChanged
         await Task.Delay(2_000);
         return GetRandomWord();
     }
-    
+
     public string GetRandomWord()
     {
-        return new string(Enumerable.Range(1, _rand.Next(1, 10))
-            .Select(_ => _rand.Next(0, 26))
-            .Select(x => (char) ('A' + ((char) x))).ToArray());
+        return new string(
+            Enumerable
+                .Range(1, _rand.Next(1, 10))
+                .Select(_ => _rand.Next(0, 26))
+                .Select(x => (char)('A' + ((char)x)))
+                .ToArray()
+        );
     }
 
     [DiagnosticMethod]
     public string RandomLine()
     {
-        return string.Join(" ", Enumerable.Range(1, _rand.Next(1, 50)).Select(_ => GetRandomWord()).ToArray());
+        return string.Join(
+            " ",
+            Enumerable.Range(1, _rand.Next(1, 50)).Select(_ => GetRandomWord()).ToArray()
+        );
     }
 
     private void SendEvents(object o)
@@ -307,7 +431,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static Task RunScopedTraceExampleAsync(ILog log, string message)
     {
-        return Task.Run(async () => {
+        return Task.Run(async () =>
+        {
             try
             {
                 using var scope = new TraceScope(log.Info);
@@ -320,7 +445,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
             }
         });
     }
-
 
     private void HandleGadgetRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
     {
@@ -378,7 +502,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
         }
     }
 
-
     private void bNotice_Click(object sender, EventArgs e)
     {
         try
@@ -427,7 +550,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
         }
     }
 
-
     private void bRemoveGadget_Click(object sender, EventArgs e)
     {
         RemoveItem(_gadgets, _gadgetLog);
@@ -457,10 +579,9 @@ public partial class Form1 : Form, INotifyPropertyChanged
         using (new TraceScope(_formLog.Info))
         {
             TraceScope.Trace($"In Trace Scope Button Click 1 InvokeRequired: {InvokeRequired}");
-                
-                
 
-            Task task1 = Task.Run(async () => {
+            Task task1 = Task.Run(async () =>
+            {
                 await Task.Delay(100);
                 TraceScope.Trace("In the async bit A1");
 
@@ -470,7 +591,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
                 TraceScope.Trace("In the async bit A2");
             });
 
-            Task task2 = Task.Run(async () => {
+            Task task2 = Task.Run(async () =>
+            {
                 await Task.Delay(100);
                 TraceScope.Trace("In the async bit B1");
                 await Task.Delay(100);
@@ -489,7 +611,11 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private async void btnTestTraceScope2_Click(object sender, EventArgs e)
     {
-        using var scope = new TraceScope("UI_ACTION_RoutingModel_SendAll", _formLog.Info, forceTrace: true);
+        using var scope = new TraceScope(
+            "UI_ACTION_RoutingModel_SendAll",
+            _formLog.Info,
+            forceTrace: true
+        );
 
         TraceScope.Trace($"In Trace Scope Button Click 2 InvokeRequired: {InvokeRequired}");
         // await TraceScopeExample.TestTraceScope1();
@@ -500,34 +626,38 @@ public partial class Form1 : Form, INotifyPropertyChanged
         Report("In the async bit A");
 
         using SemaphoreSlim throttle = new SemaphoreSlim(3);
-        IEnumerable<Task> parallelTasks = Enumerable.Range(1, 20).Select(async x => {
-            await throttle.WaitAsync();
-            try
+        IEnumerable<Task> parallelTasks = Enumerable
+            .Range(1, 20)
+            .Select(async x =>
             {
-                List<string> ids = new();
-                ids.Add(Task.CurrentId?.ToString() ?? "X");
-                using var scope2 = new TraceScope("Doing the parallel bit");
-                Report($"Parallel...{x}...A");
-                ids.Add(Task.CurrentId?.ToString() ?? "X");
-                await Task.Delay(100);
-                ids.Add(Task.CurrentId?.ToString() ?? "X");
-
-                await Task.Run(async () => {
+                await throttle.WaitAsync();
+                try
+                {
+                    List<string> ids = new();
                     ids.Add(Task.CurrentId?.ToString() ?? "X");
-                    Report($"Inner task {x} Q");
+                    using var scope2 = new TraceScope("Doing the parallel bit");
+                    Report($"Parallel...{x}...A");
+                    ids.Add(Task.CurrentId?.ToString() ?? "X");
                     await Task.Delay(100);
                     ids.Add(Task.CurrentId?.ToString() ?? "X");
-                    Report($"Inner task {x} W");
-                });
 
-                ids.Add(Task.CurrentId?.ToString() ?? "X");
-                Report($"Parallel...{x}...B [" + string.Join(", ", ids) + "]");
-            }
-            finally
-            {
-                throttle.Release();
-            }
-        });
+                    await Task.Run(async () =>
+                    {
+                        ids.Add(Task.CurrentId?.ToString() ?? "X");
+                        Report($"Inner task {x} Q");
+                        await Task.Delay(100);
+                        ids.Add(Task.CurrentId?.ToString() ?? "X");
+                        Report($"Inner task {x} W");
+                    });
+
+                    ids.Add(Task.CurrentId?.ToString() ?? "X");
+                    Report($"Parallel...{x}...B [" + string.Join(", ", ids) + "]");
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            });
 
         await Task.WhenAll(parallelTasks);
 
@@ -536,7 +666,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
         Report("Finished");
 
         await Task.Delay(1000);
-
     }
 
     static void Report(string message)
@@ -551,12 +680,14 @@ public partial class Form1 : Form, INotifyPropertyChanged
         {
             // using (var scope = new TraceScope("SYNC BLAH 1"))
             {
-                string message = $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$%";
+                string message =
+                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$%";
                 TraceScope.Trace(message);
             }
             // using (var scope = new AsyncTraceScope("ASYNC BLAH 1"))
             {
-                string message = $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$%";
+                string message =
+                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$%";
                 TraceScope.Trace(message);
             }
 
@@ -566,25 +697,25 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private void DoScopeTimerCode()
     {
-        Invoke(() => {
+        Invoke(() =>
+        {
             using (var scope = new TraceScope("SYNC BLAH 2"))
             {
-
-                string message = $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$% ";
+                string message =
+                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$% ";
                 TraceScope.Trace(message);
             }
         });
-        Invoke(() => {
+        Invoke(() =>
+        {
             using (var scope = new TraceScope("ASYNC BLAH 2"))
             {
-
-                string message = $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$% ";
+                string message =
+                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$% ";
                 TraceScope.Trace(message);
             }
         });
-
     }
-
 
     private void btn10_Click(object sender, EventArgs e)
     {
@@ -607,14 +738,14 @@ public partial class Form1 : Form, INotifyPropertyChanged
         try
         {
             Stopwatch watch = Stopwatch.StartNew();
-            await Task.Run(() => {
+            await Task.Run(() =>
+            {
                 for (int i = 0; i < count; i++)
                 {
-
                     LoggingEventData data = new()
                     {
                         Message = $"Event #{i}",
-                        Level = IntToLevel(_rand.Next(1, 12) * 10000)
+                        Level = IntToLevel(_rand.Next(1, 12) * 10000),
                     };
 
                     _formLog.Logger.Log(new LoggingEvent(data));
@@ -637,18 +768,28 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static Level IntToLevel(int value)
     {
-        if (value >= Level.Emergency.Value) return Level.Emergency;
-        if (value >= Level.Fatal.Value) return Level.Fatal;
-        if (value >= Level.Alert.Value) return Level.Alert;
-        if (value >= Level.Critical.Value) return Level.Critical;
-        if (value >= Level.Severe.Value) return Level.Severe;
-        if (value >= Level.Error.Value) return Level.Error;
-        if (value >= Level.Warn.Value) return Level.Warn;
-        if (value >= Level.Notice.Value) return Level.Notice;
-        if (value >= Level.Info.Value) return Level.Info;
-        if (value >= Level.Debug.Value) return Level.Debug;
-        if (value >= Level.Trace.Value) return Level.Trace;
+        if (value >= Level.Emergency.Value)
+            return Level.Emergency;
+        if (value >= Level.Fatal.Value)
+            return Level.Fatal;
+        if (value >= Level.Alert.Value)
+            return Level.Alert;
+        if (value >= Level.Critical.Value)
+            return Level.Critical;
+        if (value >= Level.Severe.Value)
+            return Level.Severe;
+        if (value >= Level.Error.Value)
+            return Level.Error;
+        if (value >= Level.Warn.Value)
+            return Level.Warn;
+        if (value >= Level.Notice.Value)
+            return Level.Notice;
+        if (value >= Level.Info.Value)
+            return Level.Info;
+        if (value >= Level.Debug.Value)
+            return Level.Debug;
+        if (value >= Level.Trace.Value)
+            return Level.Trace;
         return Level.Verbose;
     }
-
 }

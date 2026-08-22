@@ -1,0 +1,107 @@
+:host {
+    display: block;
+    min-height: 100vh;
+}
+
+.self-host-shell {
+    min-height: 100vh;
+    background: var(--surface-ground);
+    color: var(--text-color);
+}
+
+.self-host-connection-status {
+    position: fixed;
+    top: 0.75rem;
+    left: 50%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: min(30rem, calc(100vw - 1.5rem));
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid;
+    border-radius: 0.375rem;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.94);
+    color: #fde68a;
+    text-align: center;
+}
+
+.self-host-connection-status--disconnected {
+    border-color: rgba(248, 113, 113, 0.7);
+    color: #fecaca;
+}
+
+.self-host-connection-status--connecting {
+    border-color: rgba(250, 204, 21, 0.7);
+}
+
+.self-host-connection-status-dot {
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #facc15;
+}
+
+.self-host-connection-status--disconnected .self-host-connection-status-dot {
+    background: #f87171;
+}
+
+.self-host-connection-status--connecting .self-host-connection-status-dot {
+    animation: self-host-connection-pulse 1.5s ease-in-out infinite;
+}
+
+.self-host-content {
+    min-height: 100vh;
+    padding: 0.75rem;
+}
+
+.self-host-tabs {
+    min-height: 0;
+}
+
+.self-host-error {
+    margin: 0.75rem 0;
+    color: #fca5a5;
+}
+
+.self-host-empty {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    color: var(--text-color-secondary);
+}
+
+.detail-panel-row {
+    overflow: hidden;
+}
+
+.detail-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 8px;
+    cursor: row-resize;
+    background: var(--surface-card);
+    border-top: 1px solid var(--surface-border);
+}
+
+.detail-divider:hover {
+    background: #84cc16;
+}
+
+.detail-divider-grip {
+    width: 40px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--text-color-secondary);
+}
+
+@keyframes self-host-connection-pulse {
+    50% {
+        opacity: 0.35;
+    }
+}

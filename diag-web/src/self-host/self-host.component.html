@@ -1,0 +1,77 @@
+<main class="app-dark self-host-shell">
+    @if (connectionState() !== 'connected') {
+        <div class="self-host-connection-status"
+             [class.self-host-connection-status--connecting]="connectionState() === 'connecting'"
+             [class.self-host-connection-status--disconnected]="connectionState() === 'disconnected'"
+             role="status"
+             aria-live="polite">
+            <span class="self-host-connection-status-dot" aria-hidden="true"></span>
+            @if (connectionState() === 'connecting') {
+                Connecting to local diagnostics...
+            } @else {
+                Connection to local diagnostics lost. Retrying...
+            }
+        </div>
+    }
+
+    @if (process(); as localProcess) {
+        <div class="self-host-content grid grid-rows-[auto_minmax(0,1fr)_auto] h-screen">
+            <div>
+                <p class="float-left cursor-pointer" (click)="expandCollapse()">
+                    {{ localProcess.machineName }}
+                    / {{ localProcess.name }}
+                    <span class="text-xs">({{ localProcess.id }})</span>
+                </p>
+                <span class="text-lime-500 float-right opacity-70 hover:opacity-100">
+                    <span class="mr-6">{{ processModel().titleMessage() }}</span>
+                </span>
+            </div>
+
+            @if (error()) {
+                <div class="self-host-error">{{ error() }}</div>
+            }
+
+            <div class="tabs-right self-host-tabs overflow-hidden">
+                @if (processModel().categories().length) {
+                    <p-tabs [value]="processModel().activeCatName()" (valueChange)="onCategoryChange($event)" class="h-full">
+                        <p-tablist>
+                            @for (category of processModel().categories(); track category.name()) {
+                                <p-tab [value]="category.name()">
+                                    <span class="alert-pill"
+                                          [class]="category.labelClass()"
+                                          [class.pill-pulse-odd]="category.pulseId() % 2 === 1"
+                                          [class.pill-pulse-even]="category.pulseId() % 2 === 0 && category.pulseId() > 0"></span>
+                                    {{ category.name() }}
+                                </p-tab>
+                            }
+                        </p-tablist>
+                        <p-tabpanels>
+                            @for (category of processModel().categories(); track category.name()) {
+                                <p-tabpanel [value]="category.name()">
+                                    <div class="overflow-y-auto">
+                                        <app-category-view [category]="category" [process]="localProcess" (eventSelected)="onEventSelected($event)" />
+                                    </div>
+                                </p-tabpanel>
+                            }
+                        </p-tabpanels>
+                    </p-tabs>
+                } @else {
+                    <div class="self-host-empty">Waiting for registered diagnostics...</div>
+                }
+            </div>
+
+            @if (selectedEvent()) {
+                <div class="detail-divider" (mousedown)="startResize($event)" title="Drag to resize">
+                    <span class="detail-divider-grip"></span>
+                </div>
+                <div class="detail-panel-row" [style.height.px]="detailHeight()">
+                    <app-event-detail-panel [event]="selectedEvent()!" (closed)="closeDetail()" />
+                </div>
+            }
+        </div>
+    } @else {
+        <div class="self-host-empty">
+            {{ connectionState() === 'connecting' ? 'Connecting to local diagnostics...' : 'Connection to local diagnostics lost. Retrying...' }}
+        </div>
+    }
+</main>

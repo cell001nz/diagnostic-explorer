@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Linq;
+using System.Text.Json.Serialization;
 using DiagnosticExplorer;
 using ProtoBuf;
 
@@ -82,6 +83,8 @@ public class PropertyBag
 	[ProtoMember(4)]
 	public List<Category> Categories { get; set; }
 
+	[IgnoreDataMember]
+	[JsonIgnore]
 	public object SourceObject { get; set; }
 
 	public Property GetProperty(string name, string category = null)

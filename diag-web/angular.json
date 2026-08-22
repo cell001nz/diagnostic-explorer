@@ -100,6 +100,70 @@
                     }
                 }
             }
+        },
+        "self-host": {
+            "projectType": "application",
+            "root": "src/self-host",
+            "sourceRoot": "src/self-host",
+            "prefix": "app",
+            "architect": {
+                "build": {
+                    "builder": "@angular/build:application",
+                    "options": {
+                        "outputPath": "dist/self-host",
+                        "index": "src/self-host/index.html",
+                        "browser": "src/self-host/main.ts",
+                        "polyfills": [
+                            "zone.js"
+                        ],
+                        "tsConfig": "tsconfig.self-host.json",
+                        "inlineStyleLanguage": "scss",
+                        "assets": [],
+                        "styles": [
+                            "src/styles.css",
+                            "src/styles.scss",
+                            "src/self-host/styles.scss"
+                        ],
+                        "scripts": []
+                    },
+                    "configurations": {
+                        "production": {
+                            "outputHashing": "all"
+                        },
+                        "development": {
+                            "optimization": false,
+                            "extractLicenses": false,
+                            "sourceMap": true
+                        },
+                        "net48": {
+                            "outputPath": "dist/self-host-net48",
+                            "fileReplacements": [
+                                {
+                                    "replace": "src/self-host/transport.ts",
+                                    "with": "src/self-host/transport.net48.ts"
+                                }
+                            ],
+                            "scripts": [
+                                "node_modules/jquery/dist/jquery.min.js",
+                                "node_modules/signalr/jquery.signalR.min.js"
+                            ]
+                        }
+                    },
+                    "defaultConfiguration": "production"
+                },
+                "serve": {
+                    "builder": "@angular/build:dev-server",
+                    "configurations": {
+                        "production": {
+                            "buildTarget": "self-host:build:production"
+                        },
+                        "development": {
+                            "buildTarget": "self-host:build:development"
+                        }
+                    },
+                    "defaultConfiguration": "development"
+                }
+            }
         }
     },
     "cli": {
