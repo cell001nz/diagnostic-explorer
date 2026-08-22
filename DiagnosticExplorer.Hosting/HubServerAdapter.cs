@@ -11,6 +11,7 @@ using DiagnosticExplorer;
 using DiagnosticExplorer.Util;
 using log4net;
 using Microsoft.AspNetCore.SignalR.Client;
+using TypedSignalR.Client;
 
 namespace DiagWebService.Hubs;
 
@@ -20,25 +21,13 @@ internal class HubServerAdapter : IDiagnosticHubClient
     private Task _writeEventTask;
     private CancellationTokenSource _writeEventCancel;
 
-    private readonly HubConnection _hubConn;
+    private readonly IDiagnosticHubServer _hubServer;
+    private readonly IDisposable _clientRegistration;
 
     public HubServerAdapter(HubConnection hubConn)
     {
-        _hubConn = hubConn;
-
-        _hubConn.On<byte[]>(nameof(IDiagnosticHubClient.GetDiagnostics), GetDiagnostics);
-
-        _hubConn.On<string, string, string, OperationResponse>(nameof(IDiagnosticHubClient.SetProperty),
-            (requestId, path, value) => SetProperty(requestId, path, value));
-
-        _hubConn.On<string, string, string, string[], OperationResponse>(nameof(IDiagnosticHubClient.ExecuteOperation),
-            (requestId, path, operation, args) => ExecuteOperation(requestId, path, operation, args));
-
-        _hubConn.On(nameof(IDiagnosticHubClient.SubscribeEvents),
-            async () => await SubscribeEvents());
-
-        _hubConn.On(nameof(IDiagnosticHubClient.UnsubscribeEvents),
-            async () => await UnsubscribeEvents());
+        _hubServer = hubConn.CreateHubProxy<IDiagnosticHubServer>();
+        _clientRegistration = hubConn.Register<IDiagnosticHubClient>(this);
     }
 
     public Task SubscribeEvents()
@@ -63,12 +52,12 @@ internal class HubServerAdapter : IDiagnosticHubClient
         try
         {
             SystemEvent[] initial = stream.InitialEvents;
-            await _hubConn.InvokeCoreAsync<string>(nameof(IDiagnosticHubServer.SetEvents), new object[] { initial }, cancel);
+            await _hubServer.SetEvents(initial);
 
             while (await stream.EventChannel.Reader.WaitToReadAsync(cancel))
             {
                 IList<SystemEvent> item = await stream.EventChannel.Reader.ReadAsync(cancel);
-                await _hubConn.InvokeCoreAsync<string>(nameof(IDiagnosticHubServer.StreamEvents), new object[] { item }, cancel);
+                await _hubServer.StreamEvents(item.ToArray());
             }
         }
         catch (OperationCanceledException)
@@ -80,6 +69,7 @@ internal class HubServerAdapter : IDiagnosticHubClient
     public void Dispose()
     {
         UnsubscribeEvents();
+        _clientRegistration.Dispose();
     }
 
 
@@ -134,7 +124,7 @@ internal class HubServerAdapter : IDiagnosticHubClient
 
     public async Task<RegistrationResponse> Register(Registration registration)
     {
-        RpcResult<RegistrationResponse> response = await _hubConn.InvokeCoreAsync<RpcResult<RegistrationResponse>>(nameof(IDiagnosticHubServer.Register), new object[] { registration });
+        RpcResult<RegistrationResponse> response = await _hubServer.Register(registration);
         if (!response.IsSuccess)
             throw new ApplicationException(response.Message);
 
@@ -143,17 +133,14 @@ internal class HubServerAdapter : IDiagnosticHubClient
 
     public async Task Deregister(Registration registration)
     {
-        if (_hubConn != null)
-        {
-            RpcResult response = await _hubConn.InvokeCoreAsync<RpcResult>(nameof(IDiagnosticHubServer.Deregister), new object[] { registration });
-            if (!response.IsSuccess)
-                throw new ApplicationException(response.Message);
-        }
+        RpcResult response = await _hubServer.Deregister(registration);
+        if (!response.IsSuccess)
+            throw new ApplicationException(response.Message);
     }
 
     public async Task LogEvents(byte[] eventData)
     {
-        RpcResult response = await _hubConn.InvokeCoreAsync<RpcResult>(nameof(IDiagnosticHubServer.LogEvents), new object[] { eventData });
+        RpcResult response = await _hubServer.LogEvents(eventData);
 
         if (!response.IsSuccess)
             throw new ApplicationException(response.Message);
