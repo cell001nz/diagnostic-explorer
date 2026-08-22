@@ -8,44 +8,38 @@
     "Enabled": true,
     "RemoteUrl": "http://localhost:2803/diagnostics",
     "SelfHostUrl": "http://localhost:45001",
+    "EventRetention": {
+      "MaxEventsPerSink": 1000,
+      "MaxAgeMinutes": 30
+    },
     "Routing": {
       "MatchMode": "AllMatches",
       "Routes": [
         {
           "CategoryPattern": "Widgets",
           "MinLevel": "Information",
-          "Destinations": [
-            "Widgets/Widgets Events"
-          ]
+          "Destinations": ["Widgets/Widgets Events"]
         },
         {
           "CategoryPattern": "Gadgets",
           "MinLevel": "Information",
-          "Destinations": [
-            "Gadgets/Gadget Events"
-          ]
+          "Destinations": ["Gadgets/Gadget Events"]
         },
         {
           "CategoryPattern": "WidgetSampleNuget.Form1",
           "MinLevel": "Trace",
-          "Destinations": [
-            "Form 1/Form1 Events Only"
-          ]
+          "Destinations": ["Form 1/Form1 Events Only"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Warning",
           "MaxLevel": "Warning",
-          "Destinations": [
-            "System/Warnings"
-          ]
+          "Destinations": ["System/Warnings"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Error",
-          "Destinations": [
-            "System/Errors"
-          ]
+          "Destinations": ["System/Errors"]
         }
       ]
     }

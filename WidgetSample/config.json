@@ -1,5 +1,5 @@
 {
-  "WidgetSample": {
+  "WidgetSampleNuget": {
     "Logging": {
       "Provider": "MEL"
     }
@@ -12,45 +12,34 @@
       "MaxEventsPerSink": 1000,
       "MaxAgeMinutes": 30
     },
-    // MinLevel and MaxLevel accept: Trace, Debug, Information, Warning, Error, Critical, None.
     "Routing": {
       "MatchMode": "AllMatches",
       "Routes": [
         {
           "CategoryPattern": "Widgets",
           "MinLevel": "Information",
-          "Destinations": [
-            "Widgets/Widgets Events"
-          ]
+          "Destinations": ["Widgets/Widgets Events"]
         },
         {
           "CategoryPattern": "Gadgets",
           "MinLevel": "Information",
-          "Destinations": [
-            "Gadgets/Gadget Events"
-          ]
+          "Destinations": ["Gadgets/Gadget Events"]
         },
         {
-          "CategoryPattern": "WidgetSample.Form1",
+          "CategoryPattern": "WidgetSampleNuget.Form1",
           "MinLevel": "Trace",
-          "Destinations": [
-            "Form 1/Form1 Events Only"
-          ]
+          "Destinations": ["Form 1/Form1 Events Only"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Warning",
           "MaxLevel": "Warning",
-          "Destinations": [
-            "System/Warnings"
-          ]
+          "Destinations": ["System/Warnings"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Error",
-          "Destinations": [
-            "System/Errors"
-          ]
+          "Destinations": ["System/Errors"]
         }
       ]
     }
