@@ -46,9 +46,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
 {
     private static readonly ISampleLogger _gadgetLog = SampleLogging.GetLogger("Gadgets");
     private static readonly ISampleLogger _widgetLog = SampleLogging.GetLogger("Widgets");
-    private static readonly ISampleLogger _formLog = SampleLogging.GetLogger(
-        typeof(Form1).FullName
-    );
+    private static readonly ISampleLogger _formLog = SampleLogging.GetLogger(typeof(Form1).FullName);
     private static int _evtCount1;
     private static readonly Random _rand = new Random();
     private readonly BindingList<Gadget> _gadgets;
@@ -107,13 +105,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
         _counterTimer = new Timer(IncrementCount, null, 400, 400);
         _listTestTimer = new Timer(MungeNumbersList, null, 100, 100);
 
-        txtContent.DataBindings.Add(
-            "Text",
-            this,
-            "InfoText",
-            false,
-            DataSourceUpdateMode.OnPropertyChanged
-        );
+        txtContent.DataBindings.Add("Text", this, "InfoText", false, DataSourceUpdateMode.OnPropertyChanged);
 
         _scopeTimer = new Timer(x => DoScopeTimerCode(), null, 500, 500);
         _scopeTask = RunScopeTask();
@@ -131,28 +123,27 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static void StartSelfHostedDiagnostics()
     {
-        _selfHost = DiagnosticSelfHostingService
-            .StartAsync("http://localhost:12345")
-            .GetAwaiter()
-            .GetResult();
+        _selfHost = DiagnosticSelfHostingService.StartAsync(LoadConfiguration()).GetAwaiter().GetResult();
         Debug.WriteLine($"Self-hosted diagnostics started at {_selfHost.Url}");
     }
 
     private static void StartRemoteDiagnostics()
     {
-        MicrosoftConfiguration.IConfigurationBuilder configurationBuilder =
-            new MicrosoftConfiguration.ConfigurationBuilder();
+        MicrosoftConfiguration.IConfiguration configuration = LoadConfiguration();
+        string diagnosticExplorerUrl = configuration["DiagnosticExplorer:RemoteUrl"];
+        DiagnosticHostingService.Start(diagnosticExplorerUrl ?? ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri"));
+    }
+
+    private static MicrosoftConfiguration.IConfiguration LoadConfiguration()
+    {
+        MicrosoftConfiguration.IConfigurationBuilder configurationBuilder = new MicrosoftConfiguration.ConfigurationBuilder();
         MicrosoftConfiguration.JsonConfigurationExtensions.AddJsonFile(
             configurationBuilder,
             Path.Combine(AppContext.BaseDirectory, "config.json"),
             optional: false,
             reloadOnChange: false
         );
-        MicrosoftConfiguration.IConfiguration configuration = configurationBuilder.Build();
-        string diagnosticExplorerUrl = configuration["DiagnosticExplorer:Url"];
-        DiagnosticHostingService.Start(
-            diagnosticExplorerUrl ?? ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri")
-        );
+        return configurationBuilder.Build();
     }
 
     private async void StopDiagnosticsOnClosing(object sender, FormClosingEventArgs e)
@@ -240,11 +231,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     [RateProperty(Category = "Widgets", ExposeRate = false, ExposeTotal = true)]
     public RateCounter WidgetEvents { get; } = new RateCounter(5);
 
-    [RateProperty(
-        Category = "Gadgets",
-        ExposeTotal = true,
-        Description = "The rate of gadget events received"
-    )]
+    [RateProperty(Category = "Gadgets", ExposeTotal = true, Description = "The rate of gadget events received")]
     public RateCounter GadgetEvents { get; } = new RateCounter(5);
 
     [CollectionProperty(CollectionMode.List, Category = "All Gadgets")]
@@ -292,8 +279,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
         if (message == "throw")
             throw new ArgumentException("Ok, I'll throw");
 
-        Action sayHello = () =>
-            MessageBox.Show(this, message, caption, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+        Action sayHello = () => MessageBox.Show(this, message, caption, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
         BeginInvoke(sayHello);
     }
 
@@ -304,22 +290,13 @@ public partial class Form1 : Form, INotifyPropertyChanged
             throw new ArgumentException("Ok, I'll throw");
 
         Stopwatch watch = Stopwatch.StartNew();
-        Action sayHello = () =>
-            MessageBox.Show(this, message, caption, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+        Action sayHello = () => MessageBox.Show(this, message, caption, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
         Invoke(sayHello);
         return string.Format("User clicked Ok in {0:N1} seconds", watch.Elapsed.TotalSeconds);
     }
 
     [DiagnosticMethod]
-    public string LogLotsOfStuff(
-        string msg1,
-        string msg2,
-        string msg3,
-        string msg4,
-        string msg5,
-        string msg6,
-        string msg7
-    )
+    public string LogLotsOfStuff(string msg1, string msg2, string msg3, string msg4, string msg5, string msg6, string msg7)
     {
         string[] vals = { msg1, msg2, msg3, msg4, msg5, msg6, msg7 };
         string[] toLog = vals.Where(x => !string.IsNullOrEmpty(x)).ToArray();
@@ -379,10 +356,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     [DiagnosticMethod]
     public string RandomText()
     {
-        return string.Join(
-            Environment.NewLine,
-            Enumerable.Range(1, _rand.Next(5, 100)).Select(_ => RandomLine()).ToArray()
-        );
+        return string.Join(Environment.NewLine, Enumerable.Range(1, _rand.Next(5, 100)).Select(_ => RandomLine()).ToArray());
     }
 
     [DiagnosticMethod]
@@ -394,22 +368,13 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     public string GetRandomWord()
     {
-        return new string(
-            Enumerable
-                .Range(1, _rand.Next(1, 10))
-                .Select(_ => _rand.Next(0, 26))
-                .Select(x => (char)('A' + ((char)x)))
-                .ToArray()
-        );
+        return new string(Enumerable.Range(1, _rand.Next(1, 10)).Select(_ => _rand.Next(0, 26)).Select(x => (char)('A' + ((char)x))).ToArray());
     }
 
     [DiagnosticMethod]
     public string RandomLine()
     {
-        return string.Join(
-            " ",
-            Enumerable.Range(1, _rand.Next(1, 50)).Select(_ => GetRandomWord()).ToArray()
-        );
+        return string.Join(" ", Enumerable.Range(1, _rand.Next(1, 50)).Select(_ => GetRandomWord()).ToArray());
     }
 
     private void SendEvents(object o)
@@ -618,11 +583,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private async void btnTestTraceScope2_Click(object sender, EventArgs e)
     {
-        using var scope = new TraceScope(
-            "UI_ACTION_RoutingModel_SendAll",
-            message => _formLog.Info(message),
-            forceTrace: true
-        );
+        using var scope = new TraceScope("UI_ACTION_RoutingModel_SendAll", message => _formLog.Info(message), forceTrace: true);
 
         TraceScope.Trace($"In Trace Scope Button Click 2 InvokeRequired: {InvokeRequired}");
         // await TraceScopeExample.TestTraceScope1();

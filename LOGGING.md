@@ -17,45 +17,30 @@ The framework-specific package references the core `DiagnosticExplorer` package.
 
 ## Shared Routing Configuration
 
-Put routes under an application-owned `DiagnosticExplorer:Routing` section. The hosting URL shown below is optional and unrelated to logging routing.
+Put routes under an application-owned `DiagnosticExplorer:Routing` section. Remote service connection settings use `DiagnosticExplorer:RemoteUrl`; standalone self-host listener settings use `DiagnosticExplorer:SelfHostUrl`. Both are unrelated to logging routing.
 
 ```json
 {
   "DiagnosticExplorer": {
-    "Url": "http://localhost:2803/diagnostics",
+    "RemoteUrl": "http://localhost:2803/diagnostics",
     "Routing": {
       "MatchMode": "AllMatches",
       "Routes": [
         {
           "CategoryPattern": "MyCompany.MyApp.Orders",
           "MinLevel": "Information",
-          "Destinations": [
-            {
-              "SinkName": "Order Events",
-              "SinkCategory": "Orders"
-            }
-          ]
+          "Destinations": ["Orders/Order Events"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Warning",
           "MaxLevel": "Warning",
-          "Destinations": [
-            {
-              "SinkName": "Warnings",
-              "SinkCategory": "System"
-            }
-          ]
+          "Destinations": ["System/Warnings"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Error",
-          "Destinations": [
-            {
-              "SinkName": "Errors",
-              "SinkCategory": "System"
-            }
-          ]
+          "Destinations": ["System/Errors"]
         }
       ]
     }
@@ -65,7 +50,7 @@ Put routes under an application-owned `DiagnosticExplorer:Routing` section. The 
 
 `CategoryPattern` is case-insensitive. A value such as `MyCompany.MyApp.Orders` matches that exact category and child categories such as `MyCompany.MyApp.Orders.Processing`; it does not match `MyCompany.MyApp.OrderSummary`. `*` matches every category.
 
-Routes can set `MinLevel`, `MaxLevel`, `StopProcessing`, and one or more destinations. Duplicate `(SinkName, SinkCategory)` destinations are written once per event.
+Routes can set `MinLevel`, `MaxLevel`, `StopProcessing`, and one or more destinations. Write destinations as `SinkCategory/SinkName`; `/` is reserved and cannot appear in either value. The object form with `SinkName` and `SinkCategory` remains supported for programmatic configuration. Duplicate `(SinkName, SinkCategory)` destinations are written once per event.
 
 `MatchMode` controls overlapping routes:
 

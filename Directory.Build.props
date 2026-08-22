@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <DiagnosticExplorerPackageVersion>3.1.38</DiagnosticExplorerPackageVersion>
+    <DiagnosticExplorerAssemblyVersion>3.1.38.0</DiagnosticExplorerAssemblyVersion>
+    <DiagnosticExplorerFileVersion>3.1.38.0</DiagnosticExplorerFileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)PACKAGE-README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+</Project>

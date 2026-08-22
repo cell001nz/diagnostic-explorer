@@ -10,15 +10,15 @@ the current integration surface and its intentional limits.
 
 Use self-hosting for local development, support investigations, or a focused single-process diagnostic view. Use `DiagnosticService` when multiple running applications must register with one viewer or when historical diagnostics are required.
 
-| Capability | `DiagnosticService` | `DiagnosticExplorer.SelfHost` |
-| --- | --- | --- |
-| Processes shown | Many remote or local processes | One local process |
-| Process selector | Yes | No |
-| Realtime diagnostics | Yes | Yes |
-| Property edits and operations | Yes | Yes |
-| Event streaming | Yes | Yes |
-| Retro diagnostics and persistence | Yes | No |
-| Remote registration | Yes | No |
+| Capability                        | `DiagnosticService`            | `DiagnosticExplorer.SelfHost` |
+| --------------------------------- | ------------------------------ | ----------------------------- |
+| Processes shown                   | Many remote or local processes | One local process             |
+| Process selector                  | Yes                            | No                            |
+| Realtime diagnostics              | Yes                            | Yes                           |
+| Property edits and operations     | Yes                            | Yes                           |
+| Event streaming                   | Yes                            | Yes                           |
+| Retro diagnostics and persistence | Yes                            | No                            |
+| Remote registration               | Yes                            | No                            |
 
 ## Architecture
 
@@ -38,13 +38,13 @@ The self-host package must not use `DiagnosticHostingService` or `RegistrationHa
 
 The package is `DiagnosticExplorer.SelfHost` and targets `net6.0`, `net8.0`, and `net48`.
 
-| Target | Standalone integration | Existing web-host integration | Server transport |
-| --- | --- | --- | --- |
-| `net6.0` | Yes | Yes, ASP.NET Core/Kestrel | ASP.NET Core SignalR |
-| `net8.0` | Yes | Yes, ASP.NET Core/Kestrel | ASP.NET Core SignalR |
-| `net48` | Yes, root path only | Not in the first release | OWIN and SignalR 2 |
+| Target   | Standalone integration | Existing web-host integration | Server transport     |
+| -------- | ---------------------- | ----------------------------- | -------------------- |
+| `net6.0` | Yes                    | Yes, ASP.NET Core/Kestrel     | ASP.NET Core SignalR |
+| `net8.0` | Yes                    | Yes, ASP.NET Core/Kestrel     | ASP.NET Core SignalR |
+| `net48`  | Yes, root path only    | Not in the first release      | OWIN and SignalR 2   |
 
-A .NET Framework 4.8 application can use the ASP.NET Core SignalR *client*, but it cannot host an ASP.NET Core SignalR hub in-process. The `net48` package implementation will therefore use OWIN and SignalR 2 behind the same public self-host API.
+A .NET Framework 4.8 application can use the ASP.NET Core SignalR _client_, but it cannot host an ASP.NET Core SignalR hub in-process. The `net48` package implementation will therefore use OWIN and SignalR 2 behind the same public self-host API.
 
 ASP.NET Core SignalR and SignalR 2 have incompatible browser protocols. The realtime UI shares its screen and state model, while the package carries a transport-specific SPA bundle for each server implementation.
 
@@ -62,10 +62,20 @@ The standalone API is intended for console applications, workers, Windows servic
 
 ```csharp
 using DiagnosticSelfHost diagnostics = await DiagnosticSelfHostingService.StartAsync(
-    "http://127.0.0.1:1234");
+        configuration);
 ```
 
 `StartAsync` returns a host handle. `StopAsync` waits for the listener and diagnostic subscriptions to stop. `Dispose` initiates that same cleanup without blocking the calling thread, which makes it safe to call from a UI shutdown handler. Starting an equivalent listener twice must fail clearly; disposal and stop operations must be safe to repeat.
+
+Configure the standalone listener with `DiagnosticExplorer:SelfHostUrl`:
+
+```json
+{
+  "DiagnosticExplorer": {
+    "SelfHostUrl": "http://127.0.0.1:1234"
+  }
+}
+```
 
 `SelfHostOptions` configures the path base and detailed hub errors. `PathBase`
 is supported by modern ASP.NET Core hosting; standalone net48 OWIN hosting uses
@@ -75,7 +85,10 @@ embeds the SPA assets; consumers do not install Node.js or build Angular files.
 For applications that already own an ASP.NET Core pipeline, the package provides registration and endpoint-mapping extensions instead of creating a second Kestrel server:
 
 ```csharp
-builder.Services.AddDiagnosticSelfHost();
+builder.Services.AddDiagnosticSelfHost(options =>
+{
+  options.PathBase = "/diagnostics";
+});
 
 var app = builder.Build();
 app.MapDiagnosticSelfHost("/diagnostics");

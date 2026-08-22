@@ -66,9 +66,19 @@ pipeline:
 using DiagnosticExplorer.SelfHost;
 
 using DiagnosticSelfHost host = await DiagnosticSelfHostingService.StartAsync(
-   "http://127.0.0.1:1234");
+    configuration);
 
 Console.WriteLine($"Open {host.Url} in a browser.");
+```
+
+Configure the standalone local listener with `DiagnosticExplorer:SelfHostUrl`:
+
+```json
+{
+  "DiagnosticExplorer": {
+    "SelfHostUrl": "http://127.0.0.1:1234"
+  }
+}
 ```
 
 The default URL is `http://127.0.0.1:1234`. Disposing the returned
@@ -94,7 +104,7 @@ using DiagnosticExplorer.SelfHost;
 
 builder.Services.AddDiagnosticSelfHost(options =>
 {
-   options.PathBase = "/diagnostics";
+  options.PathBase = "/diagnostics";
 });
 
 var app = builder.Build();
@@ -218,8 +228,7 @@ Required configuration:
 ```json
 {
   "DiagnosticExplorer": {
-    "Uri": "http://diagnostics:2803/diagnostics",
-    "Enabled": true
+    "RemoteUrl": "http://diagnostics:2803/diagnostics"
   }
 }
 ```

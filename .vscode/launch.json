@@ -2,15 +2,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run DiagnosticService",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/DiagnosticService/bin/Debug/net8.0/DiagnosticExplorer.Service.exe",
-      "cwd": "${workspaceFolder}/DiagnosticService",
-      "console": "integratedTerminal",
-      "noDebug": true
-    },
-    {
       "name": "Debug DiagnosticService",
       "type": "coreclr",
       "request": "launch",
@@ -20,6 +11,23 @@
       "stopAtEntry": true
     },
     {
+      "name": "Debug WidgetSample",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/WidgetSample/bin/Debug/net6.0-windows/WidgetSample.exe",
+      "cwd": "${workspaceFolder}/WidgetSample",
+      "stopAtEntry": true
+    },
+     {
+      "name": "Run DiagnosticService",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/DiagnosticService/bin/Debug/net8.0/DiagnosticExplorer.Service.exe",
+      "cwd": "${workspaceFolder}/DiagnosticService",
+      "console": "integratedTerminal",
+      "noDebug": true
+    },
+   {
       "name": "Run WidgetSample",
       "type": "coreclr",
       "request": "launch",
@@ -27,13 +35,5 @@
       "cwd": "${workspaceFolder}/WidgetSample",
       "noDebug": true
     },
-    {
-      "name": "Debug WidgetSample",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/WidgetSample/bin/Debug/net6.0-windows/WidgetSample.exe",
-      "cwd": "${workspaceFolder}/WidgetSample",
-      "stopAtEntry": true
-    }
   ]
 }

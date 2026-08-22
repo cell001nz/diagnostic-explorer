@@ -4,9 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>DiagnosticExplorer.NLog</AssemblyName>
     <RootNamespace>DiagnosticExplorer.NLog</RootNamespace>
-    <Version>3.1.38</Version>
-    <AssemblyVersion>3.1.38.0</AssemblyVersion>
-    <FileVersion>3.1.38.0</FileVersion>
+    <IsDiagnosticExplorerPackage>true</IsDiagnosticExplorerPackage>
+    <Version>$(DiagnosticExplorerPackageVersion)</Version>
+    <AssemblyVersion>$(DiagnosticExplorerAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(DiagnosticExplorerFileVersion)</FileVersion>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>NLog target for DiagnosticExplorer.</Description>

@@ -21,7 +21,8 @@ public static class DiagnosticSelfHostServiceCollectionExtensions
         configure?.Invoke(options);
         services.AddSingleton(options);
         services.AddSingleton<SelfHostManager>();
-        services.AddSignalR()
+        services
+            .AddSignalR()
             .AddHubOptions<SelfHostWebHub>(hub => hub.EnableDetailedErrors = options.EnableDetailedErrors)
             .AddJsonProtocol(json => json.PayloadSerializerOptions.PropertyNameCaseInsensitive = true);
         return services;
@@ -115,22 +116,24 @@ internal static class DiagnosticSelfHostFactory
         await Task.Run(() => app.StartAsync(cancellationToken)).ConfigureAwait(false);
 
         SelfHostManager manager = app.Services.GetRequiredService<SelfHostManager>();
-        return new DiagnosticSelfHost(url + options.GetNormalizedPathBase(), async () =>
-        {
-            manager.Dispose();
-            await Task.Run(async () =>
+        return new DiagnosticSelfHost(
+            url + options.GetNormalizedPathBase(),
+            async () =>
             {
-                using CancellationTokenSource stopToken = new(TimeSpan.FromSeconds(2));
-                try
-                {
-                    await app.StopAsync(stopToken.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
-                {
-                }
-                await app.DisposeAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        });
+                manager.Dispose();
+                await Task.Run(async () =>
+                    {
+                        using CancellationTokenSource stopToken = new(TimeSpan.FromSeconds(2));
+                        try
+                        {
+                            await app.StopAsync(stopToken.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException) when (stopToken.IsCancellationRequested) { }
+                        await app.DisposeAsync().ConfigureAwait(false);
+                    })
+                    .ConfigureAwait(false);
+            }
+        );
     }
 }
 #endif

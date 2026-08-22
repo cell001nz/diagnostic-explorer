@@ -2,9 +2,10 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net8.0;net6.0;net48</TargetFrameworks>
-		<Version>3.1.38</Version>
-		<AssemblyVersion>3.1.38.0</AssemblyVersion>
-		<FileVersion>3.1.38.0</FileVersion>
+		<IsDiagnosticExplorerPackage>true</IsDiagnosticExplorerPackage>
+		<Version>$(DiagnosticExplorerPackageVersion)</Version>
+		<AssemblyVersion>$(DiagnosticExplorerAssemblyVersion)</AssemblyVersion>
+		<FileVersion>$(DiagnosticExplorerFileVersion)</FileVersion>
 		<LangVersion>latest</LangVersion>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	</PropertyGroup>

@@ -1,45 +1,25 @@
 $ErrorActionPreference = 'Stop'
-
-npm --prefix diag-web install
-npm --prefix diag-web run build
-
-$selfHostBuildJobs = @(
-	Start-Job -Name 'self-host' -ScriptBlock {
-		param($workingDirectory)
-		Set-Location $workingDirectory
-		npm --prefix diag-web run build:self-host
-		if ($LASTEXITCODE -ne 0) {
-			throw "npm run build:self-host failed with exit code $LASTEXITCODE."
-		}
-	} -ArgumentList $PSScriptRoot
-	Start-Job -Name 'self-host-net48' -ScriptBlock {
-		param($workingDirectory)
-		Set-Location $workingDirectory
-		npm --prefix diag-web run build:self-host-net48
-		if ($LASTEXITCODE -ne 0) {
-			throw "npm run build:self-host-net48 failed with exit code $LASTEXITCODE."
-		}
-	} -ArgumentList $PSScriptRoot
+$packageOutput = Join-Path $PSScriptRoot 'artifacts\packages'
+$packageProjects = @(
+	'DiagnosticExplorer\DiagnosticExplorer.csproj'
+	'DiagnosticExplorer.Log4Net\DiagnosticExplorer.Log4Net.csproj'
+	'DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj'
+	'DiagnosticExplorer.SelfHost\DiagnosticExplorer.SelfHost.csproj'
+	'DiagnosticExplorer.Extensions.Logging\DiagnosticExplorer.Extensions.Logging.csproj'
+	'DiagnosticExplorer.Serilog\DiagnosticExplorer.Serilog.csproj'
+	'DiagnosticExplorer.NLog\DiagnosticExplorer.NLog.csproj'
 )
 
-try {
-	$selfHostBuildJobs | Wait-Job | Out-Null
-	$selfHostBuildJobs | Receive-Job
+Set-Location $PSScriptRoot
 
-	$failedBuildJobs = $selfHostBuildJobs | Where-Object State -ne 'Completed'
-	if ($failedBuildJobs) {
-		throw "One or more self-host builds failed: $($failedBuildJobs.Name -join ', ')."
+& "$PSScriptRoot\BuildDev.ps1" -Configuration Release
+
+Remove-Item -Recurse -Force $packageOutput -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $packageOutput | Out-Null
+
+foreach ($packageProject in $packageProjects) {
+	dotnet pack $packageProject --no-build --no-restore --configuration Release --output $packageOutput
+	if ($LASTEXITCODE -ne 0) {
+		throw "dotnet pack $packageProject failed with exit code $LASTEXITCODE."
 	}
 }
-finally {
-	$selfHostBuildJobs | Remove-Job -Force
-}
-
-Remove-Item -Recurse -Force DiagnosticExplorer.SelfHost\wwwroot\core\*
-Copy-Item -Recurse -Force diag-web\dist\self-host\browser\* DiagnosticExplorer.SelfHost\wwwroot\core
-
-Remove-Item -Recurse -Force DiagnosticExplorer.SelfHost\wwwroot\net48\*
-Copy-Item -Recurse -Force diag-web\dist\self-host-net48\browser\* DiagnosticExplorer.SelfHost\wwwroot\net48
-
-dotnet restore DiagnosticExplorer.slnx
-dotnet build DiagnosticExplorer.slnx --no-restore

@@ -14,7 +14,7 @@ All adapters use `EventSinkRouteOptions` from `DiagnosticExplorer.Logging`. The 
 
 `CategoryPattern` is case-insensitive. It matches its exact category and child categories separated by `.`, so `Widgets` matches `Widgets` and `Widgets.Rendering`, but not `WidgetShop`. `*` matches every category.
 
-Each matching rule may set `MinLevel` and `MaxLevel`, and can write to multiple sinks. The default `AllMatches` policy preserves log4net-style fan-out: a `Widgets` event can go to both a widget sink and a global warning or error sink. `MostSpecific` selects the longest matching prefix; `FirstMatch` uses declaration order. `StopProcessing` ends rule discovery after the matching rule is included.
+Each matching rule may set `MinLevel` and `MaxLevel`, and can write to multiple sinks. Destinations use the `SinkCategory/SinkName` shorthand; `/` is reserved and cannot appear in either value. The object form with `SinkName` and `SinkCategory` remains available for programmatic configuration. The default `AllMatches` policy preserves log4net-style fan-out: a `Widgets` event can go to both a widget sink and a global warning or error sink. `MostSpecific` selects the longest matching prefix; `FirstMatch` uses declaration order. `StopProcessing` ends rule discovery after the matching rule is included.
 
 ```json
 {
@@ -27,19 +27,17 @@ Each matching rule may set `MinLevel` and `MaxLevel`, and can write to multiple 
       "Routes": [
         {
           "CategoryPattern": "Widgets",
-          "Destinations": [
-            { "SinkName": "Widgets Events", "SinkCategory": "Widgets" }
-          ]
+          "Destinations": ["Widgets/Widgets Events"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Warning",
-          "Destinations": [{ "SinkName": "Warnings", "SinkCategory": "System" }]
+          "Destinations": ["System/Warnings"]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Error",
-          "Destinations": [{ "SinkName": "Errors", "SinkCategory": "System" }]
+          "Destinations": ["System/Errors"]
         }
       ]
     }
@@ -121,7 +119,7 @@ Reference `DiagnosticExplorer.Log4Net` and replace per-sink `DiagnosticAppender`
 </appender>
 ```
 
-The appender maps `LoggingEvent.LoggerName` and its level to the shared router. Keep ordinary log4net logger levels, filters, SMTP, debug, retro, forwarding, and fallback appenders in `log4net.config`; only Diagnostic Explorer sink routing moves to JSON. `WidgetSample` keeps its service URL and routes together under `DiagnosticExplorer`, with routes at `DiagnosticExplorer:Routing`; see [WidgetSample/log4net.config](../WidgetSample/log4net.config) and [WidgetSample/config.json](../WidgetSample/config.json).
+The appender maps `LoggingEvent.LoggerName` and its level to the shared router. Keep ordinary log4net logger levels, filters, SMTP, debug, retro, forwarding, and fallback appenders in `log4net.config`; only Diagnostic Explorer sink routing moves to JSON. `WidgetSample` keeps its remote service connection in `DiagnosticExplorer:RemoteUrl` and routes at `DiagnosticExplorer:Routing`; see [WidgetSample/log4net.config](../WidgetSample/log4net.config) and [WidgetSample/config.json](../WidgetSample/config.json).
 
 ## WidgetSample Provider Demo
 

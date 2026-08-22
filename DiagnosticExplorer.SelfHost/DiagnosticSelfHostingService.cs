@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace DiagnosticExplorer.SelfHost;
 
@@ -10,14 +11,30 @@ public static class DiagnosticSelfHostingService
 {
     private static readonly ConcurrentDictionary<string, DiagnosticSelfHost> Hosts = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Starts a standalone self-host listener.</summary>
-    public static async Task<DiagnosticSelfHost> StartAsync(string url = null, SelfHostOptions options = null, CancellationToken cancellationToken = default)
+    /// <summary>Starts a standalone listener from the <c>DiagnosticExplorer:SelfHostUrl</c> configuration key.</summary>
+    public static Task<DiagnosticSelfHost> StartAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        string listenerUrl = string.IsNullOrWhiteSpace(url) ? SelfHostOptions.DefaultUrl : url;
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+        SelfHostOptions options = new() { Url = configuration[SelfHostOptions.SelfHostUrlConfigurationKey] ?? SelfHostOptions.DefaultUrl };
+        return StartAsync(options.Url, options, cancellationToken);
+    }
+
+    /// <summary>Starts a standalone self-host listener.</summary>
+    public static async Task<DiagnosticSelfHost> StartAsync(
+        string url = null,
+        SelfHostOptions options = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        SelfHostOptions resolvedOptions = options ?? new SelfHostOptions();
+        string listenerUrl = string.IsNullOrWhiteSpace(url) ? resolvedOptions.Url : url;
+        if (string.IsNullOrWhiteSpace(listenerUrl))
+            listenerUrl = SelfHostOptions.DefaultUrl;
         if (Hosts.ContainsKey(listenerUrl))
             throw new InvalidOperationException($"A self-host listener is already running at '{listenerUrl}'.");
 
-        DiagnosticSelfHost host = await DiagnosticSelfHostFactory.StartAsync(listenerUrl, options ?? new SelfHostOptions(), cancellationToken).ConfigureAwait(false);
+        DiagnosticSelfHost host = await DiagnosticSelfHostFactory.StartAsync(listenerUrl, resolvedOptions, cancellationToken).ConfigureAwait(false);
         if (!Hosts.TryAdd(listenerUrl, host))
         {
             await host.StopAsync().ConfigureAwait(false);
@@ -69,8 +86,6 @@ public sealed class DiagnosticSelfHost : IDisposable
         {
             await stopTask.ConfigureAwait(false);
         }
-        catch
-        {
-        }
+        catch { }
     }
 }

@@ -13,11 +13,11 @@ namespace DiagnosticExplorer
         public static IServiceCollection AddDiagnosticExplorer(
             this IServiceCollection services,
             IConfiguration config,
-            Action<HttpConnectionOptions> configureHttp = null)
+            Action<HttpConnectionOptions> configureHttp = null
+        )
         {
-            services.Configure<DiagnosticOptions>(config.GetSection("DiagnosticExplorer"));
-            services.AddHostedService(sp =>
-                new DiagnosticHostingService(sp.GetService<IOptions<DiagnosticOptions>>(), configureHttp));
+            services.Configure<DiagnosticOptions>(options => options.Uri = config[DiagnosticOptions.RemoteUrlConfigurationKey]);
+            services.AddHostedService(sp => new DiagnosticHostingService(sp.GetService<IOptions<DiagnosticOptions>>(), configureHttp));
             return services;
         }
     }

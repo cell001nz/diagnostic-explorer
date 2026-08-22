@@ -2,12 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build Solution",
+      "label": "Build Development",
       "type": "process",
-      "command": "dotnet",
+      "command": "pwsh",
       "args": [
-        "build",
-        "DiagnosticExplorer.slnx"
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}\\BuildDev.ps1"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -17,6 +18,35 @@
         "isDefault": true
       },
       "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build NuGet Packages",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}\\Build.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Publish NuGet Packages",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}\\Publish-NuGetPackages.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "Build NuGet Packages",
+      "dependsOrder": "sequence"
     }
   ]
 }

@@ -2,11 +2,9 @@
 
 public class DiagnosticOptions
 {
-    public static string DiagnosticExplorer = "DiagnosticExplorer";
+    public const string RemoteUrlConfigurationKey = "DiagnosticExplorer:RemoteUrl";
 
-    public DiagnosticOptions()
-    {
-    }
+    public DiagnosticOptions() { }
 
     public DiagnosticOptions(string uri)
     {

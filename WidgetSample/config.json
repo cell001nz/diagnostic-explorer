@@ -5,7 +5,8 @@
     }
   },
   "DiagnosticExplorer": {
-    "Url": "http://localhost:2803/diagnostics",
+    "RemoteUrl": "http://localhost:2803/diagnostics",
+    "SelfHostUrl": "http://localhost:45000",
     "Routing": {
       "MatchMode": "AllMatches",
       "Routes": [
@@ -13,21 +14,21 @@
           "CategoryPattern": "Widgets",
           "MinLevel": "Information",
           "Destinations": [
-            { "SinkName": "Widgets Events", "SinkCategory": "Widgets" }
+            "Widgets/Widgets Events"
           ]
         },
         {
           "CategoryPattern": "Gadgets",
           "MinLevel": "Information",
           "Destinations": [
-            { "SinkName": "Gadget Events", "SinkCategory": "Gadgets" }
+            "Gadgets/Gadget Events"
           ]
         },
         {
           "CategoryPattern": "WidgetSample.Form1",
           "MinLevel": "Trace",
           "Destinations": [
-            { "SinkName": "Form1 Events Only", "SinkCategory": "Form 1" }
+            "Form 1/Form1 Events Only"
           ]
         },
         {
@@ -35,14 +36,14 @@
           "MinLevel": "Warning",
           "MaxLevel": "Warning",
           "Destinations": [
-            { "SinkName": "Warnings", "SinkCategory": "System" }
+            "System/Warnings"
           ]
         },
         {
           "CategoryPattern": "*",
           "MinLevel": "Error",
           "Destinations": [
-            { "SinkName": "Errors", "SinkCategory": "System" }
+            "System/Errors"
           ]
         }
       ]
