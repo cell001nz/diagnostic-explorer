@@ -5,8 +5,7 @@
     "SpaDirectory": "..\\..\\..\\..\\..\\diagnostics-web\\dist\\diagnostics-web",
     "SpaProxy": "http://localhost:4200",
     "Urls": [
-      "http://*:2803",
-      "http://*:6001"
+      "http://*:2803"
     ]
   },
 

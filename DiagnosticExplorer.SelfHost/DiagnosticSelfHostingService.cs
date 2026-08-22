@@ -16,6 +16,11 @@ public static class DiagnosticSelfHostingService
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
+
+        IConfigurationSection eventRetentionSection = configuration.GetSection(EventRetentionOptions.ConfigurationSectionKey);
+        if (eventRetentionSection.Exists())
+            EventSinkRepo.Default.ConfigureEventRetention(eventRetentionSection.Get<EventRetentionOptions>());
+
         SelfHostOptions options = new()
         {
             Enabled = configuration.GetValue<bool?>(DiagnosticManager.EnabledConfigurationKey) ?? true,

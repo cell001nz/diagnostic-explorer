@@ -18,6 +18,40 @@ Install `DiagnosticExplorer` to register application objects. Add one hosting pa
 
 Do not add more than one Diagnostic Explorer logging adapter to the same log event path; each adapter writes its own event.
 
+## Default configuration
+
+When adding a Diagnostic Explorer package, add this baseline section to the application's `config.json` or `appsettings.json`. It includes two sample routing entries and is safe to adapt to the application's category names.
+
+```jsonc
+{
+  "DiagnosticExplorer": {
+    "Enabled": true,
+    "EventRetention": {
+      "MaxEventsPerSink": 1000,
+      "MaxAgeMinutes": 30,
+    },
+    // MinLevel and MaxLevel accept: Trace, Debug, Information, Warning, Error, Critical, None.
+    "Routing": {
+      "MatchMode": "AllMatches",
+      "Routes": [
+        {
+          "CategoryPattern": "MyCompany.MyApp",
+          "MinLevel": "Information",
+          "Destinations": ["Application/Application Events"],
+        },
+        {
+          "CategoryPattern": "*",
+          "MinLevel": "Warning",
+          "Destinations": ["System/Warnings"],
+        },
+      ],
+    },
+  },
+}
+```
+
+`MaxEventsPerSink` is a per-destination event count, not a global memory or byte limit. Events older than `MaxAgeMinutes` are removed during the scheduled purge, which runs every 20 seconds. Add `RemoteUrl` when using `DiagnosticExplorer.Hosting`, or `SelfHostUrl` when using `DiagnosticExplorer.SelfHost`.
+
 ## Register diagnostics
 
 Register objects whose public properties and diagnostic attributes should be visible:
@@ -83,7 +117,7 @@ app.MapDiagnosticSelfHost();
 
 ## Route log events
 
-All logging adapters use this `DiagnosticExplorer:Routing` section. Categories are case-insensitive namespace prefixes; `*` matches every category.
+All logging adapters use this `DiagnosticExplorer:Routing` section. Categories are case-insensitive namespace prefixes; `*` matches every category. `MinLevel` and `MaxLevel` accept `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`, or `None`.
 
 ```json
 {

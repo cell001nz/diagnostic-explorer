@@ -1,5 +1,5 @@
 {
-  "WidgetSample": {
+  "WidgetSampleNuget": {
     "Logging": {
       "Provider": "MEL"
     }
@@ -7,12 +7,7 @@
   "DiagnosticExplorer": {
     "Enabled": true,
     "RemoteUrl": "http://localhost:2803/diagnostics",
-    "SelfHostUrl": "http://localhost:45000",
-    "EventRetention": {
-      "MaxEventsPerSink": 1000,
-      "MaxAgeMinutes": 30
-    },
-    // MinLevel and MaxLevel accept: Trace, Debug, Information, Warning, Error, Critical, None.
+    "SelfHostUrl": "http://localhost:45001",
     "Routing": {
       "MatchMode": "AllMatches",
       "Routes": [
@@ -31,7 +26,7 @@
           ]
         },
         {
-          "CategoryPattern": "WidgetSample.Form1",
+          "CategoryPattern": "WidgetSampleNuget.Form1",
           "MinLevel": "Trace",
           "Destinations": [
             "Form 1/Form1 Events Only"

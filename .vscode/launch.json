@@ -1,6 +1,25 @@
 {
   "version": "0.2.0",
   "configurations": [
+     {
+      "name": "Debug ConsoleApp",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/ConsoleApp/bin/Debug/net8.0/_ConsoleApp.exe",
+      "cwd": "${workspaceFolder}/ConsoleApp",
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build ConsoleApp",
+      "stopAtEntry": false
+    },
+   {
+      "name": "Debug Widget Sample NuGet",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/WidgetSampleNuget/bin/Debug/net8.0-windows/WidgetSampleNuget.exe",
+      "cwd": "${workspaceFolder}/WidgetSampleNuget",
+      "preLaunchTask": "Build WidgetSampleNuget",
+      "stopAtEntry": false
+    },
     {
       "name": "Debug DiagnosticService",
       "type": "coreclr",
@@ -19,6 +38,16 @@
       "stopAtEntry": true
     },
      {
+      "name": "Run ConsoleApp",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/ConsoleApp/bin/Debug/net8.0/_ConsoleApp.exe",
+      "cwd": "${workspaceFolder}/ConsoleApp",
+      "console": "integratedTerminal",
+      "preLaunchTask": "Build ConsoleApp",
+      "noDebug": true
+    },
+    {
       "name": "Run DiagnosticService",
       "type": "coreclr",
       "request": "launch",
@@ -33,6 +62,15 @@
       "request": "launch",
       "program": "${workspaceFolder}/WidgetSample/bin/Debug/net8.0-windows/WidgetSample.exe",
       "cwd": "${workspaceFolder}/WidgetSample",
+      "noDebug": true
+    },
+    {
+      "name": "Run Widget Sample NuGet",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/WidgetSampleNuget/bin/Debug/net8.0-windows/WidgetSampleNuget.exe",
+      "cwd": "${workspaceFolder}/WidgetSampleNuget",
+      "preLaunchTask": "Build WidgetSampleNuget",
       "noDebug": true
     },
   ]

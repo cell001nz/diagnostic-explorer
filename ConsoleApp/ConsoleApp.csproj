@@ -9,6 +9,8 @@
 
 
 	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="DiagnosticExplorer.SelfHost" Version="5.0.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
@@ -24,10 +26,5 @@
 		</PackageReference>
 	</ItemGroup>
 
-
-	<ItemGroup>
-		<ProjectReference Include="..\DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj" />
-		<ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
-	</ItemGroup>
 
 </Project>

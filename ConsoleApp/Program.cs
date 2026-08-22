@@ -1,14 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-// using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
-using DiagnosticExplorer;
-// using DiagnosticExplorer.Common;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
+using DiagnosticExplorer.SelfHost;
 
 // using Grpc.Core;
 // using Microsoft.AspNetCore.SignalR.Client;
@@ -17,21 +10,16 @@ namespace ConsoleApp;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         Trace.Listeners.Add(new ConsoleTraceListener());
 
-
         while (true)
         {
-            // DiagnosticHostingService.Start("http://localhost:2803/diagnostics");
-            // DiagnosticHostingService.Start("http://localhost:5000/diagnostics");
-            DiagnosticHostingService.Start("http://localhost:2803/diagnostics, http://localhost:6001/diagnostics");
-            // DiagnosticHostingService.Start("https://localhost:7097/diagnostics");
-            // DiagnosticHostingService.Start("http://localhost/api/diagnostics");
+            DiagnosticSelfHost host = await DiagnosticSelfHostingService.StartAsync("http://localhost:2803");
             Console.WriteLine("Diagnostics started");
             Console.ReadLine();
-            DiagnosticHostingService.Stop();
+            await host.StopAsync();
             Console.WriteLine("Diagnostics stopped");
             Console.ReadLine();
         }

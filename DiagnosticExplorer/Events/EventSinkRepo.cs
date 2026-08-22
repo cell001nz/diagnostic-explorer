@@ -9,12 +9,29 @@ namespace DiagnosticExplorer;
 
 public class EventSinkRepo
 {
-
     private readonly List<EventSinkStream> _sinkStreams = new();
     private readonly ReaderWriterLockSlim _eventStreamLock = new(LockRecursionPolicy.NoRecursion);
     private readonly ConcurrentDictionary<string, EventSink> _sinks = new();
+    private EventRetentionOptions _eventRetention;
 
-    public static EventSinkRepo Default { get; }= new();
+    public static EventSinkRepo Default { get; } = new();
+
+    public EventSinkRepo(EventRetentionOptions eventRetention = null)
+    {
+        _eventRetention = (eventRetention ?? new EventRetentionOptions()).CloneAndValidate();
+    }
+
+    public EventRetentionOptions EventRetention => Volatile.Read(ref _eventRetention);
+
+    public void ConfigureEventRetention(EventRetentionOptions eventRetention)
+    {
+        if (eventRetention == null)
+            throw new ArgumentNullException(nameof(eventRetention));
+
+        Volatile.Write(ref _eventRetention, eventRetention.CloneAndValidate());
+        foreach (EventSink sink in _sinks.Values)
+            sink.Purge();
+    }
 
     public EventSink GetSink(string name, string category)
     {

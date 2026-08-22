@@ -20,4 +20,5 @@
   </Project>
   <Project Path="DiagnosticService/Diagnostic.Service.csproj" />
   <Project Path="WidgetSample/WidgetSample.csproj" />
+  <Project Path="WidgetSampleNuget/WidgetSampleNuget.csproj" />
 </Solution>

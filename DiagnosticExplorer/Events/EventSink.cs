@@ -33,12 +33,12 @@ namespace DiagnosticExplorer;
 
 public class EventSink : IDisposable
 {
-    public const int MaxMessages = 1000;
+    public const int MaxMessages = EventRetentionOptions.DefaultMaxEventsPerSink;
     private const int MaxLength = 102400;
-    private static TimeSpan messageLife = TimeSpan.FromMinutes(30);
     private static WeakReferenceHash<EventSink> sinks = new();
     private static Timer _timer;
     private EventSinkRepo _repo;
+    private readonly string _sinkId = Guid.NewGuid().ToString();
 
     private static void PurgeAllSinks(object sender)
     {
@@ -63,6 +63,7 @@ public class EventSink : IDisposable
         _repo = repo;
         Name = name;
         Category = category;
+        sinks.Add(_sinkId, this);
     }
 
     ~EventSink()
@@ -78,7 +79,7 @@ public class EventSink : IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
-            sinks.Remove(Name);
+            sinks.Remove(_sinkId);
     }
 
     public string Name { get; }
@@ -89,11 +90,12 @@ public class EventSink : IDisposable
 
     public ConcurrentQueue<SystemEvent> Events { get; } = new();
 
-    private void Purge()
+    internal void Purge()
     {
         try
         {
-            while (Events.Count > MaxMessages)
+            EventRetentionOptions retention = _repo.EventRetention;
+            while (Events.Count > retention.MaxEventsPerSink)
                 if (!Events.TryDequeue(out _))
                     break;
 
@@ -109,7 +111,7 @@ public class EventSink : IDisposable
 
     private bool ShouldPurge(SystemEvent evt)
     {
-        return DateTime.UtcNow - evt.Date > messageLife;
+        return DateTime.UtcNow - evt.Date > TimeSpan.FromMinutes(_repo.EventRetention.MaxAgeMinutes);
     }
 
     public void Info(string message, string detail = null)
@@ -172,7 +174,7 @@ public class EventSink : IDisposable
 
         Events.Enqueue(evt);
         _repo.RegisterEvent(evt);
-        if (Events.Count > MaxMessages)
+        if (Events.Count > _repo.EventRetention.MaxEventsPerSink)
             Events.TryDequeue(out _);
     }
 
