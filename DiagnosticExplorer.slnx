@@ -9,7 +9,11 @@
   </Folder>
   <Project Path="ConsoleApp/ConsoleApp.csproj" />
   <Project Path="DiagnosticExplorer.Hosting/DiagnosticExplorer.Hosting.csproj" />
+  <Project Path="DiagnosticExplorer.Extensions.Logging/DiagnosticExplorer.Extensions.Logging.csproj" />
   <Project Path="DiagnosticExplorer.Log4Net/DiagnosticExplorer.Log4Net.csproj" />
+  <Project Path="DiagnosticExplorer.NLog/DiagnosticExplorer.NLog.csproj" />
+  <Project Path="DiagnosticExplorer.Serilog/DiagnosticExplorer.Serilog.csproj" />
+  <Project Path="DiagnosticExplorer.Logging.Tests/DiagnosticExplorer.Logging.Tests.csproj" />
   <Project Path="DiagnosticExplorer.SelfHost/DiagnosticExplorer.SelfHost.csproj" />
   <Project Path="DiagnosticExplorer/DiagnosticExplorer.csproj">
     <Build Solution="*|x86" Project="false" />

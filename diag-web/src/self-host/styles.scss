@@ -1,2 +1,26 @@
 html, body { min-height: 100%; margin: 0; }
 body { min-width: 320px; }
+
+html {
+	scrollbar-color: #5a5a5a #1b1b1d;
+	scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+
+::-webkit-scrollbar-track {
+	background: #1b1b1d;
+}
+
+::-webkit-scrollbar-thumb {
+	border: 3px solid #1b1b1d;
+	border-radius: 8px;
+	background: #5a5a5a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #777777;
+}

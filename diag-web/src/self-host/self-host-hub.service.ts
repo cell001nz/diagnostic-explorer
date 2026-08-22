@@ -1,10 +1,10 @@
-import {Injectable, signal} from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import {Subject} from 'rxjs';
-import {DiagnosticResponse, SystemEvent} from '@domain/DiagResponse';
-import {DiagProcess} from '@domain/DiagProcess';
-import {LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest} from '@domain/SetPropertyRequest';
-import {selfHostTransport} from './transport';
+import { Subject } from 'rxjs';
+import { DiagnosticResponse, SystemEvent } from '@domain/DiagResponse';
+import { DiagProcess } from '@domain/DiagProcess';
+import { LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
+import { selfHostTransport } from './transport';
 
 declare const $: any;
 
@@ -87,8 +87,7 @@ export class SelfHostDiagHubService {
         if (connection) {
             try {
                 await (await connection).stop();
-            } catch {
-            }
+            } catch {}
         }
     }
 
@@ -97,14 +96,12 @@ export class SelfHostDiagHubService {
             this.connectionState.set('connecting');
             this.error.set('');
             this.#connection = (async () => {
-                const connection = selfHostTransport === 'signalr2'
-                    ? await this.createSignalR2Connection()
-                    : this.createCoreConnection();
+                const connection = selfHostTransport === 'signalr2' ? await this.createSignalR2Connection() : this.createCoreConnection();
                 await connection.start();
                 this.process.set(this.toDiagProcess(await connection.getProcessInfo()));
                 this.connectionState.set('connected');
                 return connection;
-            })().catch(error => {
+            })().catch((error) => {
                 this.#connection = undefined;
                 this.process.set(undefined);
                 this.connectionState.set('disconnected');
@@ -120,20 +117,24 @@ export class SelfHostDiagHubService {
     private createCoreConnection(): SelfHostConnection {
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(new URL('hub', document.baseURI).toString())
-            .withAutomaticReconnect({nextRetryDelayInMilliseconds: () => RECONNECT_INTERVAL})
+            .withAutomaticReconnect({ nextRetryDelayInMilliseconds: () => RECONNECT_INTERVAL })
             .build();
         this.registerCallbacks((name, callback) => connection.on(name, callback));
         connection.onreconnecting(() => this.connectionState.set('connecting'));
-        connection.onreconnected(() => void this.subscribeProcess(LOCAL_PROCESS_ID));
-        connection.onclose(error => this.handleDisconnected(error));
+        connection.onreconnected(() => {
+            this.connectionState.set('connected');
+            this.error.set('');
+            void this.subscribeProcess(LOCAL_PROCESS_ID);
+        });
+        connection.onclose((error) => this.handleDisconnected(error));
 
         return {
             start: () => connection.start(),
             getProcessInfo: () => connection.invoke<SelfHostProcessInfo>('GetProcessInfo'),
-            subscribe: processId => connection.invoke('Subscribe', processId),
-            unsubscribe: processId => connection.invoke('Unsubscribe', processId),
-            setProperty: (path, value) => connection.invoke<SelfHostOperationResponse>('SetProperty', LOCAL_PROCESS_ID, {path, value}),
-            executeOperation: (path, operation, args) => connection.invoke<SelfHostOperationResponse>('ExecuteOperation', LOCAL_PROCESS_ID, {path, operation, arguments: args}),
+            subscribe: (processId) => connection.invoke('Subscribe', processId),
+            unsubscribe: (processId) => connection.invoke('Unsubscribe', processId),
+            setProperty: (path, value) => connection.invoke<SelfHostOperationResponse>('SetProperty', LOCAL_PROCESS_ID, { path, value }),
+            executeOperation: (path, operation, args) => connection.invoke<SelfHostOperationResponse>('ExecuteOperation', LOCAL_PROCESS_ID, { path, operation, arguments: args }),
             stop: () => connection.stop()
         };
     }
@@ -143,24 +144,27 @@ export class SelfHostDiagHubService {
             this.#hubProxyLoad ??= this.loadScript(new URL('hub/hubs', document.baseURI).toString());
             await this.#hubProxyLoad;
         }
-        if (!$.connection?.selfHostWebHub)
-            throw new Error('The local SignalR 2 hub proxy could not be loaded.');
+        if (!$.connection?.selfHostWebHub) throw new Error('The local SignalR 2 hub proxy could not be loaded.');
 
         const hub = $.connection.selfHostWebHub;
         const connection = $.connection.hub;
         connection.url = new URL('hub', document.baseURI).toString();
-        this.registerCallbacks((name, callback) => hub.client[name] = callback);
+        this.registerCallbacks((name, callback) => (hub.client[name] = callback));
         connection.reconnecting(() => this.connectionState.set('connecting'));
-        connection.reconnected(() => void this.subscribeProcess(LOCAL_PROCESS_ID));
+        connection.reconnected(() => {
+            this.connectionState.set('connected');
+            this.error.set('');
+            void this.subscribeProcess(LOCAL_PROCESS_ID);
+        });
         connection.disconnected(() => this.handleDisconnected());
 
         return {
             start: () => this.toPromise<void>(connection.start()),
             getProcessInfo: () => this.toPromise<SelfHostProcessInfo>(hub.server.getProcessInfo()),
-            subscribe: processId => this.toPromise<void>(hub.server.subscribe(processId)),
-            unsubscribe: processId => this.toPromise<void>(hub.server.unsubscribe(processId)),
-            setProperty: (path, value) => this.toPromise<SelfHostOperationResponse>(hub.server.setProperty(LOCAL_PROCESS_ID, {path, value})),
-            executeOperation: (path, operation, args) => this.toPromise<SelfHostOperationResponse>(hub.server.executeOperation(LOCAL_PROCESS_ID, {path, operation, arguments: args})),
+            subscribe: (processId) => this.toPromise<void>(hub.server.subscribe(processId)),
+            unsubscribe: (processId) => this.toPromise<void>(hub.server.unsubscribe(processId)),
+            setProperty: (path, value) => this.toPromise<SelfHostOperationResponse>(hub.server.setProperty(LOCAL_PROCESS_ID, { path, value })),
+            executeOperation: (path, operation, args) => this.toPromise<SelfHostOperationResponse>(hub.server.executeOperation(LOCAL_PROCESS_ID, { path, operation, arguments: args })),
             stop: () => this.toPromise<void>(connection.stop())
         };
     }
@@ -169,16 +173,16 @@ export class SelfHostDiagHubService {
         register('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
             this.diagsArrived$.next({
                 processId,
-                response: {...response, serverDate: response.serverDate ?? new Date().toISOString()}
+                response: { ...response, serverDate: response.serverDate ?? new Date().toISOString() }
             });
         });
         register('ShowDiagnosticsError', (_processId: string, message: string) => this.error.set(message));
         register('SetEvents', (processId: string, events: SystemEvent[]) => {
-            this.clearEvents$.next({processId});
-            this.loadEvents$.next({requestId: '', clientId: '', processId, events});
+            this.clearEvents$.next({ processId });
+            this.loadEvents$.next({ requestId: '', clientId: '', processId, events });
         });
         register('StreamEvents', (processId: string, events: SystemEvent[]) => {
-            this.streamEvents$.next({processId, events});
+            this.streamEvents$.next({ processId, events });
         });
     }
 
@@ -186,14 +190,12 @@ export class SelfHostDiagHubService {
         this.#connection = undefined;
         this.process.set(undefined);
         this.connectionState.set('disconnected');
-        if (error)
-            this.error.set(this.errorMessage(error));
+        if (error) this.error.set(this.errorMessage(error));
         this.scheduleReconnect();
     }
 
     private scheduleReconnect(): void {
-        if (this.#stopRequested || this.#reconnectTimer != null)
-            return;
+        if (this.#stopRequested || this.#reconnectTimer != null) return;
 
         this.#reconnectTimer = setTimeout(() => {
             this.#reconnectTimer = undefined;
@@ -202,15 +204,12 @@ export class SelfHostDiagHubService {
     }
 
     private async tryReconnect(): Promise<void> {
-        if (this.#stopRequested || this.#connection)
-            return;
+        if (this.#stopRequested || this.#connection) return;
 
         try {
             const connection = await this.getConnection();
-            if (!this.#stopRequested)
-                await connection.subscribe(LOCAL_PROCESS_ID);
-        } catch {
-        }
+            if (!this.#stopRequested) await connection.subscribe(LOCAL_PROCESS_ID);
+        } catch {}
     }
 
     private toDiagProcess(process: SelfHostProcessInfo): DiagProcess {

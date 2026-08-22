@@ -4,255 +4,371 @@ using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Security;
+using System.Threading;
 using DiagnosticExplorer.Util;
 using log4net.Appender;
 using log4net.Core;
+using log4net.Util;
 
 namespace DiagnosticExplorer.Log4Net;
 
 public struct AppendResult
 {
-	public AppendResult(bool success) : this()
-	{
-		Success = success;
-	}
+    public AppendResult(bool success)
+        : this()
+    {
+        Success = success;
+    }
 
-	public AppendResult(bool success, string message)
-	{
-		Success = success;
-		Message = message;
-	}
+    public AppendResult(bool success, string message)
+    {
+        Success = success;
+        Message = message;
+    }
 
-	public bool Success { get; }
-	public string Message { get; }
+    public bool Success { get; }
+    public string Message { get; }
 }
 
 [DiagnosticClass(AttributedPropertiesOnly = true)]
 public abstract class AppenderProxyBase
 {
-	protected TimeSpan _timeout;
-	protected DateTime? _errorTime;
+    protected TimeSpan _timeout;
+    protected DateTime? _errorTime;
 
+    public AppenderProxyBase(TimeSpan timeout)
+    {
+        _timeout = timeout;
+    }
 
-	public AppenderProxyBase(TimeSpan timeout)
-	{
-		_timeout = timeout;
-	}
+    public bool IsInError { get; protected set; }
 
-	public bool IsInError { get; protected set; }
+    [Property]
+    public DateTime? LastError { get; set; }
 
-	[Property]
-	public DateTime? LastError { get; set; }
+    [Property]
+    public DateTime? LastMessageSent { get; set; }
 
-	[Property]
-	public DateTime? LastMessageSent { get; set; }
+    [RateProperty(ExposeRate = false, ExposeTotal = true)]
+    public RateCounter MessagesSent { get; } = new RateCounter(3);
 
-	[RateProperty(ExposeRate = false, ExposeTotal = true)]
-	public RateCounter MessagesSent { get; } = new RateCounter(3);
+    [RateProperty(ExposeRate = false, ExposeTotal = true)]
+    public RateCounter Errors { get; } = new RateCounter(3);
 
-	[RateProperty(ExposeRate = false, ExposeTotal = true)]
-	public RateCounter Errors { get; } = new RateCounter(3);
+    [DiagnosticMethod]
+    public void Reactivate()
+    {
+        IsInError = false;
+        _errorTime = null;
+    }
 
-	[DiagnosticMethod]
-	public void Reactivate()
-	{
-		IsInError = false;
-		_errorTime = null;
-	}
+    [Property]
+    public string LastErrorMessage { get; set; }
 
-	[Property]
-	public string LastErrorMessage { get; set; }
+    private TimeSpan? TimeUntilNextActive()
+    {
+        DateTime? time = _errorTime;
 
-	private TimeSpan? TimeUntilNextActive()
-	{
-		DateTime? time = _errorTime;
+        if (!time.HasValue)
+            return null;
 
-		if (!time.HasValue)
-			return null;
+        TimeSpan elapsed = DateTime.UtcNow - time.Value;
+        if (elapsed > _timeout)
+            return null;
 
-		TimeSpan elapsed = SystemDateTime.UtcNow() - time.Value;
-		if (elapsed > _timeout)
-			return null;
+        return elapsed;
+    }
 
-		return elapsed;
-	}
+    [Property]
+    public string StatusMessage
+    {
+        get
+        {
+            TimeSpan? timeFailed = TimeUntilNextActive();
+            if (timeFailed.HasValue)
+            {
+                string remaining = FormatTimeSpan(_timeout - timeFailed.Value);
+                return $"FAILED, Ready in {remaining}";
+            }
+            return "READY";
+        }
+    }
 
-	[Property]
-	public string StatusMessage
-	{
-		get
-		{
-			TimeSpan? timeFailed = TimeUntilNextActive();
-			if (timeFailed.HasValue)
-			{
-				string remaining = FormatTimeSpan(_timeout - timeFailed.Value);
-				return $"FAILED, Ready in {remaining}";
-			}
-			return "READY";
-		}
-	}
+    private string FormatTimeSpan(TimeSpan time)
+    {
+        if (time.TotalMinutes >= 60)
+            return string.Format(
+                "{0:D2}:{1:D2}:{2:D2}",
+                (int)time.TotalHours,
+                time.Minutes,
+                time.Seconds
+            );
 
-	private string FormatTimeSpan(TimeSpan time)
-	{
-		if (time.TotalMinutes >= 60)
-			return string.Format("{0:D2}:{1:D2}:{2:D2}", (int) time.TotalHours, time.Minutes, time.Seconds);
+        if (time.TotalSeconds < 60)
+            return string.Format("{0} seconds", time.Seconds);
 
-		if (time.TotalSeconds < 60)
-			return string.Format("{0} seconds", time.Seconds);
+        return string.Format("{0}m {1:D2}s", (int)time.TotalMinutes, time.Seconds);
+    }
 
-		return string.Format("{0}m {1:D2}s", (int) time.TotalMinutes, time.Seconds);
-	}
+    protected bool DoAppend(Func<AppendResult> appendAction)
+    {
+        if (ShouldResetError())
+        {
+            _errorTime = null;
+            IsInError = false;
+        }
 
-	protected bool DoAppend(Func<AppendResult> appendAction)
-	{
-		if (ShouldResetError())
-		{
-			_errorTime = null;
-			IsInError = false;
-		}
+        if (IsInError)
+            return false;
 
-		if (IsInError)
-			return false;
+        AppendResult result = appendAction();
+        if (result.Success)
+        {
+            LastMessageSent = DateTime.UtcNow;
+            MessagesSent.Register(1);
+        }
+        else
+        {
+            LastError = DateTime.UtcNow;
+            LastErrorMessage = result.Message;
+            Errors.Register(1);
+            if (_timeout > TimeSpan.Zero)
+                _errorTime = DateTime.UtcNow;
+        }
 
-		AppendResult result = appendAction();
-		if (result.Success)
-		{
-			LastMessageSent = SystemDateTime.UtcNow();
-			MessagesSent.Register(1);
-		}
-		else
-		{
-			LastError = SystemDateTime.UtcNow();
-			LastErrorMessage = result.Message;
-			Errors.Register(1);
-			if (_timeout > TimeSpan.Zero)
-				_errorTime = SystemDateTime.UtcNow();
-		}
+        return result.Success;
+    }
 
-		return result.Success;
-	}
+    private bool ShouldResetError()
+    {
+        if (!IsInError)
+            return false;
 
-	private bool ShouldResetError()
-	{
-		if (!IsInError)
-			return false;
+        if (_timeout <= TimeSpan.Zero)
+            return true;
 
-		if (_timeout <= TimeSpan.Zero)
-			return true;
-
-		return (SystemDateTime.UtcNow() - _errorTime) >= _timeout;
-	}
+        return (DateTime.UtcNow - _errorTime) >= _timeout;
+    }
 }
-
-
 
 [DiagnosticClass(AttributedPropertiesOnly = true)]
 public class SmtpAppenderProxy : AppenderProxyBase
 {
-	private SmtpAppender _appender;
+    private SmtpAppender _appender;
 
-	public SmtpAppenderProxy(SmtpAppender appender, string smtpHost, TimeSpan timeout) : base(timeout)
-	{
-		_appender = appender;
-		SmtpHost = smtpHost;
-	}
+    public SmtpAppenderProxy(SmtpAppender appender, string smtpHost, TimeSpan timeout)
+        : base(timeout)
+    {
+        _appender = appender;
+        SmtpHost = smtpHost;
+    }
 
-	public string SmtpHost { get; set; }
-		
-	public bool TrySend(MailMessage message)
-	{
-		return DoAppend(() => SendMessage(message));
-	}
+    public string SmtpHost { get; set; }
 
-	private AppendResult SendMessage(MailMessage message)
-	{
-		try
-		{
-			SmtpClient smtpClient = new SmtpClient();
-			if (!string.IsNullOrEmpty(SmtpHost) && !string.Equals(SmtpHost, SmtpAppender.DefaultHostName, StringComparison.CurrentCultureIgnoreCase))
-				smtpClient.Host = SmtpHost;
+    public bool TrySend(MailMessage message)
+    {
+        return DoAppend(() => SendMessage(message));
+    }
 
-			smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
+    private AppendResult SendMessage(MailMessage message)
+    {
+        try
+        {
+            SmtpClient smtpClient = new SmtpClient();
+            if (
+                !string.IsNullOrEmpty(SmtpHost)
+                && !string.Equals(
+                    SmtpHost,
+                    smtpClient.Host,
+                    StringComparison.CurrentCultureIgnoreCase
+                )
+            )
+                smtpClient.Host = SmtpHost;
 
-			if (_appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Basic)
-			{
-				// Perform basic authentication
-				smtpClient.Credentials = new NetworkCredential(_appender.Username, _appender.Password);
-			}
-			else if (_appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Ntlm)
-			{
-				// Perform integrated authentication (NTLM)
-				smtpClient.Credentials = CredentialCache.DefaultNetworkCredentials;
-			}
-			smtpClient.Send(message);
-			return new AppendResult(true);
-		}
-		catch (Exception ex)
-		{
-			return new AppendResult(false, ex.Message);
-		}
-	}
+            smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
+
+            if (_appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Basic)
+            {
+                // Perform basic authentication
+                smtpClient.Credentials = new NetworkCredential(
+                    _appender.Username,
+                    _appender.Password
+                );
+            }
+            else if (
+                _appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Ntlm
+            )
+            {
+                // Perform integrated authentication (NTLM)
+                smtpClient.Credentials = CredentialCache.DefaultNetworkCredentials;
+            }
+            smtpClient.Send(message);
+            return new AppendResult(true);
+        }
+        catch (Exception ex)
+        {
+            return new AppendResult(false, ex.Message);
+        }
+    }
 }
 
 [DiagnosticClass(AttributedPropertiesOnly = true)]
 public class AppenderProxy : AppenderProxyBase
 {
-	/// <summary>
-	/// Wraps up an <see cref="IAppender"/> adding extra behaviour to how to handle
-	/// an error while appending
-	/// </summary>
-	/// <param name="timeout">Amount of minutes to wait before attempting to append again while has error</param>
-	public AppenderProxy(IAppender appenderToWrap, TimeSpan timeout) : base(timeout)
-	{
-		AppenderSkeleton convertedAppender = appenderToWrap as AppenderSkeleton;
-		if (convertedAppender == null)
-			throw new InvalidOperationException("Cannot use AppenderProxy with an appender that does not inherit from AppenderSkeleton as it needs to hook into the IErrorHandler, to gather errors.");
+    /// <summary>
+    /// Wraps up an <see cref="IAppender"/> adding extra behaviour to how to handle
+    /// an error while appending
+    /// </summary>
+    /// <param name="timeout">Amount of minutes to wait before attempting to append again while has error</param>
+    public AppenderProxy(IAppender appenderToWrap, TimeSpan timeout)
+        : base(timeout)
+    {
+        AppenderSkeleton convertedAppender = appenderToWrap as AppenderSkeleton;
+        if (convertedAppender == null)
+            throw new InvalidOperationException(
+                "Cannot use AppenderProxy with an appender that does not inherit from AppenderSkeleton as it needs to hook into the IErrorHandler, to gather errors."
+            );
 
-		Appender = convertedAppender;
+        Appender = convertedAppender;
 
-		ErrorHandler = new AppenderProxyErrorHandler();
-		MultiErrorHandler.SetErrorHandler(Appender, ErrorHandler);
-	}
+        ErrorHandler = new AppenderProxyErrorHandler();
+        MultiErrorHandler.SetErrorHandler(Appender, ErrorHandler);
+    }
 
-	private AppenderProxyErrorHandler ErrorHandler { get; }
+    private AppenderProxyErrorHandler ErrorHandler { get; }
 
-	/// <summary>
-	/// Attempts to append to wrapped appender
-	/// </summary>
-	/// <returns>Whether the append was successful</returns>
-	public bool TryAppend(LoggingEvent loggingEvent)
-	{
-		return DoAppend(() => FireAppendAction(() => Appender.DoAppend(loggingEvent)));
-	}
+    /// <summary>
+    /// Attempts to append to wrapped appender
+    /// </summary>
+    /// <returns>Whether the append was successful</returns>
+    public bool TryAppend(LoggingEvent loggingEvent)
+    {
+        return DoAppend(() => FireAppendAction(() => Appender.DoAppend(loggingEvent)));
+    }
 
-	/// <summary>
-	/// Attempts to append to wrapped appender
-	/// </summary>
-	/// <returns>Whether the append was successful</returns>
-	public bool TryAppend(LoggingEvent[] loggingEvents)
-	{
-		return DoAppend(() => FireAppendAction(() => Appender.DoAppend(loggingEvents)));
-	}
+    /// <summary>
+    /// Attempts to append to wrapped appender
+    /// </summary>
+    /// <returns>Whether the append was successful</returns>
+    public bool TryAppend(LoggingEvent[] loggingEvents)
+    {
+        return DoAppend(() => FireAppendAction(() => Appender.DoAppend(loggingEvents)));
+    }
 
-	private AppendResult FireAppendAction(Action appendAction)
-	{
-		ErrorHandler.EnableForCurrentThread();
-		ErrorHandler.ResetError();
-		try
-		{
-			appendAction();
-		}
-		finally
-		{
-			ErrorHandler.Disable();
-		}
-		return new AppendResult(!ErrorHandler.HasError, ErrorHandler.Message);
-	}
+    private AppendResult FireAppendAction(Action appendAction)
+    {
+        ErrorHandler.EnableForCurrentThread();
+        ErrorHandler.ResetError();
+        try
+        {
+            appendAction();
+        }
+        finally
+        {
+            ErrorHandler.Disable();
+        }
+        return new AppendResult(!ErrorHandler.HasError, ErrorHandler.Message);
+    }
 
-	/// <summary>
-	/// Appender being wrapped
-	/// </summary>
-	public AppenderSkeleton Appender { get; }
+    /// <summary>
+    /// Appender being wrapped
+    /// </summary>
+    public AppenderSkeleton Appender { get; }
 
-	public string Name => Appender.Name;
+    public string Name => Appender.Name;
+}
+
+internal sealed class MultiErrorHandler : IErrorHandler
+{
+    private readonly List<IErrorHandler> _handlers = new() { new OnlyOnceErrorHandler() };
+
+    public void AddHandler(IErrorHandler handler)
+    {
+        if (handler == null)
+            throw new ArgumentNullException(nameof(handler));
+
+        _handlers.Add(handler);
+    }
+
+    public void Error(string message)
+    {
+        foreach (IErrorHandler handler in _handlers)
+            handler.Error(message);
+    }
+
+    public void Error(string message, Exception exception)
+    {
+        foreach (IErrorHandler handler in _handlers)
+            handler.Error(message, exception);
+    }
+
+    public void Error(string message, Exception exception, ErrorCode errorCode)
+    {
+        foreach (IErrorHandler handler in _handlers)
+            handler.Error(message, exception, errorCode);
+    }
+
+    public static void SetErrorHandler(AppenderSkeleton appender, AppenderProxyErrorHandler handler)
+    {
+        IErrorHandler existingHandler = appender.ErrorHandler;
+        MultiErrorHandler multiHandler = existingHandler as MultiErrorHandler;
+        if (multiHandler == null)
+        {
+            multiHandler = new MultiErrorHandler();
+            appender.ErrorHandler = multiHandler;
+            if (existingHandler != null)
+                multiHandler.AddHandler(existingHandler);
+        }
+
+        multiHandler.AddHandler(handler);
+    }
+}
+
+internal sealed class AppenderProxyErrorHandler : IErrorHandler
+{
+    private Thread _enabledThread;
+
+    public bool HasError { get; private set; }
+
+    public string Message { get; private set; }
+
+    public void EnableForCurrentThread()
+    {
+        _enabledThread = Thread.CurrentThread;
+    }
+
+    public void Disable()
+    {
+        _enabledThread = null;
+    }
+
+    public void ResetError()
+    {
+        HasError = false;
+        Message = null;
+    }
+
+    public void Error(string message)
+    {
+        Record(message);
+    }
+
+    public void Error(string message, Exception exception)
+    {
+        Record(exception?.Message ?? message);
+    }
+
+    public void Error(string message, Exception exception, ErrorCode errorCode)
+    {
+        Record(exception?.Message ?? message);
+    }
+
+    private void Record(string message)
+    {
+        if (Thread.CurrentThread != _enabledThread)
+            return;
+
+        Message = message;
+        HasError = true;
+    }
 }

@@ -35,9 +35,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using DiagnosticExplorer;
 using DiagnosticExplorer.SelfHost;
-using log4net;
-using log4net.Config;
-using log4net.Core;
+using MicrosoftConfiguration = Microsoft.Extensions.Configuration;
 using Timer = System.Threading.Timer;
 
 namespace WidgetSample;
@@ -46,9 +44,11 @@ namespace WidgetSample;
 [DiagnosticClass(AttributedPropertiesOnly = true, DeclaringTypeOnly = true)]
 public partial class Form1 : Form, INotifyPropertyChanged
 {
-    private static readonly ILog _gadgetLog = LogManager.GetLogger("Gadgets");
-    private static readonly ILog _widgetLog = LogManager.GetLogger("Widgets");
-    private static readonly ILog _formLog = LogManager.GetLogger(typeof(Form1));
+    private static readonly ISampleLogger _gadgetLog = SampleLogging.GetLogger("Gadgets");
+    private static readonly ISampleLogger _widgetLog = SampleLogging.GetLogger("Widgets");
+    private static readonly ISampleLogger _formLog = SampleLogging.GetLogger(
+        typeof(Form1).FullName
+    );
     private static int _evtCount1;
     private static readonly Random _rand = new Random();
     private readonly BindingList<Gadget> _gadgets;
@@ -71,9 +71,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
     public Form1()
     {
         InitializeComponent();
-
-        string log4net = Path.GetFullPath("log4net.config");
-        XmlConfigurator.ConfigureAndWatch(new FileInfo(log4net));
 
         Trace.Listeners.Add(new TextWriterTraceListener(Console.Error));
         Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
@@ -143,8 +140,18 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private static void StartRemoteDiagnostics()
     {
+        MicrosoftConfiguration.IConfigurationBuilder configurationBuilder =
+            new MicrosoftConfiguration.ConfigurationBuilder();
+        MicrosoftConfiguration.JsonConfigurationExtensions.AddJsonFile(
+            configurationBuilder,
+            Path.Combine(AppContext.BaseDirectory, "config.json"),
+            optional: false,
+            reloadOnChange: false
+        );
+        MicrosoftConfiguration.IConfiguration configuration = configurationBuilder.Build();
+        string diagnosticExplorerUrl = configuration["DiagnosticExplorer:Url"];
         DiagnosticHostingService.Start(
-            ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri")
+            diagnosticExplorerUrl ?? ConfigurationManager.AppSettings.Get("DiagnosticExplorerUri")
         );
     }
 
@@ -429,13 +436,13 @@ public partial class Form1 : Form, INotifyPropertyChanged
         }
     }
 
-    private static Task RunScopedTraceExampleAsync(ILog log, string message)
+    private static Task RunScopedTraceExampleAsync(ISampleLogger log, string message)
     {
         return Task.Run(async () =>
         {
             try
             {
-                using var scope = new TraceScope(log.Info);
+                using var scope = new TraceScope(message => log.Info(message));
                 TraceScope.Trace(message);
                 await TraceScopeExample.TestTraceScope1();
             }
@@ -472,7 +479,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     {
         Gadget gadget = new Gadget(GadgetIdCount++);
         _gadgets.Add(gadget);
-        _gadgetLog.InfoFormat("Added gadget {0}", gadget.Id);
+        _gadgetLog.Info($"Added gadget {gadget.Id}");
         _formLog.Info("Form1 added a gadget");
         GadgetEvents.Register(1);
     }
@@ -481,7 +488,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     {
         Widget widget = new Widget(WidgetIdCount++);
         _widgets.Add(widget);
-        _widgetLog.InfoFormat("Added widget {0}", widget.Id);
+        _widgetLog.Info($"Added widget {widget.Id}");
         _formLog.Info("Form1 added a widget");
         WidgetEvents.Register(1);
     }
@@ -560,7 +567,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
         RemoveItem(_widgets, _widgetLog);
     }
 
-    private void RemoveItem<T>(BindingList<T> items, ILog log)
+    private void RemoveItem<T>(BindingList<T> items, ISampleLogger log)
     {
         try
         {
@@ -576,7 +583,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private async void btnTraceScope_Click(object sender, EventArgs e)
     {
-        using (new TraceScope(_formLog.Info))
+        using (new TraceScope(message => _formLog.Info(message)))
         {
             TraceScope.Trace($"In Trace Scope Button Click 1 InvokeRequired: {InvokeRequired}");
 
@@ -613,7 +620,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     {
         using var scope = new TraceScope(
             "UI_ACTION_RoutingModel_SendAll",
-            _formLog.Info,
+            message => _formLog.Info(message),
             forceTrace: true
         );
 
@@ -742,13 +749,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
             {
                 for (int i = 0; i < count; i++)
                 {
-                    LoggingEventData data = new()
-                    {
-                        Message = $"Event #{i}",
-                        Level = IntToLevel(_rand.Next(1, 12) * 10000),
-                    };
-
-                    _formLog.Logger.Log(new LoggingEvent(data));
+                    _formLog.Log(IntToSampleLogLevel(_rand.Next(1, 12) * 10000), $"Event #{i}");
                     // await Task.Delay(TimeSpan.FromMilliseconds(5));
                 }
             });
@@ -766,30 +767,20 @@ public partial class Form1 : Form, INotifyPropertyChanged
         StartDiagnostics();
     }
 
-    private static Level IntToLevel(int value)
+    private static SampleLogLevel IntToSampleLogLevel(int value)
     {
-        if (value >= Level.Emergency.Value)
-            return Level.Emergency;
-        if (value >= Level.Fatal.Value)
-            return Level.Fatal;
-        if (value >= Level.Alert.Value)
-            return Level.Alert;
-        if (value >= Level.Critical.Value)
-            return Level.Critical;
-        if (value >= Level.Severe.Value)
-            return Level.Severe;
-        if (value >= Level.Error.Value)
-            return Level.Error;
-        if (value >= Level.Warn.Value)
-            return Level.Warn;
-        if (value >= Level.Notice.Value)
-            return Level.Notice;
-        if (value >= Level.Info.Value)
-            return Level.Info;
-        if (value >= Level.Debug.Value)
-            return Level.Debug;
-        if (value >= Level.Trace.Value)
-            return Level.Trace;
-        return Level.Verbose;
+        if (value >= 90000)
+            return SampleLogLevel.Critical;
+        if (value >= 70000)
+            return SampleLogLevel.Error;
+        if (value >= 60000)
+            return SampleLogLevel.Warning;
+        if (value >= 50000)
+            return SampleLogLevel.Notice;
+        if (value >= 40000)
+            return SampleLogLevel.Information;
+        if (value >= 30000)
+            return SampleLogLevel.Debug;
+        return SampleLogLevel.Trace;
     }
 }

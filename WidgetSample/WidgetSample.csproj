@@ -29,6 +29,7 @@
       <Version>3.3.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <PackageReference Include="MongoDB.Driver">
@@ -45,8 +46,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj" />
+    <ProjectReference Include="..\DiagnosticExplorer.Extensions.Logging\DiagnosticExplorer.Extensions.Logging.csproj" />
     <ProjectReference Include="..\DiagnosticExplorer.Log4Net\DiagnosticExplorer.Log4Net.csproj" />
+    <ProjectReference Include="..\DiagnosticExplorer.NLog\DiagnosticExplorer.NLog.csproj" />
     <ProjectReference Include="..\DiagnosticExplorer.SelfHost\DiagnosticExplorer.SelfHost.csproj" />
+    <ProjectReference Include="..\DiagnosticExplorer.Serilog\DiagnosticExplorer.Serilog.csproj" />
     <ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
   </ItemGroup>
   <ItemGroup>

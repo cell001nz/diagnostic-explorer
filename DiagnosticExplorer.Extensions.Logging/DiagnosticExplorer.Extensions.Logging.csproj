@@ -2,21 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>DiagnosticExplorer.Log4Net</AssemblyName>
-    <RootNamespace>DiagnosticExplorer.Log4Net</RootNamespace>
+    <AssemblyName>DiagnosticExplorer.Extensions.Logging</AssemblyName>
+    <RootNamespace>DiagnosticExplorer.Extensions.Logging</RootNamespace>
     <Version>3.1.38</Version>
     <AssemblyVersion>3.1.38.0</AssemblyVersion>
     <FileVersion>3.1.38.0</FileVersion>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Description>log4net appenders and integration for DiagnosticExplorer.</Description>
+    <Description>Microsoft.Extensions.Logging provider for DiagnosticExplorer.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
-    <PackageReference Include="log4net" Version="3.3.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
