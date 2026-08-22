@@ -5,6 +5,7 @@
     <AssemblyName>WidgetSample</AssemblyName>
     <StartupObject>WidgetSample.Program</StartupObject>
     <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
       <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
