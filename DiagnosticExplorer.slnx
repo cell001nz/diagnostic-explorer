@@ -4,13 +4,8 @@
     <Platform Name="Mixed Platforms" />
     <Platform Name="x86" />
   </Configurations>
-  <Folder Name="/Readme/">
-    <File Path="Copying.lesser.txt" />
-    <File Path="Copying.txt" />
-  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
-    <File Path="CreateDatabase.sql" />
   </Folder>
   <Project Path="angular-app/angular-app.esproj">
     <BuildType Project="Debug" />
