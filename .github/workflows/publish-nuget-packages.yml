@@ -1,0 +1,56 @@
+name: Publish NuGet packages
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+concurrency:
+  group: nuget-publish
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: diag-web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix diag-web
+
+      - name: Build release packages
+        shell: pwsh
+        run: ./Build.ps1
+
+      # This exchanges GitHub's OIDC token for a short-lived NuGet API key.
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: cell001uk
+
+      - name: Publish packages
+        shell: bash
+        run: >-
+          dotnet nuget push 'artifacts/packages/*.nupkg'
+          --api-key '${{ steps.login.outputs.NUGET_API_KEY }}'
+          --source 'https://api.nuget.org/v3/index.json'
+          --skip-duplicate
+          --timeout 300

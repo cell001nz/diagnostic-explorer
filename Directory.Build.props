@@ -4,12 +4,4 @@
     <DiagnosticExplorerAssemblyVersion>5.0.0.0</DiagnosticExplorerAssemblyVersion>
     <DiagnosticExplorerFileVersion>5.0.0.0</DiagnosticExplorerFileVersion>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
-    <None Include="$(MSBuildThisFileDirectory)PACKAGE-README.md" Pack="true" PackagePath="README.md" />
-  </ItemGroup>
 </Project>

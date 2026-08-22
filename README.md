@@ -179,6 +179,23 @@ ConsoleApp/                  Smaller CLI demo
 SelfHostSample/              Standalone local-viewer console sample
 ```
 
+## Publishing NuGet packages
+
+The [NuGet publishing workflow](.github/workflows/publish-nuget-packages.yml)
+publishes release packages on `v*.*.*` tags or through manual dispatch. It
+uses NuGet trusted publishing and does not require a stored API key.
+
+Before its first run, create a NuGet.org trusted-publishing policy with:
+
+- Repository owner: `cell001nz`
+- Repository: `diagnostic-explorer`
+- Workflow file: `publish-nuget-packages.yml`
+- Environment: leave empty
+
+The workflow uses the NuGet.org profile name `cell001uk`. Update the `user`
+value in the workflow if the package-owning NuGet.org profile has a different
+name.
+
 ## Using the library
 
 Add the package reference:

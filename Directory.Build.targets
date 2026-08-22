@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
+    <Authors>Diagnostic Explorer</Authors>
+    <Description>Diagnostic Explorer libraries for runtime object inspection, event sinks, logging integration, and diagnostics hosting.</Description>
+    <PackageTags>diagnostics;logging;runtime;signalr</PackageTags>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/cell001nz/diagnostic-explorer</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/cell001nz/diagnostic-explorer.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)PACKAGE-README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+</Project>

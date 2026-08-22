@@ -30,4 +30,7 @@ if ($packages.Count -eq 0) {
 foreach ($package in $packages) {
     Write-Host "Publishing $($package.Name) to $Source"
     dotnet nuget push $package.FullName --api-key $apiKey --source $Source --skip-duplicate --timeout 300
+    if ($LASTEXITCODE -ne 0) {
+        throw "Publishing $($package.Name) failed with exit code $LASTEXITCODE."
+    }
 }
