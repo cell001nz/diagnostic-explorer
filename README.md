@@ -1,16 +1,73 @@
 # DiagnosticExplorer
 
-DiagnosticExplorer is a .NET diagnostic instrumentation toolkit and an
-accompanying web-based viewer service. Application code emits property
-bags, operations, and events via the `DiagnosticExplorer` library;
-those get pushed over SignalR to a central hosting service which fans
-them out to a browser-based dashboard for live inspection across a
-fleet of running processes.
+DiagnosticExplorer is a .NET diagnostic instrumentation toolkit and a
+web-based viewer for inspecting live application state. The
+`DiagnosticService` hosts the `diag-web` Angular single-page application
+and exposes SignalR endpoints for both diagnostic clients and the browser.
+Applications such as `WidgetSample` connect to the service, register
+themselves, and keep a live connection open while they publish
+diagnostic data.
+
+The Angular dashboard shows the programs currently registered with the
+service. A developer can select a program to request and inspect its
+diagnostic information, including the property bags, operations, and
+events made available by the application.
 
 The project originated as Cameron Elliot's open-source diagnostic
 toolset around 2010 (LGPL v3+) and has been carried forward under
 Centerprise's EMS trading platform as the diagnostic backbone for the
 TOMI engine and its surrounding services.
+
+## How it works
+
+```mermaid
+flowchart LR
+   Client[Instrumented application\ne.g. WidgetSample] <-- SignalR /diagnostics --> Service[DiagnosticService]
+   Service <-- SignalR /web-hub --> Web[diag-web Angular SPA]
+   Web --> Developer[Developer]
+```
+
+1. An instrumented application uses `DiagnosticExplorer.Hosting` to
+   connect to the `DiagnosticService` endpoint at `/diagnostics`.
+2. The application registers with the service and maintains its SignalR
+   connection while it is running.
+3. `diag-web` connects to the service's `/web-hub` endpoint and displays
+   the registered applications.
+4. Selecting an application in the dashboard requests its current
+   diagnostics and presents the response for inspection.
+
+## Running the viewer locally
+
+The service and SPA are deployed together in normal use. Before starting
+`DiagnosticService`, set its `DiagServiceSettings` configuration to point
+to the built Angular output and the URLs on which the service should
+listen. The base configuration is in
+`DiagnosticService/Config/settings.json`; environment-specific transforms
+can supply the deployment values.
+
+Build the SPA from `diag-web`:
+
+```bash
+npm install
+npm run build
+```
+
+Then run the service from the repository root:
+
+```bash
+dotnet run --project DiagnosticService/Diagnostic.Service.csproj
+```
+
+For UI development, start the Angular development server instead:
+
+```bash
+cd diag-web
+npm start
+```
+
+Set `DiagServiceSettings:UseSpaProxy` and `DiagServiceSettings:SpaProxy`
+for the Angular development server when using this mode. The service
+will proxy SPA requests while continuing to host the SignalR endpoints.
 
 ## Repository layout
 
@@ -21,11 +78,13 @@ DiagnosticExplorer/          netstandard2.0 core library
 DiagnosticExplorer.Hosting/  net8.0 / net6.0 / net48 hosting integration
                              - AddDiagnosticExplorer DI extension,
                                DiagnosticHostingService, RegistrationHandler
-DiagnosticService/           Standalone web service (Docker payload)
-                             - ASP.NET Core + SignalR hubs + SPA host
-diagnostics-web/             Angular 13 SPA (the dashboard UI)
-Docker/                      Dockerfile and compose YAMLs for the service
-WidgetSample/                WinForms demo of the library
+DiagnosticService/           Standalone ASP.NET Core viewer service
+                             - SignalR hubs at /diagnostics and /web-hub
+                             - Hosts the SPA or proxies to its dev server
+diag-web/                     Angular SPA for browsing registered programs
+                             - Select a program to view live diagnostics
+WidgetSample/                WinForms diagnostic-client example
+                             - Registers with the service and publishes data
 ConsoleApp/                  Smaller CLI demo
 ```
 
@@ -73,98 +132,3 @@ Required configuration:
 
 The `Uri` may be a comma-or-semicolon-separated list of hub URLs if you
 want a single application to report to multiple diagnostic servers.
-
-### Tracing scopes
-
-```csharp
-using (var scope = new TraceScope(Log.Info))
-{
-    TraceScope.Trace("Loaded {0} records", count);
-    // ... work ...
-    TraceScope.Trace("Completed in {0}ms", elapsed);
-}
-```
-
-`TraceScope` flows through `AsyncLocal`, so nested async calls share
-the same scope automatically.
-
-## Running the service
-
-Two compose files under `Docker/`:
-
-```bash
-# Build the image locally and bring up service + MongoDB:
-docker compose -f Docker/compose-and-create-image.yaml up -d --build
-
-# Or pull the published image from ghcr.io:
-docker compose -f Docker/compose-with-existing-image.yaml up -d
-```
-
-Then open `http://localhost:2803/` for the dashboard.
-
-Environment-variable overrides documented inline at the top of each
-compose file. Most-useful:
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `DIAGEXPLORER_HOST_PORT` | `2803` | Host-side port mapping if 2803 is in use locally |
-| `MONGO_USERNAME` / `MONGO_PASSWORD` | `admin` / `password123` | Mongo root credentials |
-| `DIAGEXPLORER_IMAGE_NAME` | `ghcr.io/cell001nz/diagnostic-explorer` | Repoint at a fork's GHCR namespace |
-| `DIAGEXPLORER_IMAGE_TAG` | `latest` | Pin to a specific GHCR tag (e.g. `3.1.38`) |
-
-The service listens on port `2803` inside the container. Settings
-default to a Mongo backend at `mongodb:27017` (the sidecar in compose);
-override `DiagServiceSettings__RetroConnection` to point at a
-different store.
-
-## Building from source
-
-```bash
-# Library + service + samples:
-dotnet build DiagnosticExplorer.sln -c Release
-
-# Angular dashboard (Node 16 recommended; Angular 13 doesn't love Node 18+):
-cd diagnostics-web
-npm ci --legacy-peer-deps
-npm run build
-```
-
-The shipped libraries have `<GeneratePackageOnBuild>true</GeneratePackageOnBuild>`,
-so a Release build produces the NuGet packages under each project's
-`bin/Release/`.
-
-Vulnerability check:
-
-```bash
-dotnet list DiagnosticExplorer.sln package --vulnerable --include-transitive
-```
-
-(Should report no vulnerable packages as of `3.1.38`.)
-
-## Container image
-
-Published to `ghcr.io/cell001nz/diagnostic-explorer` by the GitHub
-Actions workflow at `.github/workflows/publish-docker-image.yml`.
-
-Triggers:
-- `push` to `main` → tags `latest`, `main`, `sha-<short>`
-- `push` of a `v*.*.*` git tag → tags the matching semver + `major.minor`
-- `workflow_dispatch` → manual publish from any ref
-- `pull_request` against `main` → build-validate only, no push
-
-The image is `linux/amd64`. The GHCR package's visibility inherits
-the source repo on first publish (public repo → public package,
-private repo → private package). Override at any time from the
-package's settings page on GitHub.
-
-## Releases
-
-Current release: **3.1.38**.
-
-Versions are tagged `v{semver}` (e.g. `v3.1.38`); pushing the tag
-triggers a container-image publish to GHCR.
-
-## License
-
-LGPL v3 or later — see `LICENSE` and the file headers in
-`DiagnosticExplorer/`.
