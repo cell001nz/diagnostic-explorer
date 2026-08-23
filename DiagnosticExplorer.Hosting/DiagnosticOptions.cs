@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace DiagnosticExplorer;
 
@@ -7,8 +8,7 @@ public class DiagExplorerOptions
     public const string ConfigurationSectionName = "DiagnosticExplorer";
 
     public bool Enabled { get; set; } = true;
-    public string RemoteUrl { get; set; }
-    public string SelfHostUrl { get; set; }
+    public List<DiagnosticHostOptions> Hosts { get; set; } = new();
     public EventRetentionOptions EventRetention { get; set; } = new();
 }
 

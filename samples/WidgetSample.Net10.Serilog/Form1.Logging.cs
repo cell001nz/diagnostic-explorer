@@ -4,8 +4,6 @@ namespace WidgetSample.Harness;
 
 public partial class Form1
 {
-    private static partial bool RemoteDiagnosticsAreHostManaged() => true;
-
     private static global::Serilog.ILogger _gadgetLog;
     private static global::Serilog.ILogger _widgetLog;
     private static global::Serilog.ILogger _formLog;

@@ -32,7 +32,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DiagnosticExplorer;
-using DiagnosticExplorer.SelfHost;
 using Timer = System.Threading.Timer;
 
 namespace WidgetSample.Harness;
@@ -53,14 +52,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private Task _autoLogTask;
     private Timer _scopeTimer;
     private Task _scopeTask;
-    private static DiagnosticSelfHost _selfHost;
-    private static Task _selfHostStartTask;
-    private bool _shutdownInProgress;
-
-    private const bool _serverDiags = true;
-    private const bool _selfHostDiags = true;
-
-    private static partial bool RemoteDiagnosticsAreHostManaged();
 
     public Form1()
     {
@@ -77,9 +68,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
                         }
                     });
         */
-        StartDiagnostics();
-        FormClosing += StopDiagnosticsOnClosing;
-
         //Exposure the remoting interface
         _gadgets = new BindingList<Gadget>();
         _widgets = new BindingList<Widget>();
@@ -103,110 +91,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
         _scopeTimer = new Timer(x => DoScopeTimerCode(), null, 500, 500);
         _scopeTask = RunScopeTask();
-    }
-
-    private static void StartDiagnostics()
-    {
-        // To use the in-process viewer, uncomment this line and comment out StartRemoteDiagnostics().
-        if (_selfHostDiags)
-            StartSelfHostedDiagnostics();
-
-        if (_serverDiags && !RemoteDiagnosticsAreHostManaged())
-            StartRemoteDiagnostics();
-    }
-
-    private static void StartSelfHostedDiagnostics()
-    {
-        if (_selfHost != null || _selfHostStartTask != null)
-            return;
-
-        _selfHostStartTask = StartSelfHostedDiagnosticsAsync();
-    }
-
-    private static async Task StartSelfHostedDiagnosticsAsync()
-    {
-        try
-        {
-            _selfHost = await DiagnosticSelfHostingService.StartAsync(DiagnosticManager.CurrentConfiguration);
-            if (_selfHost.IsEnabled)
-                Debug.WriteLine($"Self-hosted diagnostics started at {_selfHost.Url}");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
-        finally
-        {
-            _selfHostStartTask = null;
-        }
-    }
-
-    private static void StartRemoteDiagnostics()
-    {
-        DiagnosticHostingService.Start(DiagnosticManager.CurrentConfiguration);
-    }
-
-    private async void StopDiagnosticsOnClosing(object sender, FormClosingEventArgs e)
-    {
-        Trace.WriteLine("Closing");
-        if (_shutdownInProgress)
-        {
-            e.Cancel = true;
-            return;
-        }
-
-        _shutdownInProgress = true;
-        e.Cancel = true;
-
-        try
-        {
-            if (!RemoteDiagnosticsAreHostManaged())
-            {
-                await DiagnosticHostingService.Stop();
-                Trace.WriteLine("Stopped Diags");
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
-        try
-        {
-            await StopSelfHostedDiagnosticsAsync();
-            Trace.WriteLine("Stopped SelfHost");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-        }
-        finally
-        {
-            FormClosing -= StopDiagnosticsOnClosing;
-            Trace.WriteLine("Invoking close");
-            BeginInvoke(Close);
-        }
-    }
-
-    private async void StopDiagnostics(object sender, EventArgs e)
-    {
-        if (_selfHostDiags)
-            await StopSelfHostedDiagnosticsAsync();
-        else if (!RemoteDiagnosticsAreHostManaged())
-            await DiagnosticHostingService.Stop();
-    }
-
-    private static async Task StopSelfHostedDiagnosticsAsync()
-    {
-        Task selfHostStartTask = _selfHostStartTask;
-        if (selfHostStartTask != null)
-            await selfHostStartTask;
-
-        if (_selfHost == null)
-            return;
-
-        DiagnosticSelfHost selfHost = _selfHost;
-        _selfHost = null;
-        await selfHost.StopAsync();
     }
 
     [ExtendedProperty]
@@ -394,24 +278,48 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private void SendEvents(object o)
     {
         if (chkSystem.Checked)
-            _ = RunScopedTraceExampleAsync(message => _formLog.Info(message), exception => _formLog.Error(exception), $"Form Trace Scope {_evtCount1++}");
+            _ = RunScopedTraceExampleAsync(
+                message => _formLog.Info(message),
+                exception => _formLog.Error(exception),
+                $"Form Trace Scope {_evtCount1++}"
+            );
 
         if (chkWidgets.Checked)
-            _ = RunScopedTraceExampleAsync(message => _widgetLog.Info(message), exception => _widgetLog.Error(exception), $"Widget Trace Scope {_evtCount1++}");
+            _ = RunScopedTraceExampleAsync(
+                message => _widgetLog.Info(message),
+                exception => _widgetLog.Error(exception),
+                $"Widget Trace Scope {_evtCount1++}"
+            );
 
         if (chkGadgets.Checked)
-            _ = RunScopedTraceExampleAsync(message => _gadgetLog.Info(message), exception => _gadgetLog.Error(exception), $"Gadget Trace Scope {_evtCount1++}");
+            _ = RunScopedTraceExampleAsync(
+                message => _gadgetLog.Info(message),
+                exception => _gadgetLog.Error(exception),
+                $"Gadget Trace Scope {_evtCount1++}"
+            );
     }
 
     private void SendInitial()
     {
         for (int i = 0; i < 10; i++)
         {
-            _ = RunScopedTraceExampleAsync(message => _formLog.Info(message), exception => _formLog.Error(exception), $"Form Trace Scope {_evtCount1++}");
+            _ = RunScopedTraceExampleAsync(
+                message => _formLog.Info(message),
+                exception => _formLog.Error(exception),
+                $"Form Trace Scope {_evtCount1++}"
+            );
 
-            _ = RunScopedTraceExampleAsync(message => _widgetLog.Info(message), exception => _widgetLog.Error(exception), $"Widget Trace Scope {_evtCount1++}");
+            _ = RunScopedTraceExampleAsync(
+                message => _widgetLog.Info(message),
+                exception => _widgetLog.Error(exception),
+                $"Widget Trace Scope {_evtCount1++}"
+            );
 
-            _ = RunScopedTraceExampleAsync(message => _gadgetLog.Info(message), exception => _gadgetLog.Error(exception), $"Gadget Trace Scope {_evtCount1++}");
+            _ = RunScopedTraceExampleAsync(
+                message => _gadgetLog.Info(message),
+                exception => _gadgetLog.Error(exception),
+                $"Gadget Trace Scope {_evtCount1++}"
+            );
         }
     }
 
@@ -737,11 +645,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
         }
     }
 
-        private void btnStartHosting_Click(object sender, EventArgs e)
-    {
-        StartDiagnostics();
-    }
-
     private static SampleLogLevel IntToSampleLogLevel(int value)
     {
         if (value >= 90000)
@@ -759,4 +662,3 @@ public partial class Form1 : Form, INotifyPropertyChanged
         return SampleLogLevel.Trace;
     }
 }
-

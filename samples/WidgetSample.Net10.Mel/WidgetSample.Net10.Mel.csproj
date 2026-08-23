@@ -15,7 +15,6 @@
     <ProjectReference Include="..\..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
     <ProjectReference Include="..\..\DiagnosticExplorer.Extensions.Logging\DiagnosticExplorer.Extensions.Logging.csproj" />
     <ProjectReference Include="..\..\DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj" />
-    <ProjectReference Include="..\..\DiagnosticExplorer.SelfHost\DiagnosticExplorer.SelfHost.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="config.json" CopyToOutputDirectory="PreserveNewest" />

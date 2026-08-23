@@ -20,10 +20,18 @@ namespace WidgetSample.Net48.Log4Net
             DiagnosticManager.Configure(diagnostics => DiagnosticsConfiguration.Configure(diagnostics, configuration));
             LogManager.GetRepository().ConfigureDiagnosticExplorer();
             Form1.InitializeLoggers();
+            DiagnosticHostingService.StartAsync(DiagnosticManager.CurrentConfiguration).GetAwaiter().GetResult();
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new Form1());
+            }
+            finally
+            {
+                DiagnosticHostingService.Stop().GetAwaiter().GetResult();
+            }
         }
     }
 }

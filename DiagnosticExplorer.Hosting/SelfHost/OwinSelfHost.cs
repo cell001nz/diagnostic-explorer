@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Owin;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 internal static class DiagnosticSelfHostFactory
 {
@@ -22,12 +22,15 @@ internal static class DiagnosticSelfHostFactory
 
         SelfHostManager manager = new();
         IDisposable server = WebApp.Start(url, app => Configure(app, manager, options));
-        DiagnosticSelfHost host = new(url + options.GetNormalizedPathBase(), () =>
-        {
-            manager.Dispose();
-            server.Dispose();
-            return Task.CompletedTask;
-        });
+        DiagnosticSelfHost host = new(
+            url + options.GetNormalizedPathBase(),
+            () =>
+            {
+                manager.Dispose();
+                server.Dispose();
+                return Task.CompletedTask;
+            }
+        );
         return Task.FromResult(host);
     }
 
@@ -82,7 +85,7 @@ internal sealed class SignalRProtocolContractResolver : CamelCasePropertyNamesCo
         "M",
         "R",
         "S",
-        "T"
+        "T",
     };
 
     protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
@@ -136,8 +139,11 @@ internal sealed class OwinSelfHostClient : ISelfHostClient
     public OwinSelfHostClient(dynamic client) => _client = client;
 
     public Task ShowDiagnostics(string processId, DiagnosticResponse response) => _client.ShowDiagnostics(processId, response);
+
     public Task ShowDiagnosticsError(string processId, string message) => _client.ShowDiagnosticsError(processId, message);
+
     public Task SetEvents(string processId, SystemEvent[] events) => _client.SetEvents(processId, events);
+
     public Task StreamEvents(string processId, SystemEvent[] events) => _client.StreamEvents(processId, events);
 }
 #endif

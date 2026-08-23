@@ -14,20 +14,12 @@ internal static class DiagnosticsConfiguration
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
-
-        DiagExplorerOptions options = configuration.GetSection(DiagExplorerOptions.ConfigurationSectionName).Get<DiagExplorerOptions>() ?? new();
-        Configure(config, options);
-    }
-
-    public static void Configure(IDiagConfigurator config, DiagExplorerOptions options)
-    {
         if (config == null)
             throw new ArgumentNullException(nameof(config));
-        if (options == null)
-            throw new ArgumentNullException(nameof(options));
 
         config.ApplyAttributes = false;
-        ConfigureRuntime(config, options);
+        config.ConfigureHosting(configuration);
+        config.ConfigureEventRouting(ConfigureEventRouting);
 
         config.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss.fff}");
         config.DefaultFormat<Point>("Located at {0}");
@@ -37,34 +29,15 @@ internal static class DiagnosticsConfiguration
         ConfigureGadget(config);
     }
 
-    private static void ConfigureRuntime(IDiagConfigurator config, DiagExplorerOptions options)
+    private static void ConfigureEventRouting(EventSinkRouteOptions routes)
     {
-        config.Runtime(runtime =>
-        {
-            runtime.Enabled(options.Enabled);
-
-            if (!string.IsNullOrWhiteSpace(options.RemoteUrl))
-                runtime.RemoteUrl(options.RemoteUrl);
-
-            if (!string.IsNullOrWhiteSpace(options.SelfHostUrl))
-                runtime.SelfHostUrl(options.SelfHostUrl);
-
-            runtime.EventRetention(retention =>
-            {
-                retention.MaxEventsPerSink = options.EventRetention.MaxEventsPerSink;
-                retention.MaxAgeMinutes = options.EventRetention.MaxAgeMinutes;
-            });
-
-            runtime.Routing(routes =>
-                routes
-                    .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
-                    .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widgets Events"))
-                    .Route("Gadgets", route => route.AtLeast(LogLevel.Information).To("Gadgets", "Gadget Events"))
-                    .Route("WidgetSample.Form1", route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
-                    .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
-                    .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors"))
-            );
-        });
+        routes
+            .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
+            .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widgets Events"))
+            .Route("Gadgets", route => route.AtLeast(LogLevel.Information).To("Gadgets", "Gadget Events"))
+            .Route("WidgetSample.Form1", route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
+            .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
+            .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors"));
     }
 
     private static void ConfigureForm(IDiagConfigurator config)
@@ -141,4 +114,3 @@ internal static class DiagnosticsConfiguration
         });
     }
 }
-

@@ -5,8 +5,6 @@ namespace WidgetSample.Harness;
 
 public partial class Form1
 {
-    private static partial bool RemoteDiagnosticsAreHostManaged() => true;
-
     private static ILogger _gadgetLog;
     private static ILogger _widgetLog;
     private static ILogger _formLog;

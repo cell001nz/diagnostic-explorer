@@ -20,7 +20,6 @@
   <Project Path="DiagnosticExplorer.NLog/DiagnosticExplorer.NLog.csproj" />
   <Project Path="DiagnosticExplorer.Serilog/DiagnosticExplorer.Serilog.csproj" />
   <Project Path="DiagnosticExplorer.Logging.Tests/DiagnosticExplorer.Logging.Tests.csproj" />
-  <Project Path="DiagnosticExplorer.SelfHost/DiagnosticExplorer.SelfHost.csproj" />
   <Project Path="DiagnosticExplorer/DiagnosticExplorer.csproj">
     <Build Solution="*|x86" Project="false" />
   </Project>

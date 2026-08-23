@@ -8,7 +8,6 @@ $packageProjects = @(
 	'DiagnosticExplorer\DiagnosticExplorer.csproj'
 	'DiagnosticExplorer.Log4Net\DiagnosticExplorer.Log4Net.csproj'
 	'DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj'
-	'DiagnosticExplorer.SelfHost\DiagnosticExplorer.SelfHost.csproj'
 	'DiagnosticExplorer.Extensions.Logging\DiagnosticExplorer.Extensions.Logging.csproj'
 	'DiagnosticExplorer.Serilog\DiagnosticExplorer.Serilog.csproj'
 	'DiagnosticExplorer.NLog\DiagnosticExplorer.NLog.csproj'

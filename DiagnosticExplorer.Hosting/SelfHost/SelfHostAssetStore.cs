@@ -3,11 +3,11 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 internal static class SelfHostAssetStore
 {
-    private const string ResourcePrefix = "DiagnosticExplorer.SelfHost.Assets.";
+    private const string ResourcePrefix = "DiagnosticExplorer.Hosting.Assets.";
 
     public static bool TryOpen(string path, out Stream stream, out string contentType, out bool isIndex)
     {
@@ -15,7 +15,8 @@ internal static class SelfHostAssetStore
         isIndex = string.Equals(assetPath, "index.html", StringComparison.OrdinalIgnoreCase);
         contentType = GetContentType(assetPath);
         Assembly assembly = typeof(SelfHostAssetStore).Assembly;
-        stream = assembly.GetManifestResourceStream(ResourcePrefix + assetPath.Replace('/', '.'))
+        stream =
+            assembly.GetManifestResourceStream(ResourcePrefix + assetPath.Replace('/', '.'))
             ?? assembly.GetManifestResourceStream(ResourcePrefix + assetPath.Replace('/', '\\'))
             ?? assembly.GetManifestResourceStream(ResourcePrefix + assetPath);
 
@@ -57,7 +58,7 @@ internal static class SelfHostAssetStore
             ".woff" => "font/woff",
             ".ttf" => "font/ttf",
             ".eot" => "application/vnd.ms-fontobject",
-            _ => "application/octet-stream"
+            _ => "application/octet-stream",
         };
     }
 }

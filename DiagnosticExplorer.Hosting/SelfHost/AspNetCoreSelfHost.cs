@@ -1,6 +1,7 @@
 #if NET6_0_OR_GREATER
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -10,7 +11,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 /// <summary>Registers self-host diagnostics services in an ASP.NET Core application.</summary>
 public static class DiagnosticSelfHostServiceCollectionExtensions
@@ -26,10 +27,11 @@ public static class DiagnosticSelfHostServiceCollectionExtensions
 
         DiagnosticManager.UseConfiguration(configuration);
         DiagnosticRuntimeOptions runtime = configuration.RuntimeOptions;
+        string selfHostUrl = runtime.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.SelfHost)?.Url;
         return services.AddDiagnosticSelfHost(options =>
         {
             options.Enabled = runtime.Enabled;
-            options.Url = runtime.SelfHostUrl ?? options.Url;
+            options.Url = selfHostUrl ?? options.Url;
             configure?.Invoke(options);
         });
     }
@@ -41,9 +43,11 @@ public static class DiagnosticSelfHostServiceCollectionExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        DiagExplorerOptions hostOptions = configuration.GetSection(DiagExplorerOptions.ConfigurationSectionName).Get<DiagExplorerOptions>() ?? new();
         return services.AddDiagnosticSelfHost(options =>
         {
-            options.Enabled = configuration.GetValue<bool?>(DiagnosticManager.EnabledConfigurationKey) ?? true;
+            options.Enabled = hostOptions.Enabled;
+            options.Url = hostOptions.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.SelfHost)?.Url ?? options.Url;
             configure?.Invoke(options);
             DiagnosticManager.Enabled = options.Enabled;
         });

@@ -1,6 +1,7 @@
 #if NET5_0_OR_GREATER
 
 using System;
+using System.Linq;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +37,7 @@ namespace DiagnosticExplorer
             DiagExplorerOptions options = config.GetSection(DiagExplorerOptions.ConfigurationSectionName).Get<DiagExplorerOptions>() ?? new();
             DiagnosticManager.Enabled = options.Enabled;
             services.Configure<DiagExplorerOptions>(config.GetSection(DiagExplorerOptions.ConfigurationSectionName));
-            services.AddHostedService(sp => new DiagnosticHostingService(sp.GetRequiredService<IOptions<DiagExplorerOptions>>(), configureHttp));
+            AddConfiguredHostedServices(services, options, configureHttp);
             return services;
         }
 
@@ -56,16 +57,38 @@ namespace DiagnosticExplorer
             services.Configure<DiagExplorerOptions>(options =>
             {
                 options.Enabled = runtime.Enabled;
-                options.RemoteUrl = runtime.RemoteUrl;
-                options.SelfHostUrl = runtime.SelfHostUrl;
+                options.Hosts = runtime.Hosts.Select(host => new DiagnosticHostOptions { Type = host.Type, Url = host.Url }).ToList();
                 options.EventRetention = new EventRetentionOptions
                 {
                     MaxEventsPerSink = runtime.EventRetention.MaxEventsPerSink,
                     MaxAgeMinutes = runtime.EventRetention.MaxAgeMinutes,
                 };
             });
-            services.AddHostedService(sp => new DiagnosticHostingService(sp.GetRequiredService<IOptions<DiagExplorerOptions>>(), configureHttp));
+            AddConfiguredHostedServices(
+                services,
+                new DiagExplorerOptions
+                {
+                    Enabled = runtime.Enabled,
+                    Hosts = runtime.Hosts.Select(host => new DiagnosticHostOptions { Type = host.Type, Url = host.Url }).ToList(),
+                },
+                configureHttp
+            );
             return services;
+        }
+
+        private static void AddConfiguredHostedServices(
+            IServiceCollection services,
+            DiagExplorerOptions options,
+            Action<HttpConnectionOptions> configureHttp
+        )
+        {
+            if (!options.Enabled)
+                return;
+
+            if (options.Hosts.Any(host => host.Type == DiagnosticHostType.Remote && !string.IsNullOrWhiteSpace(host.Url)))
+                services.AddHostedService(sp => new DiagnosticHostingService(sp.GetRequiredService<IOptions<DiagExplorerOptions>>(), configureHttp));
+            if (options.Hosts.Any(host => host.Type == DiagnosticHostType.SelfHost && !string.IsNullOrWhiteSpace(host.Url)))
+                services.AddHostedService<DiagnosticSelfHostHostedService>();
         }
     }
 }

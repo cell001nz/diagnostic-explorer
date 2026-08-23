@@ -10,32 +10,31 @@ Inspect registered objects, their properties, and live diagnostic events from on
 
 ## Quick Start
 
-Choose one viewer:
+Configure one or both hosts:
 
-| Viewer                                    | Package                       | Browser URL                                                     |
-| ----------------------------------------- | ----------------------------- | --------------------------------------------------------------- |
-| A local viewer hosted by your application | `DiagnosticExplorer.SelfHost` | `http://127.0.0.1:50001`                                        |
-| A central Diagnostic Explorer service     | `DiagnosticExplorer.Hosting`  | Your DiagnosticService URL, for example`http://localhost:50000` |
+| Viewer                                    | Package                      | Browser URL                                                     |
+| ----------------------------------------- | ---------------------------- | --------------------------------------------------------------- |
+| A local viewer hosted by your application | `DiagnosticExplorer.Hosting` | `http://127.0.0.1:50001`                                        |
+| A central Diagnostic Explorer service     | `DiagnosticExplorer.Hosting` | Your DiagnosticService URL, for example`http://localhost:50000` |
 
-Reference the package you chose. Use the current version from NuGet:
+Reference `DiagnosticExplorer.Hosting`. It starts the host or hosts selected
+by configuration:
 
 ```xml
-<!-- Local viewer; no separate DiagnosticService required -->
-<PackageReference Include="DiagnosticExplorer.SelfHost" Version="5.0.0" />
-
-<!-- Or connect this application to a central DiagnosticService -->
 <PackageReference Include="DiagnosticExplorer.Hosting" Version="5.0.0" />
 ```
 
-Add configuration to `appsettings.json` or `config.json`. Use `SelfHostUrl`
-for the local viewer, or `RemoteUrl` for a central service:
+Add configuration to `appsettings.json` or `config.json`. Each `Hosts` entry
+selects a hosting mode. Set either host type or both:
 
 ```json
 {
   "DiagnosticExplorer": {
     "Enabled": true,
-    "SelfHostUrl": "http://127.0.0.1:50001",
-    "RemoteUrl": "http://localhost:50000/diagnostics"
+    "Hosts": [
+      { "Type": "SelfHost", "Url": "http://127.0.0.1:50001" },
+      { "Type": "Remote", "Url": "http://localhost:50000/diagnostics" }
+    ]
   }
 }
 ```
@@ -59,6 +58,10 @@ using IHost host = Host.CreateDefaultBuilder(args)
 host.Start();
 ```
 
+`host.Start()` starts the configured local viewer and/or remote diagnostic
+connection; `host.StopAsync()` stops them. A WinForms application using the
+generic host does not need to choose or manage either lifecycle itself.
+
 Register the object whose public properties you want to inspect, typically in
 its constructor or startup code:
 
@@ -68,14 +71,14 @@ using DiagnosticExplorer;
 DiagnosticManager.Register(this, "BagName", "CatName");
 ```
 
-For a local viewer in a console, worker, desktop, or other application without
-an ASP.NET Core pipeline, start the viewer with the same configuration:
+For an application without a generic host, start the local viewer directly and
+retain the returned handle until shutdown:
 
 ```csharp
-using DiagnosticExplorer.SelfHost;
+using DiagnosticExplorer;
 
-using DiagnosticSelfHost viewer = await DiagnosticSelfHostingService.StartAsync(
-    configuration);
+DiagnosticSelfHost viewer = await DiagnosticSelfHostingService.StartAsync(
+    DiagnosticManager.CurrentConfiguration);
 ```
 
 Run the application and open `http://127.0.0.1:50001` (or `viewer.Url`) in a
@@ -86,39 +89,81 @@ configured URL, and select your registered application.
 
 [Download the latest x64 MSI](https://github.com/cell001nz/diagnostic-explorer/releases/latest/download/DiagnosticExplorer.Service-win-x64.msi).
 
-## Advanced Hosting
+## Logging and Advanced Hosting
 
-To forward log4net events to DiagnosticExplorer, add the optional integration
-package and configure its appenders in `log4net.config`:
-
-```xml
-<PackageReference Include="DiagnosticExplorer.Log4Net" Version="5.0.0" />
-```
-
-Use the `DiagnosticExplorer.Log4Net` assembly in appender type names, for
-example:
+To route `Microsoft.Extensions.Logging` events to DiagnosticExplorer, add the
+optional logging provider:
 
 ```xml
-<appender name="Diagnostics" type="DiagnosticExplorer.Log4Net.DiagnosticAppender, DiagnosticExplorer.Log4Net" />
+<PackageReference Include="DiagnosticExplorer.Extensions.Logging" Version="5.0.0" />
 ```
 
-For SignalR connections that need custom configuration, pass an
-`Action<HttpConnectionOptions>`:
+Configure the Diagnostic Explorer endpoint and routes in the host builder's
+`ConfigureServices` callback, then add the MEL provider. Call
+`AddDiagnosticExplorer()` after configuring routes; the provider compiles the
+current route configuration when it is registered:
 
 ```csharp
-services.AddDiagnosticExplorer(
-    context.Configuration,
-    options => options.AccessTokenProvider = GetCurrentAccessToken);
+using DiagnosticExplorer;
+using DiagnosticExplorer.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+services.ConfigureDiagnosticExplorer(diagnostics =>
+{
+    diagnostics.ConfigureHosting(hosting =>
+        hosting.AddHost(DiagnosticHostType.Remote, "http://localhost:50000/diagnostics"));
+    diagnostics.ConfigureEventRouting(routes =>
+        routes.Route("*", route =>
+            route.AtLeast(LogLevel.Information)
+                .To("System", "Application Events")));
+});
+
+services.AddLogging(logging => logging.AddDiagnosticExplorer());
+
+public sealed class MyApplication
+{
+    private readonly ILogger<MyApplication> logger;
+
+    public MyApplication(ILogger<MyApplication> logger)
+    {
+        this.logger = logger;
+    }
+
+    public void Run()
+    {
+        logger.LogInformation("Started processing widgets");
+    }
+}
 ```
 
-Static start (for non-DI hosts):
+Each `Route` has a category pattern, an optional inclusive level range, and one
+or more destinations. `To` takes the destination sink category first and sink
+name second. A named category matches that category and its dot-separated
+children, while `*` matches every category. The default `AllMatches` mode
+writes an event to every matching route, so specific category routes can fan
+out alongside a wildcard severity route:
 
 ```csharp
-DiagnosticHostingService.Start(
-    "http://diagnostics:50000/diagnostics",
-    options => options.AccessTokenProvider = GetCurrentAccessToken);
+routes
+    .Route("Widgets", route =>
+        route.AtLeast(LogLevel.Information)
+            .To("Application", "Widget Events"))
+    .Route("*", route =>
+        route.AtLeast(LogLevel.Warning)
+            .To("System", "Warnings"));
 ```
 
-`RemoteUrl` may be a comma-or-semicolon-separated list of hub URLs if you
-The `Uri` may be a comma-or-semicolon-separated list of hub URLs if you
-want a single application to report to multiple diagnostic servers.
+Use `routes.UseMatchMode(EventSinkRouteMatchMode.MostSpecific)` to write only
+to the longest matching category route, or
+`EventSinkRouteMatchMode.FirstMatch` to use the first declared matching route.
+`route.StopAfterMatch()` stops evaluating routes that follow it. Duplicate
+destinations are written once per event.
+
+For non-DI hosts, start the connection directly:
+
+```csharp
+DiagnosticHostingService.Start("http://diagnostics:50000/diagnostics");
+```
+
+Use one `Remote` host entry per central diagnostic server.

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 /// <summary>Bridges the in-process diagnostic manager to connected browser clients.</summary>
 public sealed class SelfHostManager : IDisposable
@@ -32,13 +32,14 @@ public sealed class SelfHostManager : IDisposable
 
     public string ProcessName => Process.GetCurrentProcess().ProcessName;
 
-    public SelfHostProcessInfo GetProcessInfo() => new()
-    {
-        Id = LocalProcessId,
-        Name = ProcessName,
-        MachineName = Environment.MachineName,
-        UserName = Environment.UserName
-    };
+    public SelfHostProcessInfo GetProcessInfo() =>
+        new()
+        {
+            Id = LocalProcessId,
+            Name = ProcessName,
+            MachineName = Environment.MachineName,
+            UserName = Environment.UserName,
+        };
 
     public void AddClient(string connectionId, ISelfHostClient client)
     {
@@ -126,9 +127,7 @@ public sealed class SelfHostManager : IDisposable
                 await BroadcastEventsAsync(events.ToArray());
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) { }
     }
 
     private async Task RequestDiagnosticsAsync(CancellationToken stopToken)
@@ -153,9 +152,7 @@ public sealed class SelfHostManager : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(2), stopToken);
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) { }
     }
 
     private void StartDiagnosticsLoop()
@@ -197,9 +194,7 @@ public sealed class SelfHostManager : IDisposable
         {
             await diagnosticsTask;
         }
-        catch
-        {
-        }
+        catch { }
         finally
         {
             stopToken.Dispose();
@@ -212,9 +207,7 @@ public sealed class SelfHostManager : IDisposable
         {
             await client.ShowDiagnostics(LocalProcessId, diagnostics);
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     private async Task TrySendDiagnosticsError(ISelfHostClient client, string message)
@@ -223,9 +216,7 @@ public sealed class SelfHostManager : IDisposable
         {
             await client.ShowDiagnosticsError(LocalProcessId, message);
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     private async Task BroadcastEventsAsync(SystemEvent[] events)

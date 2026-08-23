@@ -63,6 +63,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private const bool _serverDiags = true;
     private const bool _selfHostDiags = true;
+
     private static bool RemoteDiagnosticsAreHostManaged() => true;
 
     public Form1()

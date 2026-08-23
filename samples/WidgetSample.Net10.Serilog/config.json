@@ -1,8 +1,10 @@
 {
   "DiagnosticExplorer": {
     "Enabled": true,
-    "RemoteUrl": "http://localhost:50000/diagnostics",
-    "SelfHostUrl": "http://localhost:50001",
+    "Hosts": [
+      { "Type": "Remote", "Url": "http://localhost:50000/diagnostics" },
+      { "Type": "SelfHost", "Url": "http://localhost:50001" }
+    ],
     "EventRetention": {
       "MaxEventsPerSink": 1000,
       "MaxAgeMinutes": 30

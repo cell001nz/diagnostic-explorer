@@ -8,18 +8,17 @@ namespace DiagnosticExplorer;
 public interface IDiagConfigurator
 {
     bool ApplyAttributes { get; set; }
-    void Runtime(Action<IDiagnosticRuntimeConfigurator> configure);
+    void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure);
+    void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
     void DefaultFormat<T>(string formatString);
     void Configure<T>(Action<ITypeConfigurator<T>> configure);
 }
 
-public interface IDiagnosticRuntimeConfigurator
+public interface IDiagnosticHostingConfigurator
 {
-    IDiagnosticRuntimeConfigurator Enabled(bool enabled = true);
-    IDiagnosticRuntimeConfigurator RemoteUrl(string url);
-    IDiagnosticRuntimeConfigurator SelfHostUrl(string url);
-    IDiagnosticRuntimeConfigurator EventRetention(Action<EventRetentionOptions> configure);
-    IDiagnosticRuntimeConfigurator Routing(Action<EventSinkRouteOptions> configure);
+    IDiagnosticHostingConfigurator Enabled(bool enabled = true);
+    IDiagnosticHostingConfigurator AddHost(DiagnosticHostType type, string url);
+    IDiagnosticHostingConfigurator EventRetention(Action<EventRetentionOptions> configure);
 }
 
 public interface ITypeConfigurator<T>

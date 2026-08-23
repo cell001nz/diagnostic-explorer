@@ -15,12 +15,20 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
     public bool ApplyAttributes { get; set; } = true;
     public DiagnosticRuntimeOptions RuntimeOptions { get; } = new();
 
-    public void Runtime(Action<IDiagnosticRuntimeConfigurator> configure)
+    public void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure)
     {
         if (configure == null)
             throw new ArgumentNullException(nameof(configure));
 
         configure(RuntimeOptions);
+    }
+
+    public void ConfigureEventRouting(Action<EventSinkRouteOptions> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        configure(RuntimeOptions.Routing);
     }
 
     public void DefaultFormat<T>(string formatString)
@@ -52,53 +60,36 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
     }
 }
 
-public sealed class DiagnosticRuntimeOptions : IDiagnosticRuntimeConfigurator
+public sealed class DiagnosticRuntimeOptions : IDiagnosticHostingConfigurator
 {
     public bool Enabled { get; private set; } = true;
-    public string RemoteUrl { get; private set; }
-    public string SelfHostUrl { get; private set; }
+    public List<DiagnosticHostOptions> Hosts { get; } = new();
     public EventRetentionOptions EventRetention { get; } = new();
     public EventSinkRouteOptions Routing { get; } = new();
 
-    IDiagnosticRuntimeConfigurator IDiagnosticRuntimeConfigurator.Enabled(bool enabled)
+    IDiagnosticHostingConfigurator IDiagnosticHostingConfigurator.Enabled(bool enabled)
     {
         Enabled = enabled;
         return this;
     }
 
-    IDiagnosticRuntimeConfigurator IDiagnosticRuntimeConfigurator.RemoteUrl(string url)
+    IDiagnosticHostingConfigurator IDiagnosticHostingConfigurator.AddHost(DiagnosticHostType type, string url)
     {
+        if (!Enum.IsDefined(typeof(DiagnosticHostType), type))
+            throw new ArgumentOutOfRangeException(nameof(type));
         if (string.IsNullOrWhiteSpace(url))
-            throw new ArgumentException("A remote diagnostics URL is required.", nameof(url));
+            throw new ArgumentException("A diagnostics host URL is required.", nameof(url));
 
-        RemoteUrl = url;
+        Hosts.Add(new DiagnosticHostOptions { Type = type, Url = url });
         return this;
     }
 
-    IDiagnosticRuntimeConfigurator IDiagnosticRuntimeConfigurator.SelfHostUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-            throw new ArgumentException("A self-host URL is required.", nameof(url));
-
-        SelfHostUrl = url;
-        return this;
-    }
-
-    IDiagnosticRuntimeConfigurator IDiagnosticRuntimeConfigurator.EventRetention(Action<EventRetentionOptions> configure)
+    IDiagnosticHostingConfigurator IDiagnosticHostingConfigurator.EventRetention(Action<EventRetentionOptions> configure)
     {
         if (configure == null)
             throw new ArgumentNullException(nameof(configure));
 
         configure(EventRetention);
-        return this;
-    }
-
-    IDiagnosticRuntimeConfigurator IDiagnosticRuntimeConfigurator.Routing(Action<EventSinkRouteOptions> configure)
-    {
-        if (configure == null)
-            throw new ArgumentNullException(nameof(configure));
-
-        configure(Routing);
         return this;
     }
 }

@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 /// <summary>Starts and stops a self-hosted diagnostics viewer.</summary>
 public static class DiagnosticSelfHostingService
@@ -19,24 +20,24 @@ public static class DiagnosticSelfHostingService
 
         DiagnosticManager.UseConfiguration(configuration);
         DiagnosticRuntimeOptions runtime = configuration.RuntimeOptions;
-        SelfHostOptions options = new() { Enabled = runtime.Enabled, Url = runtime.SelfHostUrl ?? SelfHostOptions.DefaultUrl };
+        string selfHostUrl = runtime.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.SelfHost)?.Url;
+        SelfHostOptions options = new() { Enabled = runtime.Enabled, Url = selfHostUrl ?? SelfHostOptions.DefaultUrl };
         return StartAsync(options.Url, options, cancellationToken);
     }
 
-    /// <summary>Starts a standalone listener from the <c>DiagnosticExplorer:SelfHostUrl</c> configuration key.</summary>
+    /// <summary>Starts a standalone listener from the configured <c>SelfHost</c> entry.</summary>
     public static Task<DiagnosticSelfHost> StartAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        IConfigurationSection eventRetentionSection = configuration.GetSection(EventRetentionOptions.ConfigurationSectionKey);
-        if (eventRetentionSection.Exists())
-            EventSinkRepo.Default.ConfigureEventRetention(eventRetentionSection.Get<EventRetentionOptions>());
+        DiagExplorerOptions hostOptions = configuration.GetSection(DiagExplorerOptions.ConfigurationSectionName).Get<DiagExplorerOptions>() ?? new();
+        EventSinkRepo.Default.ConfigureEventRetention(hostOptions.EventRetention);
 
         SelfHostOptions options = new()
         {
-            Enabled = configuration.GetValue<bool?>(DiagnosticManager.EnabledConfigurationKey) ?? true,
-            Url = configuration[SelfHostOptions.SelfHostUrlConfigurationKey] ?? SelfHostOptions.DefaultUrl,
+            Enabled = hostOptions.Enabled,
+            Url = hostOptions.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.SelfHost)?.Url ?? SelfHostOptions.DefaultUrl,
         };
         DiagnosticManager.Enabled = options.Enabled;
         return StartAsync(options.Url, options, cancellationToken);

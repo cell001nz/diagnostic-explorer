@@ -4,6 +4,7 @@ using System.Linq;
 using DiagnosticExplorer.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -58,25 +59,28 @@ public sealed class FluentConfigurationTests : IDisposable
     public void RuntimeSettingsCanBeConfiguredFluently()
     {
         DiagnosticConfiguration configuration = new();
-        configuration.Runtime(runtime =>
+        configuration.ConfigureHosting(runtime =>
             runtime
                 .Enabled(false)
-                .RemoteUrl("http://localhost:2803/diagnostics")
-                .SelfHostUrl("http://localhost:45000")
+                .AddHost(DiagnosticHostType.Remote, "http://localhost:2803/diagnostics")
+                .AddHost(DiagnosticHostType.SelfHost, "http://localhost:45000")
                 .EventRetention(retention => retention.WithMaxEventsPerSink(1000).WithMaxAge(TimeSpan.FromMinutes(30)))
-                .Routing(routes =>
-                    routes
-                        .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
-                        .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widgets Events"))
-                        .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
-                )
+        );
+        configuration.ConfigureEventRouting(routes =>
+            routes
+                .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
+                .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widgets Events"))
+                .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
         );
 
         DiagnosticManager.UseConfiguration(configuration);
 
         Assert.False(DiagnosticManager.Enabled);
-        Assert.Equal("http://localhost:2803/diagnostics", configuration.RuntimeOptions.RemoteUrl);
-        Assert.Equal("http://localhost:45000", configuration.RuntimeOptions.SelfHostUrl);
+        Assert.Collection(
+            configuration.RuntimeOptions.Hosts,
+            host => Assert.Equal((DiagnosticHostType.Remote, "http://localhost:2803/diagnostics"), (host.Type, host.Url)),
+            host => Assert.Equal((DiagnosticHostType.SelfHost, "http://localhost:45000"), (host.Type, host.Url))
+        );
         Assert.Equal(1000, EventSinkRepo.Default.EventRetention.MaxEventsPerSink);
         Assert.Equal(30, EventSinkRepo.Default.EventRetention.MaxAgeMinutes);
         Assert.Equal(EventSinkRouteMatchMode.AllMatches, configuration.RuntimeOptions.Routing.MatchMode);
@@ -106,15 +110,60 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void HostingConfigurationRegistersConfiguredLocalAndRemoteHosts()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.ConfigureHosting(hosting =>
+            hosting
+                .AddHost(DiagnosticHostType.Remote, "http://localhost:2803/diagnostics")
+                .AddHost(DiagnosticHostType.SelfHost, "http://127.0.0.1:50001")
+        );
+
+        ServiceCollection services = new();
+        services.AddDiagnosticExplorer(configuration);
+
+        ServiceDescriptor[] hostedServices = services.Where(service => service.ServiceType == typeof(IHostedService)).ToArray();
+        Assert.Equal(2, hostedServices.Length);
+        Assert.Contains(hostedServices, service => service.ImplementationType?.Name == "DiagnosticSelfHostHostedService");
+        Assert.Contains(hostedServices, service => service.ImplementationFactory != null);
+    }
+
+    [Fact]
+    public void HostingConfigurationBindsTypedHostsFromConfiguration()
+    {
+        IConfiguration source = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string>
+                {
+                    ["DiagnosticExplorer:Hosts:0:Type"] = "Remote",
+                    ["DiagnosticExplorer:Hosts:0:Url"] = "http://localhost:2803/diagnostics",
+                    ["DiagnosticExplorer:Hosts:1:Type"] = "SelfHost",
+                    ["DiagnosticExplorer:Hosts:1:Url"] = "http://127.0.0.1:50001",
+                }
+            )
+            .Build();
+        DiagnosticConfiguration configuration = new();
+
+        configuration.ConfigureHosting(source);
+
+        Assert.Collection(
+            configuration.RuntimeOptions.Hosts,
+            host => Assert.Equal((DiagnosticHostType.Remote, "http://localhost:2803/diagnostics"), (host.Type, host.Url)),
+            host => Assert.Equal((DiagnosticHostType.SelfHost, "http://127.0.0.1:50001"), (host.Type, host.Url))
+        );
+    }
+
+    [Fact]
     public void ConfigureBuildsAppliesAndReturnsConfiguration()
     {
         DiagnosticConfiguration configuration = DiagnosticManager.Configure(config =>
-            config.Runtime(runtime => runtime.Enabled(false).SelfHostUrl("http://localhost:45000"))
+            config.ConfigureHosting(runtime => runtime.Enabled(false).AddHost(DiagnosticHostType.SelfHost, "http://localhost:45000"))
         );
 
         Assert.Same(configuration, DiagnosticManager.CurrentConfiguration);
         Assert.False(DiagnosticManager.Enabled);
-        Assert.Equal("http://localhost:45000", configuration.RuntimeOptions.SelfHostUrl);
+        Assert.Single(configuration.RuntimeOptions.Hosts);
+        Assert.Equal("http://localhost:45000", configuration.RuntimeOptions.Hosts[0].Url);
     }
 
     [Fact]

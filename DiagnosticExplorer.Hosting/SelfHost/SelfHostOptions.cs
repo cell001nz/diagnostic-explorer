@@ -1,6 +1,6 @@
 using System;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 /// <summary>Configures the local diagnostics viewer.</summary>
 public sealed class SelfHostOptions

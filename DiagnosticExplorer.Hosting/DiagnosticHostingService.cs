@@ -18,6 +18,7 @@ public class DiagnosticHostingService
 #endif
 {
     private static DiagnosticHostingService _instance;
+    private static DiagnosticSelfHost[] _selfHosts = Array.Empty<DiagnosticSelfHost>();
     private DiagExplorerOptions _options;
 
     private RegistrationHandler[] _registrationHandlers;
@@ -35,12 +36,12 @@ public class DiagnosticHostingService
     public DiagnosticHostingService(IOptions<DiagExplorerOptions> options, Action<HttpConnectionOptions> configureHttp = null)
         : this(options.Value, configureHttp)
     {
-        Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled} RemoteUrl [{_options.RemoteUrl}");
+        Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled}");
     }
 
     public async Task StartAsync(CancellationToken cancel)
     {
-        Debug.WriteLine($"DiagnosticHostingService starting {_options.Enabled} RemoteUrl [{_options.RemoteUrl}");
+        Debug.WriteLine($"DiagnosticHostingService starting {_options.Enabled}");
         if (_options.Enabled)
         {
             _instance = this;
@@ -74,8 +75,9 @@ public class DiagnosticHostingService
                 ProcessName = ResolveProcessName(),
             };
 
-            _registrationHandlers = Regex
-                .Split(_options.RemoteUrl, @"\s|;|,")
+            _registrationHandlers = _options
+                .Hosts.Where(host => host.Type == DiagnosticHostType.Remote)
+                .SelectMany(host => Regex.Split(host.Url ?? string.Empty, @"\s|;|,"))
                 .Select(hubUrl => hubUrl.Trim())
                 .Where(hubUrl => !string.IsNullOrWhiteSpace(hubUrl))
                 .Select(hubUrl => new RegistrationHandler(hubUrl, registration))
@@ -126,7 +128,13 @@ public class DiagnosticHostingService
 
         if (_instance == null)
         {
-            DiagExplorerOptions options = new() { RemoteUrl = url };
+            DiagExplorerOptions options = new()
+            {
+                Hosts =
+                {
+                    new DiagnosticHostOptions { Type = DiagnosticHostType.Remote, Url = url },
+                },
+            };
             _instance = new DiagnosticHostingService(options, configureHttp);
             _instance.StartHosting();
         }
@@ -140,10 +148,43 @@ public class DiagnosticHostingService
         DiagnosticManager.UseConfiguration(configuration);
         if (!configuration.RuntimeOptions.Enabled)
             return;
-        if (string.IsNullOrWhiteSpace(configuration.RuntimeOptions.RemoteUrl))
+        string remoteUrl = configuration.RuntimeOptions.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.Remote)?.Url;
+        if (string.IsNullOrWhiteSpace(remoteUrl))
             throw new InvalidOperationException("A remote diagnostics URL has not been configured.");
 
-        Start(configuration.RuntimeOptions.RemoteUrl, configureHttp);
+        Start(remoteUrl, configureHttp);
+    }
+
+    public static async Task StartAsync(DiagnosticConfiguration configuration, Action<HttpConnectionOptions> configureHttp = null)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        DiagnosticManager.UseConfiguration(configuration);
+        DiagnosticRuntimeOptions runtime = configuration.RuntimeOptions;
+        if (!runtime.Enabled)
+            return;
+
+        if (_instance == null && runtime.Hosts.Any(host => host.Type == DiagnosticHostType.Remote))
+        {
+            _instance = new DiagnosticHostingService(
+                new DiagExplorerOptions { Enabled = runtime.Enabled, Hosts = runtime.Hosts.ToList() },
+                configureHttp
+            );
+            _instance.StartHosting();
+        }
+
+        if (_selfHosts.Length == 0)
+        {
+            DiagnosticHostOptions[] selfHostOptions = runtime
+                .Hosts.Where(host => host.Type == DiagnosticHostType.SelfHost && !string.IsNullOrWhiteSpace(host.Url))
+                .ToArray();
+            _selfHosts = await Task.WhenAll(
+                selfHostOptions.Select(host =>
+                    DiagnosticSelfHostingService.StartAsync(host.Url, new SelfHostOptions { Enabled = runtime.Enabled, Url = host.Url })
+                )
+            );
+        }
     }
 
     public static async Task Stop()
@@ -153,6 +194,10 @@ public class DiagnosticHostingService
             await _instance.StopHosting();
             _instance = null;
         }
+
+        DiagnosticSelfHost[] selfHosts = _selfHosts;
+        _selfHosts = Array.Empty<DiagnosticSelfHost>();
+        await Task.WhenAll(selfHosts.Select(host => host.StopAsync()));
     }
 
     public static void LogEvent(DiagnosticMsg evt)

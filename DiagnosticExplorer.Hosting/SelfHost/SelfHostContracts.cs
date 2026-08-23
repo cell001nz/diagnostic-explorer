@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace DiagnosticExplorer.SelfHost;
+namespace DiagnosticExplorer;
 
 /// <summary>SignalR callbacks delivered to a self-host viewer.</summary>
 public interface ISelfHostClient

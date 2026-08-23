@@ -25,4 +25,28 @@
 		<PackageReference Include="TypedSignalR.Client" Version="3.6.0" />
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<EmbeddedResource Include="wwwroot\core\**\*">
+			<LogicalName>DiagnosticExplorer.Hosting.Assets.%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+		<PackageReference Include="Microsoft.AspNet.SignalR" Version="2.4.3" />
+		<PackageReference Include="Microsoft.Owin.Host.HttpListener" Version="4.2.2" />
+		<PackageReference Include="Microsoft.Owin.Hosting" Version="4.2.2" />
+		<PackageReference Include="Microsoft.Owin" Version="4.2.2" />
+		<EmbeddedResource Include="wwwroot\net48\**\*">
+			<LogicalName>DiagnosticExplorer.Hosting.Assets.%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<Target Name="EnsureSelfHostViewerAssets" BeforeTargets="PrepareForBuild">
+		<Error Condition="'$(TargetFramework)' == 'net48' and !Exists('$(MSBuildProjectDirectory)\wwwroot\net48\index.html')"
+			   Text="The net48 self-host viewer assets are missing. Run npm --prefix diag-web run build:self-host-net48 and copy the browser output to DiagnosticExplorer.Hosting\wwwroot\net48." />
+		<Error Condition="'$(TargetFramework)' != 'net48' and !Exists('$(MSBuildProjectDirectory)\wwwroot\core\index.html')"
+			   Text="The modern self-host viewer assets are missing. Run npm --prefix diag-web run build:self-host and copy the browser output to DiagnosticExplorer.Hosting\wwwroot\core." />
+	</Target>
+
 </Project>

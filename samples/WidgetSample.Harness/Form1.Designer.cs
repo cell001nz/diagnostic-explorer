@@ -46,8 +46,6 @@ namespace WidgetSample.Harness
             chkWidgets = new System.Windows.Forms.CheckBox();
             chkGadgets = new System.Windows.Forms.CheckBox();
             txtContent = new System.Windows.Forms.TextBox();
-            btnStartHosting = new System.Windows.Forms.Button();
-            btnStopHosting = new System.Windows.Forms.Button();
             bNotice = new System.Windows.Forms.Button();
             bWarn = new System.Windows.Forms.Button();
             btnTestTraceScope2 = new System.Windows.Forms.Button();
@@ -263,30 +261,6 @@ namespace WidgetSample.Harness
             txtContent.Size = new System.Drawing.Size(1269, 198);
             txtContent.TabIndex = 17;
             // 
-            // btnStartHosting
-            // 
-            btnStartHosting.Anchor =  System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
-            btnStartHosting.Location = new System.Drawing.Point(584, 689);
-            btnStartHosting.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            btnStartHosting.Name = "btnStartHosting";
-            btnStartHosting.Size = new System.Drawing.Size(134, 27);
-            btnStartHosting.TabIndex = 18;
-            btnStartHosting.Text = "Start Hosting Service";
-            btnStartHosting.UseVisualStyleBackColor = true;
-            btnStartHosting.Click += btnStartHosting_Click;
-            // 
-            // btnStopHosting
-            // 
-            btnStopHosting.Anchor =  System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
-            btnStopHosting.Location = new System.Drawing.Point(725, 689);
-            btnStopHosting.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            btnStopHosting.Name = "btnStopHosting";
-            btnStopHosting.Size = new System.Drawing.Size(134, 27);
-            btnStopHosting.TabIndex = 19;
-            btnStopHosting.Text = "Stop Hosting Service";
-            btnStopHosting.UseVisualStyleBackColor = true;
-            btnStopHosting.Click += StopDiagnostics;
-            // 
             // bNotice
             // 
             bNotice.Anchor =  System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
@@ -331,8 +305,6 @@ namespace WidgetSample.Harness
             Controls.Add(btnTestTraceScope2);
             Controls.Add(bWarn);
             Controls.Add(bNotice);
-            Controls.Add(btnStopHosting);
-            Controls.Add(btnStartHosting);
             Controls.Add(txtContent);
             Controls.Add(chkGadgets);
             Controls.Add(chkWidgets);
@@ -381,8 +353,6 @@ namespace WidgetSample.Harness
         private System.Windows.Forms.CheckBox chkWidgets;
         private System.Windows.Forms.CheckBox chkGadgets;
         private System.Windows.Forms.TextBox txtContent;
-        private System.Windows.Forms.Button btnStartHosting;
-        private System.Windows.Forms.Button btnStopHosting;
         private System.Windows.Forms.Button bNotice;
         private System.Windows.Forms.Button bWarn;
         private System.Windows.Forms.Button btnTestTraceScope2;

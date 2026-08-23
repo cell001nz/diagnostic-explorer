@@ -24,13 +24,15 @@ internal static class DiagnosticsConfiguration
                 retention.MaxEventsPerSink = options.EventRetention.MaxEventsPerSink;
                 retention.MaxAgeMinutes = options.EventRetention.MaxAgeMinutes;
             });
-            runtime.Routing(routes => routes
-                .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
-                .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widgets Events"))
-                .Route("Gadgets", route => route.AtLeast(LogLevel.Information).To("Gadgets", "Gadget Events"))
-                .Route("WidgetSampleNuget.Form1", route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
-                .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
-                .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors")));
+            runtime.Routing(routes =>
+                routes
+                    .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
+                    .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widgets Events"))
+                    .Route("Gadgets", route => route.AtLeast(LogLevel.Information).To("Gadgets", "Gadget Events"))
+                    .Route("WidgetSampleNuget.Form1", route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
+                    .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
+                    .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors"))
+            );
         });
 
         config.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss.fff}");
@@ -66,7 +68,12 @@ internal static class DiagnosticsConfiguration
             using (type.CreateCategoryScope("All Gadgets"))
             {
                 type.Collection(form => form.Gadgets)
-                    .List(options => options.Name(gadget => $"{gadget.Id} - {gadget.Name}").Category(gadget => gadget.Purpose).Description(gadget => $"Description for {gadget.Name}"))
+                    .List(options =>
+                        options
+                            .Name(gadget => $"{gadget.Id} - {gadget.Name}")
+                            .Category(gadget => gadget.Purpose)
+                            .Description(gadget => $"Description for {gadget.Name}")
+                    )
                     .WithMaxItems(10);
             }
 
