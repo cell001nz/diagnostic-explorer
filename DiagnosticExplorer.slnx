@@ -9,6 +9,7 @@
     <Project Path="samples/WidgetSample.Net10.NLog/WidgetSample.Net10.NLog.csproj" />
     <Project Path="samples/WidgetSample.Net10.Serilog/WidgetSample.Net10.Serilog.csproj" />
     <Project Path="samples/WidgetSample.Net48.Log4Net/WidgetSample.Net48.Log4Net.csproj" />
+    <Project Path="samples/WidgetSampleNuget/WidgetSampleNuget.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
@@ -24,5 +25,4 @@
     <Build Solution="*|x86" Project="false" />
   </Project>
   <Project Path="DiagnosticService/Diagnostic.Service.csproj" />
-  <Project Path="WidgetSampleNuget/WidgetSampleNuget.csproj" />
 </Solution>

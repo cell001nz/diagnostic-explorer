@@ -1,16 +1,12 @@
 ﻿{
-
   "DiagServiceSettings": {
     "UseSpaProxy": false,
     "SpaDirectory": "diagnostics-web",
-    "Urls": [
-      "http://*:2804",
-      "http://*:6002"
-    ]
+    "Urls": ["http://*:50000"]
   },
 
   "DiagnosticExplorer": {
-    "Uri": "http://localhost:6002/diagnostics",
+    "Uri": "http://localhost:50000/diagnostics",
     "Enabled": "true"
   }
 }

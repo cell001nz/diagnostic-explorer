@@ -70,12 +70,19 @@ jobs:
 
       - name: Publish packages
         shell: pwsh
-        run: >-
-          dotnet nuget push 'artifacts/packages/*.nupkg'
-          --api-key '${{ steps.login.outputs.NUGET_API_KEY }}'
-          --source 'https://api.nuget.org/v3/index.json'
-          --skip-duplicate
-          --timeout 300
+        run: |
+          $packages = @(Get-ChildItem artifacts/packages -Filter '*.nupkg' -File)
+          if ($packages.Count -eq 0) {
+            throw 'No NuGet packages were produced in artifacts/packages.'
+          }
+
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName `
+              --api-key '${{ steps.login.outputs.NUGET_API_KEY }}' `
+              --source 'https://api.nuget.org/v3/index.json' `
+              --skip-duplicate `
+              --timeout 300
+          }
 
       - name: Upload Windows service MSI
         uses: actions/upload-artifact@v4

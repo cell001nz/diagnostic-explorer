@@ -7,7 +7,7 @@
       "command": "dotnet",
       "args": [
         "build",
-        "${workspaceFolder}\\WidgetSampleNuget\\WidgetSampleNuget.csproj",
+        "${workspaceFolder}\\samples\\WidgetSampleNuget\\WidgetSampleNuget.csproj",
         "--configuration",
         "Debug"
       ],

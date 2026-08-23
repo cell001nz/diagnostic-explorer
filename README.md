@@ -2,14 +2,20 @@
 
 Add live diagnostic data to a .NET application, then inspect it in a browser.
 
+## Dashboard
+
+<img src="Docs/dashboard.png" alt="Diagnostic Explorer dashboard showing registered gadgets and live gadget events" width="760" />
+
+Inspect registered objects, their properties, and live diagnostic events from one browser view.
+
 ## Quick Start
 
 Choose one viewer:
 
-| Viewer                                    | Package                         | Browser URL                                                      |
-| ----------------------------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| A local viewer hosted by your application | `DiagnosticExplorer.SelfHost` | `http://127.0.0.1:1234`                                        |
-| A central Diagnostic Explorer service     | `DiagnosticExplorer.Hosting`  | Your DiagnosticService URL, for example`http://localhost:2803` |
+| Viewer                                    | Package                       | Browser URL                                                     |
+| ----------------------------------------- | ----------------------------- | --------------------------------------------------------------- |
+| A local viewer hosted by your application | `DiagnosticExplorer.SelfHost` | `http://127.0.0.1:50001`                                        |
+| A central Diagnostic Explorer service     | `DiagnosticExplorer.Hosting`  | Your DiagnosticService URL, for example`http://localhost:50000` |
 
 Reference the package you chose. Use the current version from NuGet:
 
@@ -28,8 +34,8 @@ for the local viewer, or `RemoteUrl` for a central service:
 {
   "DiagnosticExplorer": {
     "Enabled": true,
-    "SelfHostUrl": "http://127.0.0.1:1234",
-    "RemoteUrl": "http://localhost:2803/diagnostics"
+    "SelfHostUrl": "http://127.0.0.1:50001",
+    "RemoteUrl": "http://localhost:50000/diagnostics"
   }
 }
 ```
@@ -72,7 +78,7 @@ using DiagnosticSelfHost viewer = await DiagnosticSelfHostingService.StartAsync(
     configuration);
 ```
 
-Run the application and open `http://127.0.0.1:1234` (or `viewer.Url`) in a
+Run the application and open `http://127.0.0.1:50001` (or `viewer.Url`) in a
 browser. With `DiagnosticExplorer.Hosting`, run `DiagnosticService`, open its
 configured URL, and select your registered application.
 
@@ -109,7 +115,7 @@ Static start (for non-DI hosts):
 
 ```csharp
 DiagnosticHostingService.Start(
-    "http://diagnostics:2803/diagnostics",
+    "http://diagnostics:50000/diagnostics",
     options => options.AccessTokenProvider = GetCurrentAccessToken);
 ```
 

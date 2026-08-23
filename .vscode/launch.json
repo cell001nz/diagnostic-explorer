@@ -6,8 +6,8 @@
       "name": "Debug Widget Sample NuGet",
       "type": "coreclr",
       "request": "launch",
-      "program": "${workspaceFolder}/WidgetSampleNuget/bin/Debug/net8.0-windows/WidgetSampleNuget.exe",
-      "cwd": "${workspaceFolder}/WidgetSampleNuget",
+      "program": "${workspaceFolder}/samples/WidgetSampleNuget/bin/Debug/net10.0-windows/WidgetSampleNuget.exe",
+      "cwd": "${workspaceFolder}/samples/WidgetSampleNuget",
       "preLaunchTask": "Build WidgetSampleNuget",
       "stopAtEntry": false
     },
