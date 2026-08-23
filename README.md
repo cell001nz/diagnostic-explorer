@@ -4,7 +4,7 @@ Add live diagnostic data to a .NET application, then inspect it in a browser.
 
 ## Dashboard
 
-<img src="Docs/dashboard.png" alt="Diagnostic Explorer dashboard showing registered gadgets and live gadget events" width="760" />
+[![Diagnostic Explorer dashboard showing registered gadgets and live gadget events](https://github.com/cell001nz/diagnostic-explorer/raw/main/Docs/dashboard.png)](https://github.com/cell001nz/diagnostic-explorer/blob/main/Docs/dashboard.png)
 
 Inspect registered objects, their properties, and live diagnostic events from one browser view.
 
@@ -149,3 +149,43 @@ services.AddLogging(logging => logging.AddDiagnosticExplorer());
 ```
 
 The provider sends matching `Microsoft.Extensions.Logging` events to Diagnostic Explorer.
+
+## NLog
+
+This package adds a Diagnostic Explorer target to NLog:
+
+```xml
+<PackageReference Include="DiagnosticExplorer.NLog" Version="5.0.0" />
+```
+
+This configuration sends NLog events through the routes configured above:
+
+```csharp
+using DiagnosticExplorer.NLog;
+using NLog;
+using NLog.Config;
+
+LoggingConfiguration logging = new();
+logging.AddDiagnosticExplorer();
+LogManager.Configuration = logging;
+```
+
+## Serilog
+
+This package adds a Diagnostic Explorer sink to Serilog:
+
+```xml
+<PackageReference Include="DiagnosticExplorer.Serilog" Version="5.0.0" />
+```
+
+This configuration sends Serilog events through the routes configured above:
+
+```csharp
+using DiagnosticExplorer.Serilog;
+using Serilog;
+
+using ILogger logger = new LoggerConfiguration()
+    .MinimumLevel.Verbose()
+    .WriteTo.DiagnosticExplorer()
+    .CreateLogger();
+```
