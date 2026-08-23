@@ -17,6 +17,25 @@ public static class DiagnosticSelfHostServiceCollectionExtensions
 {
     public static IServiceCollection AddDiagnosticSelfHost(
         this IServiceCollection services,
+        DiagnosticConfiguration configuration,
+        Action<SelfHostOptions> configure = null
+    )
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        DiagnosticManager.UseConfiguration(configuration);
+        DiagnosticRuntimeOptions runtime = configuration.RuntimeOptions;
+        return services.AddDiagnosticSelfHost(options =>
+        {
+            options.Enabled = runtime.Enabled;
+            options.Url = runtime.SelfHostUrl ?? options.Url;
+            configure?.Invoke(options);
+        });
+    }
+
+    public static IServiceCollection AddDiagnosticSelfHost(
+        this IServiceCollection services,
         IConfiguration configuration,
         Action<SelfHostOptions> configure = null
     )

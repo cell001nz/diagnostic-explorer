@@ -178,4 +178,4 @@ logger.LogInformation("Order {OrderId} accepted", orderId);
 
 With the shared example configuration, an `Information` event from `MyCompany.MyApp.Orders` appears in `Order Events / Orders`. A warning from that category appears in both `Order Events / Orders` and `Warnings / System` when `MatchMode` is `AllMatches`.
 
-See [WidgetSample/config.json](WidgetSample/config.json) for a complete working route configuration and [WidgetSample/SampleLogging.cs](WidgetSample/SampleLogging.cs) for a runnable example that selects each native framework.
+See [samples/WidgetSample.Harness/DiagnosticsConfiguration.cs](samples/WidgetSample.Harness/DiagnosticsConfiguration.cs) for the shared fluent route configuration. Each adapter-specific host supplies the logger implementation, for example [samples/WidgetSample.Net10.Mel/Program.cs](samples/WidgetSample.Net10.Mel/Program.cs).

@@ -18,6 +18,25 @@ public sealed class EventSinkRouteOptions
     public EventSinkRouteMatchMode MatchMode { get; set; } = EventSinkRouteMatchMode.AllMatches;
 
     public List<EventSinkRoute> Routes { get; set; } = new();
+
+    public EventSinkRouteOptions UseMatchMode(EventSinkRouteMatchMode matchMode)
+    {
+        MatchMode = matchMode;
+        return this;
+    }
+
+    public EventSinkRouteOptions Route(string categoryPattern, Action<EventSinkRoute> configure)
+    {
+        if (string.IsNullOrWhiteSpace(categoryPattern))
+            throw new ArgumentException("A category pattern is required.", nameof(categoryPattern));
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        EventSinkRoute route = new() { CategoryPattern = categoryPattern };
+        configure(route);
+        Routes.Add(route);
+        return this;
+    }
 }
 
 public sealed class EventSinkRoute
@@ -31,6 +50,35 @@ public sealed class EventSinkRoute
     public List<EventSinkDestination> Destinations { get; set; } = new();
 
     public bool StopProcessing { get; set; }
+
+    public EventSinkRoute AtLeast(LogLevel minLevel)
+    {
+        MinLevel = minLevel;
+        return this;
+    }
+
+    public EventSinkRoute AtMost(LogLevel maxLevel)
+    {
+        MaxLevel = maxLevel;
+        return this;
+    }
+
+    public EventSinkRoute To(string sinkCategory, string sinkName)
+    {
+        if (string.IsNullOrWhiteSpace(sinkCategory))
+            throw new ArgumentException("A sink category is required.", nameof(sinkCategory));
+        if (string.IsNullOrWhiteSpace(sinkName))
+            throw new ArgumentException("A sink name is required.", nameof(sinkName));
+
+        Destinations.Add(new EventSinkDestination { SinkCategory = sinkCategory, SinkName = sinkName });
+        return this;
+    }
+
+    public EventSinkRoute StopAfterMatch(bool stopProcessing = true)
+    {
+        StopProcessing = stopProcessing;
+        return this;
+    }
 }
 
 [TypeConverter(typeof(EventSinkDestinationConverter))]

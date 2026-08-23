@@ -54,16 +54,16 @@ export class DiagHubService implements OnDestroy {
                     this.processArrived$.next(process);
                 });
                 hub.on('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
-                    // console.log('Diagnostics arrived', processId, response);
+                    console.log('Diagnostics arrived', processId, response);
                     this.diagsArrived$.next({ processId, response });
                 });
                 hub.on('SetEvents', (processId: string, events: SystemEvent[]) => {
-                     console.log('SetEvents', processId, events);
-                     this.clearEvents$.next({ processId});
+                    console.log('SetEvents', processId, events);
+                    this.clearEvents$.next({ processId });
                     this.streamEvents$.next({ processId, events });
                 });
                 hub.on('StreamEvents', (processId: string, events: SystemEvent[]) => {
-                     console.log('StreamEvents', processId, events);
+                    console.log('StreamEvents', processId, events);
                     this.streamEvents$.next({ processId, events });
                 });
                 hub.on('ProcessSearchResults', (result: RetroSearchResult) => {
@@ -110,7 +110,7 @@ export class DiagHubService implements OnDestroy {
         let hub = await this.getHubConnection();
         await hub.invoke('Subscribe', processId);
     }
-    
+
     async setPropertyValue(processId: string, request: SetPropertyRequest): Promise<OperationResponse> {
         let hub = await this.getHubConnection();
         return hub.invoke<OperationResponse>(`SetProperty`, processId, request);

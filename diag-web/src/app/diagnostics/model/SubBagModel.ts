@@ -1,8 +1,8 @@
-﻿import {PropModel} from './PropModel';
-import {OperationSet, SubBag} from '@domain/DiagResponse';
-import {customMerge} from '@util/merge';
-import {BagModel} from './BagModel';
-import {signal} from "@angular/core";
+﻿import { PropModel } from './PropModel';
+import { OperationSet, SubBag } from '@domain/DiagResponse';
+import { customMerge } from '@util/merge';
+import { BagModel } from './BagModel';
+import { computed, signal } from '@angular/core';
 
 export class SubBagModel {
     bag: BagModel;
@@ -10,6 +10,13 @@ export class SubBagModel {
     readonly operationSet = signal('');
 
     properties = signal<PropModel[]>([]);
+    alertSeverity = computed(() => Math.max(0, ...this.properties().map((property) => property.alertSeverity())));
+    alertTooltip = computed(() =>
+        this.properties()
+            .filter((property) => property.alertSeverity())
+            .map((property) => `${property.name()}: ${property.alertTooltip()}`)
+            .join('\n')
+    );
 
     constructor(subBag: BagModel, propCat: SubBag) {
         this.bag = subBag;
@@ -18,23 +25,26 @@ export class SubBagModel {
         this.update(propCat);
     }
 
-    getOperationSet() : OperationSet | null {
-        if (!this.operationSet())
-            return null;
-        
+    getOperationSet(): OperationSet | null {
+        if (!this.operationSet()) return null;
+
         return this.bag.cat.realtimeModel.getOperationSet(this.operationSet());
     }
-    
+
     getOperationPath(): string {
-        return this.bag.getOperationPath() + "|" + this.name();
+        return this.bag.getOperationPath() + '|' + this.name();
     }
-    
+
     update(propCat: SubBag) {
-        this.properties.set(customMerge(propCat.properties,
-            this.properties(),
-            s => s.name,
-            t => t.name(),
-            s => new PropModel(this, s),
-            (s, t) => t.update(s)));
+        this.properties.set(
+            customMerge(
+                propCat.properties,
+                this.properties(),
+                (s) => s.name,
+                (t) => t.name(),
+                (s) => new PropModel(this, s),
+                (s, t) => t.update(s)
+            )
+        );
     }
 }

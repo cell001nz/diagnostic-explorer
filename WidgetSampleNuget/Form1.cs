@@ -52,7 +52,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private static readonly Random _rand = new Random();
     private readonly BindingList<Gadget> _gadgets;
     private readonly BindingList<Widget> _widgets;
-    private ComponentModelDemo _compModelDemo;
     private Timer _counterTimer;
     private Timer _evtTimer;
 
@@ -100,8 +99,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
         //RegisterAsync this class with diagnostics
         DiagnosticManager.Register(this, "Main Form", "Form 1");
-        _compModelDemo = new ComponentModelDemo();
-        //			DiagnosticManager.RegisterAsync(_compModelDemo, "Simple Demo", "ComponentModel");
         //			SendInitial();
         _evtTimer = new Timer(SendEvents, null, 1000, 1000);
         _counterTimer = new Timer(IncrementCount, null, 400, 400);

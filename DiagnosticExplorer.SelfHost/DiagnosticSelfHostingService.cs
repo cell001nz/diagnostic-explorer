@@ -11,6 +11,18 @@ public static class DiagnosticSelfHostingService
 {
     private static readonly ConcurrentDictionary<string, DiagnosticSelfHost> Hosts = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Starts a standalone listener using fluent diagnostic runtime settings.</summary>
+    public static Task<DiagnosticSelfHost> StartAsync(DiagnosticConfiguration configuration, CancellationToken cancellationToken = default)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        DiagnosticManager.UseConfiguration(configuration);
+        DiagnosticRuntimeOptions runtime = configuration.RuntimeOptions;
+        SelfHostOptions options = new() { Enabled = runtime.Enabled, Url = runtime.SelfHostUrl ?? SelfHostOptions.DefaultUrl };
+        return StartAsync(options.Url, options, cancellationToken);
+    }
+
     /// <summary>Starts a standalone listener from the <c>DiagnosticExplorer:SelfHostUrl</c> configuration key.</summary>
     public static Task<DiagnosticSelfHost> StartAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {

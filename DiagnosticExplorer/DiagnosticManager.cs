@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -16,10 +15,13 @@ public static class DiagnosticManager
     private static List<RegisteredObject> RegisteredObjects { get; set; }
 
     private static Dictionary<string, List<PropertyGetter>> _typeHash = new();
+    private static readonly object _propertyGetterLock = new();
+    private static DiagnosticConfigurationSnapshot _configuration = DiagnosticConfigurationSnapshot.Empty;
 
     private static readonly Dictionary<Type, OperationSet> _operationLookup = new();
     public const string EnabledConfigurationKey = "DiagnosticExplorer:Enabled";
     public static bool Enabled { get; set; } = true;
+    public static DiagnosticConfiguration CurrentConfiguration { get; private set; } = new();
 
     static DiagnosticManager()
     {
@@ -29,8 +31,36 @@ public static class DiagnosticManager
     internal static void Clear()
     {
         _operationLookup.Clear();
-        _typeHash.Clear();
+        lock (_propertyGetterLock)
+            _typeHash.Clear();
         RegisteredObjects.Clear();
+    }
+
+    public static DiagnosticConfiguration Configure(Action<IDiagConfigurator> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        DiagnosticConfiguration configuration = new();
+        configure(configuration);
+        UseConfiguration(configuration);
+        return configuration;
+    }
+
+    public static void UseConfiguration(DiagnosticConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        Enabled = configuration.RuntimeOptions.Enabled;
+        EventSinkRepo.Default.ConfigureEventRetention(configuration.RuntimeOptions.EventRetention);
+        DiagnosticConfigurationSnapshot snapshot = configuration.CreateSnapshot();
+        lock (_propertyGetterLock)
+        {
+            CurrentConfiguration = configuration;
+            _configuration = snapshot;
+            _typeHash.Clear();
+        }
     }
 
     public static void Register(object o, string bagName, string bagCategory)
@@ -256,91 +286,296 @@ public static class DiagnosticManager
             typeKey = "Static: " + type.AssemblyQualifiedName;
         }
 
-        List<PropertyGetter> propertyList;
-        if (!_typeHash.TryGetValue(typeKey, out propertyList))
+        lock (_propertyGetterLock)
         {
-            propertyList = new List<PropertyGetter>();
+            if (_typeHash.TryGetValue(typeKey, out List<PropertyGetter> cachedProperties))
+                return cachedProperties;
+
+            List<PropertyGetter> propertyList = new();
+            bool applyAttributes = _configuration.ApplyAttributes;
+            TypeConfiguration typeConfiguration = obj is Type ? null : _configuration.GetEffectiveTypeConfiguration(type);
 
             bool isStatic = obj is Type;
-            IEnumerable<PropertyInfo> properties = isStatic ? GetStaticProperties(type) : GetInstanceProperties(type, null);
+            IEnumerable<PropertyInfo> properties = isStatic
+                ? GetStaticProperties(type, applyAttributes)
+                : GetInstanceProperties(type, null, typeConfiguration, applyAttributes);
             foreach (PropertyInfo info in properties)
             {
-                Type underlying = GetUnderlyingType(info.PropertyType);
-
-                PropertyAttribute propAttr = GetAttribute<PropertyAttribute>(info);
-                CollectionPropertyAttribute colPropAttr = propAttr as CollectionPropertyAttribute;
-                ExtendedPropertyAttribute extPropAttr = propAttr as ExtendedPropertyAttribute;
-
-                if (colPropAttr != null)
-                {
-                    propertyList.Add(new CollectionGetter(info, colPropAttr, isStatic));
-                }
-                else if (extPropAttr != null)
-                {
-                    propertyList.Add(new ExtendedPropertyGetter(info, extPropAttr, isStatic));
-                }
-                else if (info.PropertyType == typeof(RateCounter))
-                {
-                    RatePropertyAttribute rateAttr = propAttr as RatePropertyAttribute;
-                    propertyList.Add(new RateGetter(info, rateAttr, isStatic));
-                }
-                else if (underlying == typeof(DateTime) || underlying == typeof(DateTimeOffset))
-                {
-                    DatePropertyAttribute dateAttr = propAttr as DatePropertyAttribute;
-                    propertyList.Add(new DateGetter(info, dateAttr, isStatic));
-                }
-                else
-                {
-                    propertyList.Add(new PropertyGetter(info, isStatic));
-                }
+                DiagnosticPropertyAttribute propAttr = applyAttributes ? GetAttribute<DiagnosticPropertyAttribute>(info) : null;
+                PropertyConfiguration propertyConfiguration = typeConfiguration?.Find(info);
+                string defaultFormat = _configuration.GetDefaultFormat(info.PropertyType);
+                AddPropertyGetters(propertyList, info, propAttr, propertyConfiguration, isStatic, applyAttributes, defaultFormat);
+            }
+            if (typeConfiguration != null)
+            {
+                foreach (CustomPropertyConfiguration customProperty in typeConfiguration.CustomProperties)
+                    propertyList.Add(new CustomPropertyGetter(customProperty));
             }
             _typeHash[typeKey] = propertyList;
+            return propertyList;
         }
-        return propertyList;
     }
 
-    private static IEnumerable<PropertyInfo> GetInstanceProperties(Type type, DiagnosticClassAttribute inheritedAttr)
+    private static void AddPropertyGetters(
+        ICollection<PropertyGetter> getters,
+        PropertyInfo info,
+        DiagnosticPropertyAttribute metadata,
+        PropertyConfiguration configuration,
+        bool isStatic,
+        bool applyAttributes,
+        string defaultFormat
+    )
+    {
+        PropertyStrategy strategy = GetPropertyStrategy(info, metadata, configuration);
+        switch (strategy)
+        {
+            case PropertyStrategy.Collection:
+                AddCollectionGetters(getters, info, metadata, configuration, isStatic, applyAttributes, defaultFormat);
+                break;
+            case PropertyStrategy.Extended:
+                getters.Add(
+                    new ExtendedPropertyGetter(
+                        info,
+                        new ExtendedPropertyAttribute(),
+                        metadata,
+                        configuration,
+                        isStatic,
+                        applyAttributes,
+                        defaultFormat
+                    )
+                );
+                break;
+            case PropertyStrategy.Rate:
+                getters.Add(
+                    new RateGetter(
+                        info,
+                        CreateRateOptions(metadata as RatePropertyAttribute, configuration),
+                        metadata,
+                        configuration,
+                        isStatic,
+                        applyAttributes,
+                        defaultFormat
+                    )
+                );
+                break;
+            case PropertyStrategy.Date:
+                getters.Add(
+                    new DateGetter(
+                        info,
+                        CreateDateOptions(metadata as DatePropertyAttribute, configuration),
+                        metadata,
+                        configuration,
+                        isStatic,
+                        applyAttributes,
+                        defaultFormat
+                    )
+                );
+                break;
+            default:
+                getters.Add(new PropertyGetter(info, metadata, configuration, isStatic, applyAttributes, defaultFormat));
+                break;
+        }
+    }
+
+    private static PropertyStrategy GetPropertyStrategy(PropertyInfo info, DiagnosticPropertyAttribute attribute, PropertyConfiguration configuration)
+    {
+        if (configuration?.Strategy != null)
+            return configuration.Strategy.Value;
+        if (attribute is CollectionPropertyAttribute)
+            return PropertyStrategy.Collection;
+        if (attribute is ExtendedPropertyAttribute)
+            return PropertyStrategy.Extended;
+        if (attribute is RatePropertyAttribute || info.PropertyType == typeof(RateCounter))
+            return PropertyStrategy.Rate;
+
+        Type underlying = GetUnderlyingType(info.PropertyType);
+        if (attribute is DatePropertyAttribute || underlying == typeof(DateTime) || underlying == typeof(DateTimeOffset))
+            return PropertyStrategy.Date;
+        return PropertyStrategy.Default;
+    }
+
+    private static void AddCollectionGetters(
+        ICollection<PropertyGetter> getters,
+        PropertyInfo info,
+        DiagnosticPropertyAttribute metadata,
+        PropertyConfiguration configuration,
+        bool isStatic,
+        bool applyAttributes,
+        string defaultFormat
+    )
+    {
+        CollectionOptions source = (metadata as CollectionPropertyAttribute)?.CreateOptions();
+        IReadOnlyList<CollectionOutputConfiguration> outputs = configuration?.CollectionOutputs;
+        if (outputs == null || outputs.Count == 0)
+        {
+            CollectionOptions options = CloneCollectionOptions(source);
+            ApplyCollectionConfiguration(options, configuration);
+            getters.Add(new CollectionGetter(info, options, metadata, configuration, isStatic, applyAttributes, defaultFormat));
+            return;
+        }
+
+        foreach (CollectionOutputConfiguration output in outputs)
+        {
+            CollectionOptions options = CloneCollectionOptions(source);
+            options.Mode = output.Mode;
+            options.NameProperty = output.NameProperty ?? options.NameProperty;
+            options.NameFormatter = output.NameFormatter ?? options.NameFormatter;
+            options.ValueProperty = output.ValueProperty ?? options.ValueProperty;
+            options.ValueFormatter = output.ValueFormatter ?? options.ValueFormatter;
+            options.DescriptionProperty = output.DescriptionProperty ?? options.DescriptionProperty;
+            options.DescriptionFormatter = output.DescriptionFormatter ?? options.DescriptionFormatter;
+            options.CategoryProperty = output.CategoryProperty ?? options.CategoryProperty;
+            options.CategoryFormatter = output.CategoryFormatter ?? options.CategoryFormatter;
+            options.Separator = output.Separator ?? options.Separator;
+            ApplyCollectionConfiguration(options, configuration);
+
+            PropertyConfiguration outputConfiguration = configuration;
+            string outputName = output.Name;
+            if (outputName == null && outputs.Count > 1 && output.Mode == CollectionMode.Count)
+            {
+                string baseName = configuration.Name.IsSet ? configuration.Name.Value : metadata?.Name ?? info.Name;
+                outputName = baseName + " count";
+            }
+            if (outputName != null)
+            {
+                outputConfiguration = configuration.Clone();
+                outputConfiguration.Name = new ConfiguredValue<string>(outputName);
+            }
+
+            getters.Add(new CollectionGetter(info, options, metadata, outputConfiguration, isStatic, applyAttributes, defaultFormat));
+        }
+    }
+
+    private static CollectionOptions CloneCollectionOptions(CollectionOptions source)
+    {
+        if (source == null)
+            return new CollectionOptions(CollectionMode.Count);
+
+        return new CollectionOptions(source.Mode)
+        {
+            NameProperty = source.NameProperty,
+            NameFormatter = source.NameFormatter,
+            ValueProperty = source.ValueProperty,
+            ValueFormatter = source.ValueFormatter,
+            DescriptionProperty = source.DescriptionProperty,
+            DescriptionFormatter = source.DescriptionFormatter,
+            CategoryProperty = source.CategoryProperty,
+            CategoryFormatter = source.CategoryFormatter,
+            Separator = source.Separator,
+            MaxItems = source.MaxItems,
+        };
+    }
+
+    private static void ApplyCollectionConfiguration(CollectionOptions options, PropertyConfiguration configuration)
+    {
+        if (configuration != null && configuration.MaxItems.IsSet)
+            options.MaxItems = configuration.MaxItems.Value;
+    }
+
+    private static RatePropertyAttribute CreateRateOptions(RatePropertyAttribute source, PropertyConfiguration configuration)
+    {
+        if (source == null && configuration?.Strategy != PropertyStrategy.Rate)
+            return null;
+
+        RatePropertyAttribute options =
+            source == null
+                ? new RatePropertyAttribute()
+                : new RatePropertyAttribute { ExposeRate = source.ExposeRate, ExposeTotal = source.ExposeTotal };
+
+        if (configuration != null)
+        {
+            if (configuration.ExposeRate.IsSet)
+                options.ExposeRate = configuration.ExposeRate.Value;
+            if (configuration.ExposeTotal.IsSet)
+                options.ExposeTotal = configuration.ExposeTotal.Value;
+        }
+        return options;
+    }
+
+    private static DatePropertyAttribute CreateDateOptions(DatePropertyAttribute source, PropertyConfiguration configuration)
+    {
+        DatePropertyAttribute options =
+            source == null
+                ? new DatePropertyAttribute()
+                : new DatePropertyAttribute
+                {
+                    ExposeDate = source.ExposeDate,
+                    ExposeElapsed = source.ExposeElapsed,
+                    ExposeTimeUntil = source.ExposeTimeUntil,
+                    IsUTC = source.IsUTC,
+                };
+
+        if (configuration != null)
+        {
+            if (configuration.ExposeDate.IsSet)
+                options.ExposeDate = configuration.ExposeDate.Value;
+            if (configuration.ExposeElapsed.IsSet)
+                options.ExposeElapsed = configuration.ExposeElapsed.Value;
+            if (configuration.ExposeTimeUntil.IsSet)
+                options.ExposeTimeUntil = configuration.ExposeTimeUntil.Value;
+        }
+        return options;
+    }
+
+    private static IEnumerable<PropertyInfo> GetInstanceProperties(
+        Type type,
+        DiagnosticClassAttribute inheritedAttr,
+        TypeConfiguration configuration,
+        bool applyAttributes
+    )
     {
         if (type != typeof(object))
         {
-            DiagnosticClassAttribute diagAttr = GetAttribute<DiagnosticClassAttribute>(type, false);
+            DiagnosticClassAttribute diagAttr = applyAttributes ? GetAttribute<DiagnosticClassAttribute>(type, false) : null;
 
             if (inheritedAttr == null || !inheritedAttr.DeclaringTypeOnly || diagAttr != null)
             {
                 foreach (PropertyInfo propInfo in type.GetProperties(PublicInstancePropertyFlags | BindingFlags.DeclaredOnly))
-                    if (ShouldIncludeProperty(diagAttr ?? inheritedAttr, propInfo))
+                    if (ShouldIncludeProperty(diagAttr ?? inheritedAttr, propInfo, configuration, applyAttributes))
                         yield return propInfo;
             }
 
-            foreach (PropertyInfo propInfo in GetInstanceProperties(type.BaseType, diagAttr ?? inheritedAttr))
+            foreach (PropertyInfo propInfo in GetInstanceProperties(type.BaseType, diagAttr ?? inheritedAttr, configuration, applyAttributes))
                 yield return propInfo;
         }
     }
 
-    private static IEnumerable<PropertyInfo> GetStaticProperties(Type type)
+    private static IEnumerable<PropertyInfo> GetStaticProperties(Type type, bool applyAttributes)
     {
-        DiagnosticClassAttribute diagAttr = GetAttribute<DiagnosticClassAttribute>(type, false);
+        DiagnosticClassAttribute diagAttr = applyAttributes ? GetAttribute<DiagnosticClassAttribute>(type, false) : null;
 
-        return type.GetProperties(PublicStaticPropertyFlags).Where(propInfo => ShouldIncludeProperty(diagAttr, propInfo));
+        return type.GetProperties(PublicStaticPropertyFlags)
+            .Where(propInfo => ShouldIncludeProperty(diagAttr, propInfo, applyAttributes: applyAttributes));
     }
 
-    private static bool ShouldIncludeProperty(DiagnosticClassAttribute diagAttr, PropertyInfo info)
+    private static bool ShouldIncludeProperty(
+        DiagnosticClassAttribute diagAttr,
+        PropertyInfo info,
+        TypeConfiguration configuration = null,
+        bool applyAttributes = true
+    )
     {
         if (info.PropertyType == typeof(EventSink))
             return false;
 
-        bool attributedOnly = diagAttr is { AttributedPropertiesOnly: true };
-        BrowsableAttribute browseAttr = GetAttribute<BrowsableAttribute>(info);
-        PropertyAttribute propAttr = GetAttribute<PropertyAttribute>(info);
+        bool attributedOnly = applyAttributes && diagAttr is { AttributedPropertiesOnly: true };
+        DiagnosticPropertyAttribute propAttr = applyAttributes ? GetAttribute<DiagnosticPropertyAttribute>(info) : null;
+        PropertyConfiguration propertyConfiguration = configuration?.Find(info);
+
+        if (propertyConfiguration?.Included != null)
+            return propertyConfiguration.Included.Value;
 
         if (propAttr != null)
             return !propAttr.Ignore;
 
-        if (browseAttr is { Browsable: false })
+        if (configuration?.OptIn == true)
             return false;
 
+        if (configuration?.OptIn == false)
+            return true;
+
         if (attributedOnly)
-            return browseAttr != null;
+            return false;
 
         return true;
     }

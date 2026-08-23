@@ -6,6 +6,16 @@ namespace DiagnosticExplorer.NLog;
 
 public static class LoggingConfigurationExtensions
 {
+    public static LoggingConfiguration AddDiagnosticExplorer(this LoggingConfiguration configuration)
+    {
+        DiagnosticExplorerTarget target = configuration.AddDiagnosticExplorer(
+            "DiagnosticExplorer",
+            DiagnosticManager.CurrentConfiguration.RuntimeOptions.Routing
+        );
+        configuration.AddRuleForAllLevels(target);
+        return configuration;
+    }
+
     public static DiagnosticExplorerTarget AddDiagnosticExplorer(
         this LoggingConfiguration configuration,
         string targetName,

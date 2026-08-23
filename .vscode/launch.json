@@ -1,16 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
-     {
-      "name": "Debug ConsoleApp",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/ConsoleApp/bin/Debug/net8.0/_ConsoleApp.exe",
-      "cwd": "${workspaceFolder}/ConsoleApp",
-      "console": "integratedTerminal",
-      "preLaunchTask": "Build ConsoleApp",
-      "stopAtEntry": false
-    },
+   
    {
       "name": "Debug Widget Sample NuGet",
       "type": "coreclr",
@@ -18,6 +9,42 @@
       "program": "${workspaceFolder}/WidgetSampleNuget/bin/Debug/net8.0-windows/WidgetSampleNuget.exe",
       "cwd": "${workspaceFolder}/WidgetSampleNuget",
       "preLaunchTask": "Build WidgetSampleNuget",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Debug Widget Sample MEL",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/samples/WidgetSample.Net10.Mel/bin/Debug/net10.0-windows/WidgetSample.Net10.Mel.exe",
+      "cwd": "${workspaceFolder}/samples/WidgetSample.Net10.Mel",
+      "preLaunchTask": "Build WidgetSample.Net10.Mel",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Debug Widget Sample NLog",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/samples/WidgetSample.Net10.NLog/bin/Debug/net10.0-windows/WidgetSample.Net10.NLog.exe",
+      "cwd": "${workspaceFolder}/samples/WidgetSample.Net10.NLog",
+      "preLaunchTask": "Build WidgetSample.Net10.NLog",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Debug Widget Sample Serilog",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/samples/WidgetSample.Net10.Serilog/bin/Debug/net10.0-windows/WidgetSample.Net10.Serilog.exe",
+      "cwd": "${workspaceFolder}/samples/WidgetSample.Net10.Serilog",
+      "preLaunchTask": "Build WidgetSample.Net10.Serilog",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Debug Widget Sample log4net",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/samples/WidgetSample.Net48.Log4Net/bin/Debug/net48/WidgetSample.Net48.Log4Net.exe",
+      "cwd": "${workspaceFolder}/samples/WidgetSample.Net48.Log4Net",
+      "preLaunchTask": "Build WidgetSample.Net48.Log4Net",
       "stopAtEntry": false
     },
     {
@@ -29,48 +56,13 @@
       "console": "integratedTerminal",
       "stopAtEntry": true
     },
-    {
-      "name": "Debug WidgetSample",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/WidgetSample/bin/Debug/net8.0-windows/WidgetSample.exe",
-      "cwd": "${workspaceFolder}/WidgetSample",
-      "stopAtEntry": true
-    },
-     {
-      "name": "Run ConsoleApp",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/ConsoleApp/bin/Debug/net8.0/_ConsoleApp.exe",
-      "cwd": "${workspaceFolder}/ConsoleApp",
-      "console": "integratedTerminal",
-      "preLaunchTask": "Build ConsoleApp",
-      "noDebug": true
-    },
-    {
+      {
       "name": "Run DiagnosticService",
       "type": "coreclr",
       "request": "launch",
       "program": "${workspaceFolder}/DiagnosticService/bin/Debug/net8.0/DiagnosticExplorer.Service.exe",
       "cwd": "${workspaceFolder}/DiagnosticService",
       "console": "integratedTerminal",
-      "noDebug": true
-    },
-   {
-      "name": "Run WidgetSample",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/WidgetSample/bin/Debug/net8.0-windows/WidgetSample.exe",
-      "cwd": "${workspaceFolder}/WidgetSample",
-      "noDebug": true
-    },
-    {
-      "name": "Run Widget Sample NuGet",
-      "type": "coreclr",
-      "request": "launch",
-      "program": "${workspaceFolder}/WidgetSampleNuget/bin/Debug/net8.0-windows/WidgetSampleNuget.exe",
-      "cwd": "${workspaceFolder}/WidgetSampleNuget",
-      "preLaunchTask": "Build WidgetSampleNuget",
       "noDebug": true
     },
   ]

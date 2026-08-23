@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DiagnosticExplorer\DiagnosticExplorer.csproj" />
+    <ProjectReference Include="..\DiagnosticExplorer.Hosting\DiagnosticExplorer.Hosting.csproj" />
     <ProjectReference Include="..\DiagnosticExplorer.Extensions.Logging\DiagnosticExplorer.Extensions.Logging.csproj" />
     <ProjectReference Include="..\DiagnosticExplorer.Log4Net\DiagnosticExplorer.Log4Net.csproj" />
     <ProjectReference Include="..\DiagnosticExplorer.NLog\DiagnosticExplorer.NLog.csproj" />

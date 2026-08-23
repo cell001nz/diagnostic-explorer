@@ -7,10 +7,12 @@ namespace DiagnosticExplorer.Extensions.Logging;
 
 public static class LoggingBuilderExtensions
 {
-    public static ILoggingBuilder AddDiagnosticExplorer(
-        this ILoggingBuilder builder,
-        EventSinkRouteOptions options
-    )
+    public static ILoggingBuilder AddDiagnosticExplorer(this ILoggingBuilder builder)
+    {
+        return builder.AddDiagnosticExplorer(DiagnosticManager.CurrentConfiguration.RuntimeOptions.Routing);
+    }
+
+    public static ILoggingBuilder AddDiagnosticExplorer(this ILoggingBuilder builder, EventSinkRouteOptions options)
     {
         if (builder == null)
             throw new ArgumentNullException(nameof(builder));
@@ -19,10 +21,7 @@ public static class LoggingBuilderExtensions
         return builder;
     }
 
-    public static ILoggingBuilder AddDiagnosticExplorer(
-        this ILoggingBuilder builder,
-        Action<EventSinkRouteOptions> configure
-    )
+    public static ILoggingBuilder AddDiagnosticExplorer(this ILoggingBuilder builder, Action<EventSinkRouteOptions> configure)
     {
         if (configure == null)
             throw new ArgumentNullException(nameof(configure));
@@ -32,16 +31,12 @@ public static class LoggingBuilderExtensions
         return builder.AddDiagnosticExplorer(options);
     }
 
-    public static ILoggingBuilder AddDiagnosticExplorer(
-        this ILoggingBuilder builder,
-        IConfiguration configuration
-    )
+    public static ILoggingBuilder AddDiagnosticExplorer(this ILoggingBuilder builder, IConfiguration configuration)
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
-        EventSinkRouteOptions options =
-            configuration.Get<EventSinkRouteOptions>() ?? new EventSinkRouteOptions();
+        EventSinkRouteOptions options = configuration.Get<EventSinkRouteOptions>() ?? new EventSinkRouteOptions();
         return builder.AddDiagnosticExplorer(options);
     }
 }

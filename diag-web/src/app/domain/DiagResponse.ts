@@ -18,49 +18,56 @@ export interface PropertyBag {
 }
 
 export interface SubBag {
-  name: string;
-  operationSet: string;
-  properties: Property[];
+    name: string;
+    operationSet: string;
+    properties: Property[];
 }
 
 export interface Property {
-  name: string;
-  value: string;
-  description: string;
-  operationSet: string;
-  canSet: boolean;
+    name: string;
+    value: string;
+    description: string;
+    operationSet: string;
+    canSet: boolean;
+    alerts: PropertyAlert[];
+}
+
+export interface PropertyAlert {
+    severity: number | 'None' | 'Warning' | 'Error';
+    message: string;
+    category: string;
 }
 
 export interface EventResponse {
-  name: string;
-  category: string;
-  events: SystemEvent[];
+    name: string;
+    category: string;
+    events: SystemEvent[];
 }
 
 export interface SystemEvent {
-  id: number;
-  sinkSeq: number;
-  date: string | Date;
-  message: string;
-  detail: string;
-  level: number;
-  sinkName: string;
-  sinkCategory: string;
-}
- 
-export interface OperationSet {
-  id: string;
-  operations: Operation[];
+    id: number;
+    sinkSeq: number;
+    date: string | Date;
+    message: string;
+    detail: string;
+    level: number;
+    sinkName: string;
+    sinkCategory: string;
 }
 
-export interface Operation { 
-  returnType: string;
-  signature: string;
-  description: string;
-  parameters: OperationParameter[];
+export interface OperationSet {
+    id: string;
+    operations: Operation[];
+}
+
+export interface Operation {
+    returnType: string;
+    signature: string;
+    description: string;
+    parameters: OperationParameter[];
 }
 
 export interface OperationParameter {
-  name: string;
-  type: string;
+    name: string;
+    type: string;
 }

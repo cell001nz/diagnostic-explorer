@@ -12,6 +12,18 @@ public sealed class EventRetentionOptions
 
     public double MaxAgeMinutes { get; set; } = DefaultMaxAgeMinutes;
 
+    public EventRetentionOptions WithMaxEventsPerSink(int maxEventsPerSink)
+    {
+        MaxEventsPerSink = maxEventsPerSink;
+        return this;
+    }
+
+    public EventRetentionOptions WithMaxAge(TimeSpan maxAge)
+    {
+        MaxAgeMinutes = maxAge.TotalMinutes;
+        return this;
+    }
+
     internal EventRetentionOptions CloneAndValidate()
     {
         if (MaxEventsPerSink < 1)

@@ -2,22 +2,22 @@
 
 // Diagnostic Explorer, a .Net diagnostic toolset
 // Copyright (C) 2010 Cameron Elliot
-// 
+//
 // This file is part of Diagnostic Explorer.
-// 
+//
 // Diagnostic Explorer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // Diagnostic Explorer is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public License
 // along with Diagnostic Explorer.  If not, see <http://www.gnu.org/licenses/>.
-// 
+//
 // http://diagexplorer.sourceforge.net/
 
 #endregion
@@ -26,7 +26,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -37,223 +36,346 @@ namespace DiagnosticExplorer;
 
 internal class PropertyGetter
 {
-	public const int MaxConcatItems = 10;
+    public const int MaxConcatItems = 10;
+    private Func<object, string> _nameFormatter;
+    private Func<object, string> _categoryFormatter;
+    private Func<object, string> _descriptionFormatter;
+    private Func<object, string> _valueFormatter;
+    private IReadOnlyList<PropertyAlertConfiguration> _alerts;
 
-	protected PropertyGetter()
-	{
-			
-	}
+    protected PropertyGetter() { }
 
-	public PropertyGetter(PropertyInfo propInfo, bool isStatic)
-	{
-		PropInfo = propInfo;
+    public PropertyGetter(PropertyInfo propInfo, bool isStatic)
+        : this(propInfo, AttributeUtil.GetAttribute<DiagnosticPropertyAttribute>(propInfo), null, isStatic) { }
 
-		GetFunc = PropertyToFunction(propInfo, isStatic);
-		Name = propInfo.Name;
+    public PropertyGetter(PropertyInfo propInfo, DiagnosticPropertyAttribute propAttr, bool isStatic)
+        : this(propInfo, propAttr, null, isStatic) { }
 
-		CategoryAttribute catAttr = AttributeUtil.GetAttribute<CategoryAttribute>(propInfo);
-		if (catAttr != null)
-			Category = catAttr.Category;
+    internal PropertyGetter(
+        PropertyInfo propInfo,
+        DiagnosticPropertyAttribute propAttr,
+        PropertyConfiguration configuration,
+        bool isStatic,
+        bool applyAttributes = true,
+        string defaultFormat = null
+    )
+    {
+        PropInfo = propInfo;
 
-		DescriptionAttribute descAttr = AttributeUtil.GetAttribute<DescriptionAttribute>(propInfo);
-		if (descAttr != null)
-			Description = descAttr.Description;
+        GetFunc = PropertyToFunction(propInfo, isStatic);
+        Name = propInfo.Name;
 
+        if (applyAttributes)
+        {
+            DiagnosticClassAttribute classAttr = propInfo
+                .DeclaringType.GetCustomAttributes(typeof(DiagnosticClassAttribute), true)
+                .Cast<DiagnosticClassAttribute>()
+                .FirstOrDefault();
 
-		DiagnosticClassAttribute classAttr = propInfo.DeclaringType
-			.GetCustomAttributes(typeof (DiagnosticClassAttribute), true)
-			.Cast<DiagnosticClassAttribute>().
-			FirstOrDefault();
+            if (classAttr != null && classAttr.AllPropertiesSettable)
+                CanSet = propInfo.CanWrite && classAttr.AllPropertiesSettable;
+        }
 
-		if (classAttr != null && classAttr.AllPropertiesSettable)
-			CanSet = propInfo.CanWrite && classAttr.AllPropertiesSettable;
+        if (propAttr != null)
+        {
+            Name = propAttr.Name ?? Name;
+            Category = propAttr.Category ?? Category;
+            Description = propAttr.Description ?? Description;
+            FormatString = propAttr.FormatString;
+            if (propInfo.CanWrite && propAttr.AllowSetSpecified)
+                CanSet = propAttr.AllowSet;
+        }
 
-		PropertyAttribute propAttr = AttributeUtil.GetAttribute<PropertyAttribute>(propInfo);
-		if (propAttr != null)
-		{
-			Name = propAttr.Name ?? Name;
-			Category = propAttr.Category ?? Category;
-			Description = propAttr.Description ?? Description;
-			FormatString = propAttr.FormatString ?? GetDefaultFormatString(propInfo.PropertyType);
-			if (propInfo.CanWrite && propAttr.AllowSetSpecified)
-				CanSet = propAttr.AllowSet;
-		}
-	}
+        if (configuration != null)
+        {
+            if (configuration.Name.IsSet)
+                Name = configuration.Name.Value;
+            _nameFormatter = configuration.NameFormatter;
+            if (configuration.Category.IsSet)
+                Category = configuration.Category.Value;
+            _categoryFormatter = configuration.CategoryFormatter;
+            if (configuration.Description.IsSet)
+                Description = configuration.Description.Value;
+            _descriptionFormatter = configuration.DescriptionFormatter;
+            if (configuration.FormatString.IsSet)
+                FormatString = configuration.FormatString.Value;
+            _valueFormatter = configuration.ValueFormatter;
+            _alerts = configuration.Alerts;
+            if (configuration.AllowSet.IsSet)
+                CanSet = propInfo.CanWrite && configuration.AllowSet.Value;
 
-	protected Func<object, object> PropertyToFunction(PropertyInfo propInfo, bool isStatic)
-	{
-		if (propInfo == null) 
-			return null;
+            if (configuration.UsesPropertyDefaults && string.IsNullOrWhiteSpace(Category))
+                Category = "General";
+        }
 
-		try
-		{
-			//return obj => propInfo.GetValue(obj, null);
+        if (FormatString == null && defaultFormat != null)
+            FormatString = defaultFormat.Contains("{0") ? defaultFormat : "{0:" + defaultFormat + "}";
+        else if (FormatString == null && propAttr != null)
+            FormatString = GetDefaultFormatString(propInfo.PropertyType);
+    }
 
-			//This method takes 2/3 time of propInfo.GetValue
-			if (isStatic)
-				return obj => propInfo.GetValue(obj, null);
+    protected Func<object, object> PropertyToFunction(PropertyInfo propInfo, bool isStatic)
+    {
+        if (propInfo == null)
+            return null;
 
-			ParameterExpression objParam = Expression.Parameter(typeof (object), "obj");
-			UnaryExpression objToType = Expression.Convert(objParam, propInfo.DeclaringType);
-			Expression propExp = Expression.Property(objToType, propInfo);
-			Expression resultToObj = Expression.Convert(propExp, typeof (object));
-			return (Func<object, object>) Expression.Lambda(resultToObj, objParam).Compile();
-		}
-		catch (Exception ex)
-		{
-			string msg = string.Format("Property {0}.{1}: {2}", propInfo.DeclaringType.Name, propInfo.Name, ex.Message);
-			return obj => msg;
-		}
-	}
+        try
+        {
+            //return obj => propInfo.GetValue(obj, null);
 
-	protected Func<object, object> GetFunc { get; set; }
+            //This method takes 2/3 time of propInfo.GetValue
+            if (isStatic)
+                return obj => propInfo.GetValue(obj, null);
 
-	protected static string MaxLengthString(string s, int maxLength)
-	{
-		if (s == null) return s;
-		if (s.Length <= maxLength) return s;
+            ParameterExpression objParam = Expression.Parameter(typeof(object), "obj");
+            UnaryExpression objToType = Expression.Convert(objParam, propInfo.DeclaringType);
+            Expression propExp = Expression.Property(objToType, propInfo);
+            Expression resultToObj = Expression.Convert(propExp, typeof(object));
+            return (Func<object, object>)Expression.Lambda(resultToObj, objParam).Compile();
+        }
+        catch (Exception ex)
+        {
+            string msg = string.Format("Property {0}.{1}: {2}", propInfo.DeclaringType.Name, propInfo.Name, ex.Message);
+            return obj => msg;
+        }
+    }
 
-		return s.Substring(0, maxLength);
-	}
+    protected Func<object, object> GetFunc { get; set; }
 
-	public virtual void GetProperties(object obj, PropertyBag bag, string catPrepend)
-	{
-		Property p = new Property 
-		{
-			Name = Name,
-			Description = Description,
-			Value = MaxLengthString(GetValue(obj, out object objectValue), 8092),
-			ValueObject = objectValue,
-			CanSet = CanSet,
-			SourceObject = obj,
-			SourceProperty = PropInfo
-		};
+    protected static string MaxLengthString(string s, int maxLength)
+    {
+        if (s == null)
+            return s;
+        if (s.Length <= maxLength)
+            return s;
 
-		string prependToCategory = PrependToCategory(catPrepend);
-		bag.AddProperty(p, prependToCategory);
-	}
+        return s.Substring(0, maxLength);
+    }
 
-	protected string PrependToCategory(string prepend)
-	{
-		return CombineCategories(prepend, Category);
-	}
+    public virtual void GetProperties(object obj, PropertyBag bag, string catPrepend)
+    {
+        Property p = new Property
+        {
+            Name = GetName(obj),
+            Description = GetDescription(obj),
+            Value = MaxLengthString(GetValue(obj, out object objectValue), 8092),
+            ValueObject = objectValue,
+            CanSet = CanSet,
+            Alerts = GetAlerts(obj),
+            SourceObject = obj,
+            SourceProperty = PropInfo,
+        };
 
-	protected static string CombineCategories(string start, string end)
-	{
-		if (string.IsNullOrEmpty(start))
-			return end;
-			
-		if (string.IsNullOrEmpty(end))
-			return start;
+        string prependToCategory = PrependToCategory(catPrepend, obj);
+        bag.AddProperty(p, prependToCategory);
+    }
 
-		return start + "." + end;
-	}
+    protected string PrependToCategory(string prepend, object obj)
+    {
+        return CombineCategories(prepend, GetCategory(obj));
+    }
 
-	private string GetDefaultFormatString(Type type)
-	{
-		if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>))
-			type = type.GetGenericArguments()[0];
+    protected string PrependToCategory(string prepend)
+    {
+        return CombineCategories(prepend, Category);
+    }
 
-		if (type == typeof(float))
-			return "{0:N2}";
+    protected virtual string GetName(object obj) => GetFormattedMetadata(_nameFormatter, obj, Name);
 
-		if (type == typeof(double))
-			return "{0:N2}";
+    protected virtual string GetDescription(object obj) => GetFormattedMetadata(_descriptionFormatter, obj, Description);
 
-		if (type == typeof(decimal))
-			return "{0:N2}";
+    protected virtual string GetCategory(object obj) => GetFormattedMetadata(_categoryFormatter, obj, Category);
 
-		if (type == typeof(DateTime) || type == typeof(DateTime?))
-			return "{0:d MMM yyyy H:mm:ss}";
+    private List<PropertyAlert> GetAlerts(object obj)
+    {
+        if (_alerts == null)
+            return new List<PropertyAlert>();
 
-		return null;
-	}
+        List<PropertyAlert> activeAlerts = new();
+        Dictionary<string, int> alertIndexes = new(StringComparer.Ordinal);
+        foreach (PropertyAlertConfiguration alert in _alerts)
+        {
+            try
+            {
+                if (alert.Condition(obj))
+                {
+                    string message = alert.Message(obj);
+                    string category = alert.Category == null ? message : alert.Category(obj);
+                    AddWorstAlert(activeAlerts, alertIndexes, new PropertyAlert(alert.Severity, message, category));
+                }
+            }
+            catch (Exception ex)
+            {
+                string message = $"<{ex.Message}>";
+                AddWorstAlert(activeAlerts, alertIndexes, new PropertyAlert(PropertyAlertSeverity.Error, message));
+                break;
+            }
+        }
 
-	public PropertyInfo PropInfo { get; private set; }
-	public string Name { get; protected set; }
-	public string Description { get; protected set; }
-	protected string FormatString { get; private set; }
-	public bool CanSet { get; private set; }
-	public string Category { get; private set; }
+        return activeAlerts;
+    }
 
-	public string GetValue(object obj, out object objectValue)
-	{
-		return GetValue(obj, GetFunc, out objectValue);
-	}
+    private static void AddWorstAlert(List<PropertyAlert> alerts, IDictionary<string, int> indexes, PropertyAlert alert)
+    {
+        string category = alert.Category ?? string.Empty;
+        if (indexes.TryGetValue(category, out int index))
+        {
+            if (alert.Severity > alerts[index].Severity)
+                alerts[index] = alert;
+            return;
+        }
 
-	protected string FormatEnumerable(IEnumerable col, string separator, int maxItems)
-	{
-		IEnumerable<object> asObject = col.Cast<object>();
-		int count = asObject.Count();
-		if (count == 0) 
-			return "0 items";
-	
-		List<string> values = new List<string>();
-		if (maxItems <= 0)
-			maxItems = MaxConcatItems;
+        indexes.Add(category, alerts.Count);
+        alerts.Add(alert);
+    }
 
-		int remaining = count - maxItems;
+    private static string GetFormattedMetadata(Func<object, string> formatter, object obj, string fallback)
+    {
+        if (formatter == null)
+            return fallback;
 
-		foreach (object o in asObject.Take(maxItems))
-			values.Add(FormatValue(o));
+        try
+        {
+            return formatter(obj);
+        }
+        catch (Exception ex)
+        {
+            return $"<{ex.Message}>";
+        }
+    }
 
-		if (remaining > 0)
-			values.Add(string.Format("... ({0} more item{1})", remaining, remaining == 1 ? "" : "s"));
+    protected static string CombineCategories(string start, string end)
+    {
+        if (string.IsNullOrEmpty(start))
+            return end;
 
-		string pre = string.Format("{0} item{1}: ", count, count == 1 ? "" : "s");
-		return pre + string.Join(separator, values.ToArray());
-	}
+        if (string.IsNullOrEmpty(end))
+            return start;
 
-	public string GetValue(object obj, Func<object, object> propInfo, out object propertyValue)
-	{
-		try
-		{
-			propertyValue = propInfo(obj);
-			if (propertyValue == null)
-				return null;
+        return start + "." + end;
+    }
 
-			return FormatValue(propertyValue);
-		}
-		catch (Exception ex)
-		{
-			propertyValue = null;
-			return string.Format("<{0}>", ex.Message);
-		}
-	}
+    private string GetDefaultFormatString(Type type)
+    {
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            type = type.GetGenericArguments()[0];
 
-	protected string FormatValue(object val)
-	{
-		if (val == null) 
-			return null;
+        if (type == typeof(float))
+            return "{0:N2}";
 
-		if (val is TimeSpan)
-			return FormatTimeSpan((TimeSpan)val);
+        if (type == typeof(double))
+            return "{0:N2}";
 
-		if (val is string)
-			return (string)val;
+        if (type == typeof(decimal))
+            return "{0:N2}";
 
-		if (val is IEnumerable)
-			return FormatEnumerable((IEnumerable)val, Environment.NewLine, MaxConcatItems);
+        if (type == typeof(DateTime) || type == typeof(DateTime?))
+            return "{0:d MMM yyyy H:mm:ss}";
 
-		if (FormatString != null)
-			return string.Format(FormatString, val);
+        return null;
+    }
 
-		return val.ToString();
-	}
+    public PropertyInfo PropInfo { get; private set; }
+    public string Name { get; protected set; }
+    public string Description { get; protected set; }
+    protected string FormatString { get; set; }
+    public bool CanSet { get; private set; }
+    public string Category { get; protected set; }
 
-	protected static string FormatTimeSpan(TimeSpan span)
-	{
-		string sign= span < TimeSpan.Zero ? "-" : "";
-		string format = "{0}{2:D2}:{3:D2}:{4:D2}";
-		if (span.Days != 0)
-			format = "{0}{1}.{2:D2}:{3:D2}:{4:D2}";
+    public string GetValue(object obj, out object objectValue)
+    {
+        return GetValue(obj, GetFunc, out objectValue);
+    }
 
-		if (Math.Abs(span.TotalSeconds) < 1)
-			format += ".{5:D2}";
+    protected string FormatEnumerable(IEnumerable col, string separator, int maxItems)
+    {
+        IEnumerable<object> asObject = col.Cast<object>();
+        int count = asObject.Count();
+        if (count == 0)
+            return "0 items";
 
-		return string.Format(format, sign, 
-			Math.Abs(span.Days), Math.Abs(span.Hours), 
-			Math.Abs(span.Minutes), Math.Abs(span.Seconds), 
-			Math.Abs(span.Milliseconds));
-	}
+        List<string> values = new List<string>();
+        if (maxItems <= 0)
+            maxItems = MaxConcatItems;
+
+        int remaining = count - maxItems;
+
+        foreach (object o in asObject.Take(maxItems))
+            values.Add(FormatValue(o));
+
+        if (remaining > 0)
+            values.Add(string.Format("... ({0} more item{1})", remaining, remaining == 1 ? "" : "s"));
+
+        string pre = string.Format("{0} item{1}: ", count, count == 1 ? "" : "s");
+        return pre + string.Join(separator, values.ToArray());
+    }
+
+    public string GetValue(object obj, Func<object, object> propInfo, out object propertyValue)
+    {
+        try
+        {
+            propertyValue = propInfo(obj);
+            if (propertyValue == null)
+                return null;
+
+            return FormatValue(propertyValue);
+        }
+        catch (Exception ex)
+        {
+            propertyValue = null;
+            return string.Format("<{0}>", ex.Message);
+        }
+    }
+
+    protected void ConfigureCustomProperty(CustomPropertyConfiguration configuration)
+    {
+        Name = configuration.Name;
+        Category = configuration.Category.IsSet ? configuration.Category.Value : "General";
+        Description = configuration.Description.IsSet ? configuration.Description.Value : null;
+        _alerts = configuration.Alerts;
+    }
+
+    protected string FormatValue(object val)
+    {
+        if (val == null)
+            return null;
+
+        if (val is TimeSpan)
+            return FormatTimeSpan((TimeSpan)val);
+
+        if (val is string)
+            return (string)val;
+
+        if (_valueFormatter != null)
+            return _valueFormatter(val);
+
+        if (val is IEnumerable)
+            return FormatEnumerable((IEnumerable)val, Environment.NewLine, MaxConcatItems);
+
+        if (FormatString != null)
+            return string.Format(FormatString, val);
+
+        return val.ToString();
+    }
+
+    protected static string FormatTimeSpan(TimeSpan span)
+    {
+        string sign = span < TimeSpan.Zero ? "-" : "";
+        string format = "{0}{2:D2}:{3:D2}:{4:D2}";
+        if (span.Days != 0)
+            format = "{0}{1}.{2:D2}:{3:D2}:{4:D2}";
+
+        if (Math.Abs(span.TotalSeconds) < 1)
+            format += ".{5:D2}";
+
+        return string.Format(
+            format,
+            sign,
+            Math.Abs(span.Days),
+            Math.Abs(span.Hours),
+            Math.Abs(span.Minutes),
+            Math.Abs(span.Seconds),
+            Math.Abs(span.Milliseconds)
+        );
+    }
 }

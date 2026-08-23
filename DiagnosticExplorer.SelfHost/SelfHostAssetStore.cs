@@ -14,7 +14,10 @@ internal static class SelfHostAssetStore
         string assetPath = Normalize(path);
         isIndex = string.Equals(assetPath, "index.html", StringComparison.OrdinalIgnoreCase);
         contentType = GetContentType(assetPath);
-        stream = typeof(SelfHostAssetStore).Assembly.GetManifestResourceStream(ResourcePrefix + assetPath.Replace('/', '.'));
+        Assembly assembly = typeof(SelfHostAssetStore).Assembly;
+        stream = assembly.GetManifestResourceStream(ResourcePrefix + assetPath.Replace('/', '.'))
+            ?? assembly.GetManifestResourceStream(ResourcePrefix + assetPath.Replace('/', '\\'))
+            ?? assembly.GetManifestResourceStream(ResourcePrefix + assetPath);
 
         if (stream != null)
             return true;
@@ -24,7 +27,7 @@ internal static class SelfHostAssetStore
             assetPath = "index.html";
             isIndex = true;
             contentType = "text/html; charset=utf-8";
-            stream = typeof(SelfHostAssetStore).Assembly.GetManifestResourceStream(ResourcePrefix + assetPath);
+            stream = assembly.GetManifestResourceStream(ResourcePrefix + assetPath);
         }
 
         return stream != null;
@@ -50,6 +53,10 @@ internal static class SelfHostAssetStore
             ".json" => "application/json; charset=utf-8",
             ".svg" => "image/svg+xml",
             ".ico" => "image/x-icon",
+            ".woff2" => "font/woff2",
+            ".woff" => "font/woff",
+            ".ttf" => "font/ttf",
+            ".eot" => "application/vnd.ms-fontobject",
             _ => "application/octet-stream"
         };
     }

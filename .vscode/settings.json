@@ -3,6 +3,9 @@
     "**/bin": true,
     "**/obj": true,
     "**/.idea": true,
+    "**/.angular": true,
+    "**/.claude": true,
+    "**/.vs": true,
     "**/dist": true,
     "**/node_modules": true
   },

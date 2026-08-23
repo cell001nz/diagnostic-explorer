@@ -18,13 +18,13 @@ public class DiagnosticHostingService
 #endif
 {
     private static DiagnosticHostingService _instance;
-    private DiagnosticOptions _options;
+    private DiagExplorerOptions _options;
 
     private RegistrationHandler[] _registrationHandlers;
 
     private Action<HttpConnectionOptions> _configureHttp;
 
-    private DiagnosticHostingService(DiagnosticOptions options, Action<HttpConnectionOptions> configureHttp = null)
+    private DiagnosticHostingService(DiagExplorerOptions options, Action<HttpConnectionOptions> configureHttp = null)
     {
         _options = options;
         _configureHttp = configureHttp;
@@ -32,15 +32,15 @@ public class DiagnosticHostingService
 
 #if NET5_0_OR_GREATER
 
-    public DiagnosticHostingService(IOptions<DiagnosticOptions> options, Action<HttpConnectionOptions> configureHttp = null)
+    public DiagnosticHostingService(IOptions<DiagExplorerOptions> options, Action<HttpConnectionOptions> configureHttp = null)
         : this(options.Value, configureHttp)
     {
-        Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled} Uri [{_options.Uri}");
+        Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled} RemoteUrl [{_options.RemoteUrl}");
     }
 
     public async Task StartAsync(CancellationToken cancel)
     {
-        Debug.WriteLine($"DiagnosticHostingService starting {_options.Enabled} Uri [{_options.Uri}");
+        Debug.WriteLine($"DiagnosticHostingService starting {_options.Enabled} RemoteUrl [{_options.RemoteUrl}");
         if (_options.Enabled)
         {
             _instance = this;
@@ -75,7 +75,7 @@ public class DiagnosticHostingService
             };
 
             _registrationHandlers = Regex
-                .Split(_options.Uri, @"\s|;|,")
+                .Split(_options.RemoteUrl, @"\s|;|,")
                 .Select(hubUrl => hubUrl.Trim())
                 .Where(hubUrl => !string.IsNullOrWhiteSpace(hubUrl))
                 .Select(hubUrl => new RegistrationHandler(hubUrl, registration))
@@ -126,10 +126,24 @@ public class DiagnosticHostingService
 
         if (_instance == null)
         {
-            DiagnosticOptions options = new(url);
+            DiagExplorerOptions options = new() { RemoteUrl = url };
             _instance = new DiagnosticHostingService(options, configureHttp);
             _instance.StartHosting();
         }
+    }
+
+    public static void Start(DiagnosticConfiguration configuration, Action<HttpConnectionOptions> configureHttp = null)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        DiagnosticManager.UseConfiguration(configuration);
+        if (!configuration.RuntimeOptions.Enabled)
+            return;
+        if (string.IsNullOrWhiteSpace(configuration.RuntimeOptions.RemoteUrl))
+            throw new InvalidOperationException("A remote diagnostics URL has not been configured.");
+
+        Start(configuration.RuntimeOptions.RemoteUrl, configureHttp);
     }
 
     public static async Task Stop()

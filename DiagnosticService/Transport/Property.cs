@@ -22,12 +22,11 @@ public class Property
                 Name = property.Name,
                 CanSet = property.CanSet,
                 Path = (property.CanSet ? (path + '|' + property.Name) : null),
-                Value = property.Value
+                Value = property.Value,
             };
             result.Add(groupResult);
         }
 
         return result;
     }
-
 }

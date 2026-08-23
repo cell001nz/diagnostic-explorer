@@ -52,6 +52,33 @@ When adding a Diagnostic Explorer package, add this baseline section to the appl
 
 `MaxEventsPerSink` is a per-destination event count, not a global memory or byte limit. Events older than `MaxAgeMinutes` are removed during the scheduled purge, which runs every 20 seconds. Add `RemoteUrl` when using `DiagnosticExplorer.Hosting`, or `SelfHostUrl` when using `DiagnosticExplorer.SelfHost`.
 
+The same settings can be specified fluently in code:
+
+```csharp
+using DiagnosticExplorer;
+using DiagnosticExplorer.Logging;
+using Microsoft.Extensions.Logging;
+
+DiagnosticConfiguration diagnostics = DiagnosticManager.Configure(config =>
+  config.Runtime(runtime => runtime
+    .Enabled()
+    .RemoteUrl("http://localhost:2803/diagnostics")
+    .SelfHostUrl("http://localhost:45000")
+    .EventRetention(retention => retention
+      .WithMaxEventsPerSink(1000)
+      .WithMaxAge(TimeSpan.FromMinutes(30)))
+    .Routing(routes => routes
+      .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
+      .Route("MyCompany.MyApp", route => route
+        .AtLeast(LogLevel.Information)
+        .To("Application", "Application Events"))
+      .Route("*", route => route
+        .AtLeast(LogLevel.Warning)
+        .To("System", "Warnings")))));
+```
+
+Pass `diagnostics.RuntimeOptions.Routing` to the selected logging adapter. Remote and self-host startup can consume the same object through `AddDiagnosticExplorer(diagnostics)`, `DiagnosticHostingService.Start(diagnostics)`, `DiagnosticSelfHostingService.StartAsync(diagnostics)`, or `AddDiagnosticSelfHost(diagnostics)`.
+
 ## Register diagnostics
 
 Register objects whose public properties and diagnostic attributes should be visible:
@@ -61,6 +88,48 @@ using DiagnosticExplorer;
 
 DiagnosticManager.Register(orderProcessor, "Order processor", "Orders");
 ```
+
+### Configure property rendering
+
+Use fluent configuration when the diagnostic type cannot or should not be decorated. Existing attributes remain supported and provide the baseline metadata; fluent calls override only the values they explicitly set.
+
+```csharp
+DiagnosticManager.Configure(diagnostics =>
+{
+  diagnostics.ApplyAttributes = true; // Default; set false for fluent and convention-based rendering only.
+  diagnostics.Configure<OrderProcessor>(type =>
+  {
+    type.OptIn();
+    type.Property(processor => processor.Status)
+      .Category("Orders")
+      .Description("Current processing state");
+    type.Collection(processor => processor.PendingOrders)
+      .ShowCount()
+      .Concatenate(", ")
+      .WithMaxItems(10);
+  });
+});
+```
+
+Install the configuration before registering diagnostic objects. `OptIn` includes fluent selections and properties carrying non-ignored diagnostic attributes. `OptOut` includes public properties by default. Explicit `Include` and `Exclude` calls take precedence over attributes and `BrowsableAttribute`.
+
+Set `ApplyAttributes` to `false` to ignore reflected property-rendering metadata, including diagnostic, `Browsable`, `Category`, and `Description` attributes. Fluent rules and built-in rate/date type handling still apply.
+
+Fluent `Property`, `Collection`, `Rate`, `Date`, and `Extended` declarations use `General` when no category is specified. A plain `Include` does not assign a category.
+
+With `DiagnosticExplorer.Hosting`, configure and install the same rules during service registration. Diagnostics then follows the host lifetime:
+
+```csharp
+builder.Services
+  .ConfigureDiagnosticExplorer(diagnostics =>
+    diagnostics.Configure<OrderProcessor>(type =>
+    {
+      type.OptIn();
+      type.Include(processor => processor.Status);
+      }));
+```
+
+See [Fluent diagnostic configuration](Docs/fluent-configuration.md) for specialized strategies and precedence details.
 
 ## Connect to a central service
 

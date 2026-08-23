@@ -119,24 +119,8 @@ Reference `DiagnosticExplorer.Log4Net` and replace per-sink `DiagnosticAppender`
 </appender>
 ```
 
-The appender maps `LoggingEvent.LoggerName` and its level to the shared router. Keep ordinary log4net logger levels, filters, SMTP, debug, retro, forwarding, and fallback appenders in `log4net.config`; only Diagnostic Explorer sink routing moves to JSON. `WidgetSample` keeps its remote service connection in `DiagnosticExplorer:RemoteUrl` and routes at `DiagnosticExplorer:Routing`; see [WidgetSample/log4net.config](../WidgetSample/log4net.config) and [WidgetSample/config.json](../WidgetSample/config.json).
-
-## WidgetSample Provider Demo
-
-`WidgetSample` uses its internal logging facade to keep the `Gadgets`, `Widgets`, and `WidgetSample.Form1` categories stable while selecting one native backend at startup. The selector is sample-owned; set `WidgetSample:Logging:Provider` in `config.json` to exactly one of:
-
-```json
-{
-  "WidgetSample": {
-    "Logging": {
-      "Provider": "Log4Net"
-    }
-  }
-}
-```
-
-Supported values are `Log4Net`, `MEL`, `Serilog`, and `NLog`. The selected backend writes directly to its corresponding Diagnostic Explorer integration, and all modes use the same `DiagnosticExplorer:Routing` rules. Restart the sample after changing the value; configuring multiple providers at once is intentionally not supported because it would duplicate events.
+The appender maps `LoggingEvent.LoggerName` and its level to the shared router. Applications can keep ordinary log4net logger levels, filters, SMTP, debug, retro, forwarding, and fallback appenders in `log4net.config`, or construct them in C#. The shared widget workload keeps diagnostic configuration in [WidgetSample.Harness/DiagnosticsConfiguration.cs](../samples/WidgetSample.Harness/DiagnosticsConfiguration.cs), while [WidgetSample.Net48.Log4Net/Program.cs](../samples/WidgetSample.Net48.Log4Net/Program.cs) provides the log4net-specific setup.
 
 ## Existing log4net equivalence
 
-The sample's `Widgets`, `Gadgets`, and `WidgetSample.Form1` loggers map to individual `CategoryPattern` routes. The warning and error appenders become two `*` routes with `MinLevel` of `Warning` and `Error`. With `AllMatches`, the resulting events fan out just as they do in [WidgetSample/log4net.config](../WidgetSample/log4net.config).
+The shared harness's `Widgets`, `Gadgets`, and form loggers map to individual category routes. The warning and error destinations are two `*` routes with minimum levels of `Warning` and `Error`. With `AllMatches`, the resulting events fan out across every matching route.

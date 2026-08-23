@@ -13,15 +13,16 @@ Create a NuGet.org trusted-publishing policy for:
 
 ## Publish a release
 
-Choose an unused SemVer version, then create and push a matching `v` tag:
+Start from a clean worktree on the commit to release, then run:
 
 ```powershell
-git checkout main
-git pull --ff-only
-git tag v5.0.2
-git push origin v5.0.2
+./New-NuGetRelease.ps1
 ```
 
-The `v5.0.2` tag triggers the NuGet workflow and produces packages with version `5.0.2`.
+The script fetches the latest published `DiagnosticExplorer` version from NuGet.org, displays it, suggests the next patch version, and prompts for a new SemVer version. It verifies the worktree, branch, and tag before asking for confirmation, then creates and pushes an annotated `v` tag.
+
+The same script is available as the VS Code task **Create NuGet Release Tag**. For non-interactive use, pass `-NewVersion` and `-Force`; use `-WhatIf` to preview the tag operation.
+
+The pushed tag triggers the NuGet workflow and produces packages with the version after `v`.
 
 Monitor the run in the repository's GitHub Actions page. The workflow can also be run manually; provide the package version when prompted.

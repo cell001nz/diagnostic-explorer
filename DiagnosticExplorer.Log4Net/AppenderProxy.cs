@@ -43,10 +43,10 @@ public abstract class AppenderProxyBase
 
     public bool IsInError { get; protected set; }
 
-    [Property]
+    [DiagnosticProperty]
     public DateTime? LastError { get; set; }
 
-    [Property]
+    [DiagnosticProperty]
     public DateTime? LastMessageSent { get; set; }
 
     [RateProperty(ExposeRate = false, ExposeTotal = true)]
@@ -62,7 +62,7 @@ public abstract class AppenderProxyBase
         _errorTime = null;
     }
 
-    [Property]
+    [DiagnosticProperty]
     public string LastErrorMessage { get; set; }
 
     private TimeSpan? TimeUntilNextActive()
@@ -79,7 +79,7 @@ public abstract class AppenderProxyBase
         return elapsed;
     }
 
-    [Property]
+    [DiagnosticProperty]
     public string StatusMessage
     {
         get
@@ -97,12 +97,7 @@ public abstract class AppenderProxyBase
     private string FormatTimeSpan(TimeSpan time)
     {
         if (time.TotalMinutes >= 60)
-            return string.Format(
-                "{0:D2}:{1:D2}:{2:D2}",
-                (int)time.TotalHours,
-                time.Minutes,
-                time.Seconds
-            );
+            return string.Format("{0:D2}:{1:D2}:{2:D2}", (int)time.TotalHours, time.Minutes, time.Seconds);
 
         if (time.TotalSeconds < 60)
             return string.Format("{0} seconds", time.Seconds);
@@ -175,14 +170,7 @@ public class SmtpAppenderProxy : AppenderProxyBase
         try
         {
             SmtpClient smtpClient = new SmtpClient();
-            if (
-                !string.IsNullOrEmpty(SmtpHost)
-                && !string.Equals(
-                    SmtpHost,
-                    smtpClient.Host,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
-            )
+            if (!string.IsNullOrEmpty(SmtpHost) && !string.Equals(SmtpHost, smtpClient.Host, StringComparison.CurrentCultureIgnoreCase))
                 smtpClient.Host = SmtpHost;
 
             smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
@@ -190,14 +178,9 @@ public class SmtpAppenderProxy : AppenderProxyBase
             if (_appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Basic)
             {
                 // Perform basic authentication
-                smtpClient.Credentials = new NetworkCredential(
-                    _appender.Username,
-                    _appender.Password
-                );
+                smtpClient.Credentials = new NetworkCredential(_appender.Username, _appender.Password);
             }
-            else if (
-                _appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Ntlm
-            )
+            else if (_appender.Authentication == log4net.Appender.SmtpAppender.SmtpAuthentication.Ntlm)
             {
                 // Perform integrated authentication (NTLM)
                 smtpClient.Credentials = CredentialCache.DefaultNetworkCredentials;

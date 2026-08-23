@@ -173,8 +173,9 @@ DiagnosticService/           Standalone ASP.NET Core viewer service
 - Hosts the SPA or proxies to its dev server
 diag-web/                     Angular SPA for browsing registered programs
 - Select a program to view live diagnostics
-WidgetSample/                WinForms diagnostic-client example
-- Registers with the service and publishes data
+samples/WidgetSample.Harness/ Shared WinForms diagnostic-client workload
+samples/WidgetSample.Net10.*/ Adapter-specific .NET 10 sample hosts
+samples/WidgetSample.Net48.Log4Net/ .NET Framework 4.8 log4net host
 ConsoleApp/                  Smaller CLI demo
 SelfHostSample/              Standalone local-viewer console sample
 ```

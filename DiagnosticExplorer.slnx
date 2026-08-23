@@ -4,10 +4,15 @@
     <Platform Name="Mixed Platforms" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Samples/">
+    <Project Path="samples/WidgetSample.Net10.Mel/WidgetSample.Net10.Mel.csproj" />
+    <Project Path="samples/WidgetSample.Net10.NLog/WidgetSample.Net10.NLog.csproj" />
+    <Project Path="samples/WidgetSample.Net10.Serilog/WidgetSample.Net10.Serilog.csproj" />
+    <Project Path="samples/WidgetSample.Net48.Log4Net/WidgetSample.Net48.Log4Net.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
-  <Project Path="ConsoleApp/ConsoleApp.csproj" />
   <Project Path="DiagnosticExplorer.Hosting/DiagnosticExplorer.Hosting.csproj" />
   <Project Path="DiagnosticExplorer.Extensions.Logging/DiagnosticExplorer.Extensions.Logging.csproj" />
   <Project Path="DiagnosticExplorer.Log4Net/DiagnosticExplorer.Log4Net.csproj" />
@@ -19,6 +24,5 @@
     <Build Solution="*|x86" Project="false" />
   </Project>
   <Project Path="DiagnosticService/Diagnostic.Service.csproj" />
-  <Project Path="WidgetSample/WidgetSample.csproj" />
   <Project Path="WidgetSampleNuget/WidgetSampleNuget.csproj" />
 </Solution>

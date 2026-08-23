@@ -17,6 +17,66 @@
       "problemMatcher": "$msCompile"
     },
     {
+      "label": "Build WidgetSample.Net10.Mel",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}\\samples\\WidgetSample.Net10.Mel\\WidgetSample.Net10.Mel.csproj",
+        "--configuration",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build WidgetSample.Net10.NLog",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}\\samples\\WidgetSample.Net10.NLog\\WidgetSample.Net10.NLog.csproj",
+        "--configuration",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build WidgetSample.Net10.Serilog",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}\\samples\\WidgetSample.Net10.Serilog\\WidgetSample.Net10.Serilog.csproj",
+        "--configuration",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build WidgetSample.Net48.Log4Net",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}\\samples\\WidgetSample.Net48.Log4Net\\WidgetSample.Net48.Log4Net.csproj",
+        "--configuration",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
       "label": "Build ConsoleApp",
       "type": "process",
       "command": "dotnet",
@@ -64,19 +124,18 @@
       "problemMatcher": "$msCompile"
     },
     {
-      "label": "Publish NuGet Packages",
+      "label": "Create NuGet Release Tag",
       "type": "process",
       "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
       "args": [
         "-NoProfile",
         "-File",
-        "${workspaceFolder}\\Publish-NuGetPackages.ps1"
+        "${workspaceFolder}\\New-NuGetRelease.ps1"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "dependsOn": "Build NuGet Packages",
-      "dependsOrder": "sequence"
+      "problemMatcher": []
     }
   ]
 }

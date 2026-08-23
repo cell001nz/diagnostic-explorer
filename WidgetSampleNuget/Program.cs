@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
+using DiagnosticExplorer;
 
 namespace WidgetSampleNuget;
 
@@ -38,6 +39,11 @@ internal static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+#if false // Enable after the DiagnosticExplorer package includes the fluent configuration API.
+        DiagnosticConfiguration diagnostics = new();
+        DiagnosticsConfiguration.ConfigureDiagnostics(diagnostics);
+        DiagnosticManager.UseConfiguration(diagnostics);
+#endif
         SampleLogging.Configure();
         try
         {

@@ -9,183 +9,215 @@ namespace DiagnosticExplorer;
 
 internal class CollectionGetter : PropertyGetter
 {
-	private string _separator;
-	private CollectionMode _mode;
-	private int _maxItems;
-	private Func<object, object> _nameFunc;
-	private Func<object, object> _valueFunc;
-	private Func<object, object> _descrFunc;
-	private Func<object, object> _catFunc;
+    private string _separator;
+    private CollectionMode _mode;
+    private int _maxItems;
+    private Func<object, object> _nameFunc;
+    private Func<object, string> _nameFormatter;
+    private Func<object, object> _valueFunc;
+    private Func<object, string> _valueFormatter;
+    private Func<object, object> _descrFunc;
+    private Func<object, string> _descriptionFormatter;
+    private Func<object, object> _catFunc;
+    private Func<object, string> _categoryFormatter;
 
-	public CollectionGetter(PropertyInfo info, CollectionPropertyAttribute attr, bool isStatic)
-		: base(info, isStatic)
-	{
-		_separator = attr.Separator ?? Environment.NewLine;
-		_mode = attr.Mode;
+    public CollectionGetter(PropertyInfo info, CollectionPropertyAttribute attr, bool isStatic)
+        : this(info, attr.CreateOptions(), attr, null, isStatic) { }
 
-		Type genericType = GenericObjectCache.FindGenericInterface(info.PropertyType, typeof (IDictionary<,>));
-		bool isDictionary = info.PropertyType.GetInterfaces().Contains(typeof (IDictionary));
+    internal CollectionGetter(
+        PropertyInfo info,
+        CollectionOptions options,
+        DiagnosticPropertyAttribute metadata,
+        PropertyConfiguration configuration,
+        bool isStatic,
+        bool applyAttributes = true,
+        string defaultFormat = null
+    )
+        : base(info, metadata, configuration, isStatic, applyAttributes, defaultFormat)
+    {
+        _separator = options.Separator ?? Environment.NewLine;
+        _mode = options.Mode;
+        _nameFormatter = options.NameFormatter;
+        _valueFormatter = options.ValueFormatter;
+        _descriptionFormatter = options.DescriptionFormatter;
+        _categoryFormatter = options.CategoryFormatter;
 
-		if (genericType != null)
-		{
-			DictPropGetter propGetter = GenericObjectCache.CreateGenericObject<DictPropGetter>(typeof (DictPropGetter<,>),
-				genericType.GetGenericArguments());
-			_nameFunc = propGetter.GetNameGetter();
-			_valueFunc = propGetter.GetValueGetter();
-		}
-		else if (isDictionary)
-		{
-			_nameFunc = x => ((DictionaryEntry) x).Key;
-			_valueFunc = x => ((DictionaryEntry) x).Value;
-		}
-		else
-		{
-			_nameFunc = PropertyToFunction(GetListProperty(info, attr.NameProperty), isStatic);
-			_valueFunc = PropertyToFunction(GetListProperty(info, attr.ValueProperty), isStatic);
-			_descrFunc = PropertyToFunction(GetListProperty(info, attr.DescriptionProperty), isStatic);
-			_catFunc = PropertyToFunction(GetListProperty(info, attr.CategoryProperty), isStatic);
-		}
-		_maxItems = attr.MaxItems;
-	}
+        Type genericType = GenericObjectCache.FindGenericInterface(info.PropertyType, typeof(IDictionary<,>));
+        bool isDictionary = info.PropertyType.GetInterfaces().Contains(typeof(IDictionary));
 
-	public abstract class DictPropGetter
-	{
-		public abstract Func<object, object> GetNameGetter();
-		public abstract Func<object, object> GetValueGetter();
-	}
+        if (genericType != null)
+        {
+            DictPropGetter propGetter = GenericObjectCache.CreateGenericObject<DictPropGetter>(
+                typeof(DictPropGetter<,>),
+                genericType.GetGenericArguments()
+            );
+            _nameFunc = propGetter.GetNameGetter();
+            _valueFunc = propGetter.GetValueGetter();
+        }
+        else if (isDictionary)
+        {
+            _nameFunc = x => ((DictionaryEntry)x).Key;
+            _valueFunc = x => ((DictionaryEntry)x).Value;
+        }
+        else
+        {
+            _nameFunc = PropertyToFunction(GetListProperty(info, options.NameProperty), isStatic);
+            _valueFunc = PropertyToFunction(GetListProperty(info, options.ValueProperty), isStatic);
+            _descrFunc = PropertyToFunction(GetListProperty(info, options.DescriptionProperty), isStatic);
+            _catFunc = PropertyToFunction(GetListProperty(info, options.CategoryProperty), isStatic);
+        }
+        _maxItems = options.MaxItems;
+    }
 
-	public class DictPropGetter<TKey, TValue> : DictPropGetter
-	{
-		public override Func<object, object> GetNameGetter()
-		{
-			return value => ((KeyValuePair<TKey, TValue>) value).Key;
-		}
+    public abstract class DictPropGetter
+    {
+        public abstract Func<object, object> GetNameGetter();
+        public abstract Func<object, object> GetValueGetter();
+    }
 
-		public override Func<object, object> GetValueGetter()
-		{
-			return value => ((KeyValuePair<TKey, TValue>) value).Value;
-		}
-	}
+    public class DictPropGetter<TKey, TValue> : DictPropGetter
+    {
+        public override Func<object, object> GetNameGetter()
+        {
+            return value => ((KeyValuePair<TKey, TValue>)value).Key;
+        }
 
-	private PropertyInfo GetListProperty(PropertyInfo info, string name)
-	{
-		if (string.IsNullOrEmpty(name)) return null;
-		if (!info.PropertyType.IsGenericType) return null;
-		if (info.PropertyType.GetGenericArguments().Length != 1) return null;
+        public override Func<object, object> GetValueGetter()
+        {
+            return value => ((KeyValuePair<TKey, TValue>)value).Value;
+        }
+    }
 
-		Type colType = info.PropertyType.GetGenericArguments()[0];
-		PropertyInfo propInfo = colType.GetProperty(name, DiagnosticManager.PublicInstancePropertyFlags);
+    private PropertyInfo GetListProperty(PropertyInfo info, string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return null;
+        if (!info.PropertyType.IsGenericType)
+            return null;
+        if (info.PropertyType.GetGenericArguments().Length != 1)
+            return null;
 
-		if (propInfo == null)
-			Debug.WriteLine($"Diagnostics: Can't find property '{name}' on class '{colType}'");
+        Type colType = info.PropertyType.GetGenericArguments()[0];
+        PropertyInfo propInfo = colType.GetProperty(name, DiagnosticManager.PublicInstancePropertyFlags);
 
-		return propInfo;
-	}
+        if (propInfo == null)
+            Debug.WriteLine($"Diagnostics: Can't find property '{name}' on class '{colType}'");
 
-	public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
-	{
-		try
-		{
-			IEnumerable col = GetFunc(obj) as IEnumerable;
+        return propInfo;
+    }
 
-			if (col == null)
-			{
-				bag.AddProperty(new Property(Name, null), PrependToCategory(catPrepend));
-				return;
-			}
+    public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+    {
+        try
+        {
+            IEnumerable col = GetFunc(obj) as IEnumerable;
+            string name = GetName(obj);
 
-			int count = col.Cast<object>().Count();
+            if (col == null)
+            {
+                bag.AddProperty(new Property(name, null), PrependToCategory(catPrepend, obj));
+                return;
+            }
 
-			if (count == 0)
-			{
-				bag.AddProperty(new Property(Name, FormatValue(count)), PrependToCategory(catPrepend));
-				return;
-			}
+            int count = col.Cast<object>().Count();
 
-			switch (_mode)
-			{
-				case CollectionMode.Count:
-				{
-					bag.AddProperty(new Property(Name, FormatValue(count)), PrependToCategory(catPrepend));
-					break;
-				}
-				case CollectionMode.Concatenate:
-				{
-					AppendConcatenated(col, bag, catPrepend);
-					break;
-				}
-				case CollectionMode.List:
-					AppendAllProperties(col, bag, catPrepend);
-					break;
-				case CollectionMode.Categories:
-					AppendSeparateCategories(col, bag, catPrepend);
-					break;
-			}
-		}
-		catch (Exception ex) // May get exception if the collection is modified during iteration
-		{
-			string error = $"<{ex.Message}>";
-			bag.AddProperty(new Property(Name, error), PrependToCategory(catPrepend));
-		}
-	}
+            if (count == 0)
+            {
+                bag.AddProperty(new Property(name, FormatValue(count)), PrependToCategory(catPrepend, obj));
+                return;
+            }
 
-	private void AppendSeparateCategories(IEnumerable col, PropertyBag bag, string catPrepend)
-	{
-		int index = 0;
-		foreach (object listObject in col)
-		{
-			object catPropVal = GetNextPropVal(listObject, _catFunc, index++);
-			string valCategory = Convert.ToString(catPropVal);
-			if (!string.IsNullOrEmpty(Category))
-			{
-				if (Category.IndexOf("{") != -1)
-					valCategory = string.Format(Category, catPropVal);
-				else
-					valCategory = $"{Category}.{valCategory}";
-			}
+            switch (_mode)
+            {
+                case CollectionMode.Count:
+                {
+                    bag.AddProperty(new Property(name, FormatValue(count)), PrependToCategory(catPrepend, obj));
+                    break;
+                }
+                case CollectionMode.Concatenate:
+                {
+                    AppendConcatenated(col, bag, catPrepend, obj);
+                    break;
+                }
+                case CollectionMode.List:
+                    AppendAllProperties(col, bag, catPrepend, obj);
+                    break;
+                case CollectionMode.Categories:
+                    AppendSeparateCategories(col, bag, catPrepend, obj);
+                    break;
+            }
+        }
+        catch (Exception ex) // May get exception if the collection is modified during iteration
+        {
+            string error = $"<{ex.Message}>";
+            bag.AddProperty(new Property(GetName(obj), error), PrependToCategory(catPrepend, obj));
+        }
+    }
 
-			string newPrepend = CombineCategories(catPrepend, valCategory);
+    private void AppendSeparateCategories(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
+    {
+        int index = 0;
+        foreach (object listObject in GetLimitedItems(col))
+        {
+            object catPropVal = GetNextPropVal(listObject, _catFunc, index++, GetName(owner));
+            string valCategory = Convert.ToString(catPropVal);
+            string category = GetCategory(owner);
+            if (!string.IsNullOrEmpty(category))
+            {
+                if (category.IndexOf("{") != -1)
+                    valCategory = string.Format(category, catPropVal);
+                else
+                    valCategory = $"{category}.{valCategory}";
+            }
 
-			foreach (PropertyGetter getter in DiagnosticManager.GetPropertyGetters(listObject))
-				getter.GetProperties(listObject, bag, newPrepend);
+            string newPrepend = CombineCategories(catPrepend, valCategory);
 
-			Category cat = bag.Categories.FindByName(newPrepend);
-			if (cat != null)
-				cat.ValueObject = listObject;
-		}
-	}
+            foreach (PropertyGetter getter in DiagnosticManager.GetPropertyGetters(listObject))
+                getter.GetProperties(listObject, bag, newPrepend);
 
-	private void AppendAllProperties(IEnumerable col, PropertyBag bag, string catPrepend)
-	{
-		int index = 0;
-		foreach (object obj in col)
-		{
-			object objectValue = obj;
-			string name = Convert.ToString(GetNextPropVal(obj, _nameFunc, index++));
-			string val = _valueFunc == null ? FormatValue(obj) : GetValue(obj, _valueFunc, out objectValue);
-			string desc = _descrFunc == null ? null : GetValue(obj, _descrFunc, out objectValue);
-			string cat = _catFunc == null ? null : GetValue(obj, _catFunc, out objectValue);
+            Category cat = bag.Categories.FindByName(newPrepend);
+            if (cat != null)
+                cat.ValueObject = listObject;
+        }
+    }
 
-			Property prop = new Property(name, val, desc);
-			prop.ValueObject = objectValue;
-			bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend), cat));
-		}
-	}
+    private void AppendAllProperties(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
+    {
+        int index = 0;
+        foreach (object obj in GetLimitedItems(col))
+        {
+            object objectValue = obj;
+            string name = _nameFormatter?.Invoke(obj) ?? Convert.ToString(GetNextPropVal(obj, _nameFunc, index++, GetName(owner)));
+            string val = _valueFormatter?.Invoke(obj) ?? (_valueFunc == null ? FormatValue(obj) : GetValue(obj, _valueFunc, out objectValue));
+            string desc = _descriptionFormatter?.Invoke(obj) ?? (_descrFunc == null ? null : GetValue(obj, _descrFunc, out objectValue));
+            string cat = _categoryFormatter?.Invoke(obj) ?? (_catFunc == null ? null : GetValue(obj, _catFunc, out objectValue));
 
-	private void AppendConcatenated(IEnumerable col, PropertyBag bag, string catPrepend)
-	{
-		if (_valueFunc != null)
-			col = col.Cast<object>().Select(_valueFunc);
+            Property prop = new Property(name, val, desc);
+            prop.ValueObject = objectValue;
+            bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend, owner), cat));
+        }
+    }
 
-		string val = FormatEnumerable(col, _separator, _maxItems);
-		bag.AddProperty(new Property(Name, val), PrependToCategory(catPrepend));
-	}
+    private void AppendConcatenated(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
+    {
+        if (_valueFunc != null)
+            col = col.Cast<object>().Select(_valueFunc);
 
-	private object GetNextPropVal(object obj, Func<object, object> propFunc, int index)
-	{
-		if (propFunc == null)
-			return $"{Name} {index}";
+        string val = FormatEnumerable(col, _separator, _maxItems);
+        bag.AddProperty(new Property(GetName(owner), val), PrependToCategory(catPrepend, owner));
+    }
 
-		return propFunc(obj);
-	}
+    private object GetNextPropVal(object obj, Func<object, object> propFunc, int index, string name)
+    {
+        if (propFunc == null)
+            return $"{name} {index}";
+
+        return propFunc(obj);
+    }
+
+    private IEnumerable<object> GetLimitedItems(IEnumerable collection)
+    {
+        int maxItems = _maxItems <= 0 ? MaxConcatItems : _maxItems;
+        return collection.Cast<object>().Take(maxItems);
+    }
 }

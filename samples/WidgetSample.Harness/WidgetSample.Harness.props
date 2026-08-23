@@ -1,0 +1,13 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)DiagnosticsConfiguration.cs" Link="Harness\DiagnosticsConfiguration.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Form1.cs" Link="Harness\Form1.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Form1.Designer.cs" Link="Harness\Form1.Designer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Gadget.cs" Link="Harness\Gadget.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SampleLogging.cs" Link="Harness\SampleLogging.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TraceScopeExample.cs" Link="Harness\TraceScopeExample.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Widget.cs" Link="Harness\Widget.cs" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Form1.resx" Link="Harness\Form1.resx" />
+    <None Remove="$(MSBuildThisFileDirectory)config.json" Link="config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

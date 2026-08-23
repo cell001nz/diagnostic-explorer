@@ -12,49 +12,61 @@
              </div>
          </ng-template>
         @for (subBag of bag.subBags(); track subBag.name()) {
-            
+
             <div class="mb-4 last:mb-0">
                 <p-fieldset [toggleable]="false">
                     <ng-template #header>
                         <div>
                             {{subBag.name()}}
+                            @if (subBag.alertSeverity()) {
+                                <i class="bi bi-exclamation-triangle-fill ml-2"
+                                   [class.text-amber-400]="subBag.alertSeverity() === 1"
+                                   [class.text-red-400]="subBag.alertSeverity() === 2"
+                                   [attr.title]="subBag.alertTooltip()"></i>
+                            }
                             @if (subBag.operationSet()) {
                                 <span class="text-yellow-500 ml-1 cursor-pointer" title="Has executable operations"
                                       (click)="showOperationsDialog(subBag.getOperationSet()!, subBag.getOperationPath()); $event.stopPropagation()">&#9733;</span>
                             }
                         </div>
                     </ng-template>
-                    
+
                     <div class="ml-4 grid grid-cols-[200px_1fr] lg:grid-cols-[200px_1fr_200px_1fr] gap-x-2 gap-y-2 ">
                     @for (prop of subBag.properties(); track prop.name()) {
-                        
-                       <span class="text-blue-400 text-s my-1"
-                             [class.text-stone-500]="!prop.canSet()"
-                             [class.text-text-blue-400-500]="prop.canSet()"
-                                [class.cursor-pointer]="prop.canSet()"
-                             
+
+                         <span class="text-s my-1"
+                             [class.text-stone-500]="!prop.alertSeverity() && !prop.canSet()"
+                             [class.text-blue-400]="!prop.alertSeverity() && prop.canSet()"
+                             [class.text-amber-400]="prop.alertSeverity() === 1"
+                             [class.text-red-400]="prop.alertSeverity() === 2"
+                             [class.cursor-pointer]="prop.canSet()"
+                             [attr.title]="prop.alertTooltip() || prop.description() || null"
                              (click)="showSetPropertyDialog(prop)">{{ prop.name() }}
                         @if (prop.operationSet())                         {
                                 <span class="text-yellow-500 ml-1 cursor-pointer" title="Has executable operations"
                                       (click)="showOperationsDialog(prop.getOperationSet()!, prop.getOperationPath()); $event.stopPropagation()">&#9733;</span>
                         }
-                        </span>                       
-                        
-                        
+                        </span>
+
+
 <!--                    <button *ngIf="prop.canSet" class="text-blue-500 text-xs text-left"-->
 <!--                            (click)="showSetPropertyDialog(prop)">{{ prop.name }}-->
 <!--                    </button>-->
 <!--                    <span class="prop-value" (dblclick)="handleDoubleClick(prop, $event)"-->
 <!--                          [matTooltip]="prop.value" [matTooltipShowDelay]="0" matTooltipPosition="below"-->
 <!--                          matTooltipClass="tooltips">{{ prop.value }}</span>-->
-                        <span class="text-lime-500 text-s my-1">{{ prop.value() }}</span>
+                        <span class="text-s my-1"
+                            [class.text-lime-500]="!prop.alertSeverity()"
+                            [class.text-amber-400]="prop.alertSeverity() === 1"
+                            [class.text-red-400]="prop.alertSeverity() === 2"
+                              [attr.title]="prop.alertTooltip() || null">{{ prop.value() }}</span>
                     }
             </div>
-                    
-                </p-fieldset>      
+
+                </p-fieldset>
             </div>
         }
-        
+
     </p-panel>
 }
 
