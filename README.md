@@ -4,7 +4,7 @@ Add live diagnostic data to a .NET application, then inspect it in a browser.
 
 ## Dashboard
 
-[![Diagnostic Explorer dashboard showing registered gadgets and live gadget events](https://github.com/cell001nz/diagnostic-explorer/raw/main/Docs/dashboard.png)](https://github.com/cell001nz/diagnostic-explorer/blob/main/Docs/dashboard.png)
+[![Diagnostic Explorer dashboard showing registered gadgets and live gadget events](https://github.com/cell001nz/diagnostic-explorer/raw/main/docs/dashboard.png)](https://github.com/cell001nz/diagnostic-explorer/blob/main/docs/dashboard.png)
 
 Inspect registered objects, their properties, and live diagnostic events from one browser view.
 
