@@ -1,0 +1,40 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Diagnostic Explorer Service"
+           Manufacturer="Diagnostic Explorer"
+           Version="$(var.InstallerVersion)"
+           UpgradeCode="{F6BDFB0E-4620-46D7-8C3A-E4E9E07A4670}"
+           Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Diagnostic Explorer Service is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Diagnostic Explorer">
+        <Component Id="DiagnosticExplorerService" Bitness="always64">
+          <File Id="DiagnosticExplorerServiceExecutable"
+                Source="$(var.ServicePublishDirectory)\DiagnosticExplorer.Service.exe"
+                KeyPath="yes" />
+          <ServiceInstall Id="DiagnosticExplorerWindowsService"
+                          Name="DiagnosticExplorer"
+                          DisplayName="Diagnostic Explorer"
+                          Description="Diagnostic Explorer diagnostics viewer service"
+                          Start="auto"
+                          Type="ownProcess"
+                          ErrorControl="normal" />
+          <ServiceControl Id="DiagnosticExplorerServiceControl"
+                          Name="DiagnosticExplorer"
+                          Start="install"
+                          Stop="both"
+                          Remove="uninstall"
+                          Wait="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="Diagnostic Explorer Service" Level="1">
+      <ComponentRef Id="DiagnosticExplorerService" />
+      <Files Directory="INSTALLFOLDER" Include="$(var.ServicePublishDirectory)\**">
+        <Exclude Files="$(var.ServicePublishDirectory)\DiagnosticExplorer.Service.exe" />
+      </Files>
+    </Feature>
+  </Package>
+</Wix>

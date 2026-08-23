@@ -65,3 +65,5 @@ foreach ($packageProject in $packageProjects) {
 		throw "dotnet pack $packageProject failed with exit code $LASTEXITCODE."
 	}
 }
+
+& "$PSScriptRoot\Build-ServiceInstaller.ps1" -PackageVersion $PackageVersion -SkipAngularBuild

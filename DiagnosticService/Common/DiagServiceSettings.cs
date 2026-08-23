@@ -15,6 +15,9 @@ public class DiagServiceSettings
     {
         switch (RetroType.ToLower())
         {
+            case "none":
+                return new NullRetroLogger();
+
             case "mongo":
                 return new MongoRetroLogger(RetroConnection);
 

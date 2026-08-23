@@ -1,0 +1,8 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <InstallerVersion Condition="'$(InstallerVersion)' == ''">6.1.0</InstallerVersion>
+    <ServicePublishDirectory Condition="'$(ServicePublishDirectory)' == ''">$(MSBuildProjectDirectory)\..\artifacts\installer\publish</ServicePublishDirectory>
+    <DefineConstants>InstallerVersion=$(InstallerVersion);ServicePublishDirectory=$(ServicePublishDirectory)</DefineConstants>
+  </PropertyGroup>
+</Project>

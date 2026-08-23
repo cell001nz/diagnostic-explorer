@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   build-and-publish:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
 
     steps:
@@ -69,10 +69,23 @@ jobs:
           user: cell001uk
 
       - name: Publish packages
-        shell: bash
+        shell: pwsh
         run: >-
           dotnet nuget push 'artifacts/packages/*.nupkg'
           --api-key '${{ steps.login.outputs.NUGET_API_KEY }}'
           --source 'https://api.nuget.org/v3/index.json'
           --skip-duplicate
           --timeout 300
+
+      - name: Upload Windows service MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiagnosticExplorer.Service-${{ steps.version.outputs.package-version }}-win-x64
+          path: artifacts/packages/*.msi
+          if-no-files-found: error
+
+      - name: Publish Windows service MSI
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/packages/*.msi

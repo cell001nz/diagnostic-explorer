@@ -61,3 +61,6 @@ packages
 
 # Generated NuGet packages
 nupkg/
+
+# Generated release artifacts
+artifacts/

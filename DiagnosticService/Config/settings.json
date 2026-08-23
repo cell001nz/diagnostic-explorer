@@ -1,7 +1,7 @@
 {
 
   "DiagServiceSettings": {
-    "RetroType": "mongo",
+    "RetroType": "none",
     "RetroConnection": "mongodb://localhost:27017",
     "UseSpaProxy":  false,
     "Urls": []
