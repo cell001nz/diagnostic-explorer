@@ -12,10 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace DiagnosticExplorer;
 
-public class DiagnosticHostingService
-#if NET5_0_OR_GREATER
-    : IHostedService
-#endif
+public class DiagnosticHostingService : IHostedService
 {
     private static DiagnosticHostingService _instance;
     private static DiagnosticSelfHost[] _selfHosts = Array.Empty<DiagnosticSelfHost>();
@@ -30,8 +27,6 @@ public class DiagnosticHostingService
         _options = options;
         _configureHttp = configureHttp;
     }
-
-#if NET5_0_OR_GREATER
 
     public DiagnosticHostingService(IOptions<DiagExplorerOptions> options, Action<HttpConnectionOptions> configureHttp = null)
         : this(options.Value, configureHttp)
@@ -53,7 +48,6 @@ public class DiagnosticHostingService
     {
         return StopHosting();
     }
-#endif
 
     private void StartHosting()
     {

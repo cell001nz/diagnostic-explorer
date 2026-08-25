@@ -1,4 +1,3 @@
-#if NET5_0_OR_GREATER
 using System;
 using System.Linq;
 using System.Threading;
@@ -39,4 +38,3 @@ internal sealed class DiagnosticSelfHostHostedService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.WhenAll(_selfHosts.Select(host => host.StopAsync()));
 }
-#endif
