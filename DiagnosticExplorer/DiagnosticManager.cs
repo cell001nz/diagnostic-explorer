@@ -122,7 +122,12 @@ public static class DiagnosticManager
 
     public static DiagnosticResponse GetDiagnostics()
     {
-        return GetDiagnostics(GetRegisteredObjects());
+        return GetDiagnostics((IServiceProvider)null);
+    }
+
+    public static DiagnosticResponse GetDiagnostics(IServiceProvider serviceProvider)
+    {
+        return GetDiagnostics(GetRegisteredObjects(serviceProvider));
     }
 
     public static DiagnosticResponse GetDiagnostics(IEnumerable<RegisteredObject> registeredObjects)
@@ -235,7 +240,7 @@ public static class DiagnosticManager
         return AttributeUtil.GetAttribute<DiagnosticMethodAttribute>(method) != null;
     }
 
-    public static RegisteredObject[] GetRegisteredObjects()
+    public static RegisteredObject[] GetRegisteredObjects(IServiceProvider serviceProvider = null)
     {
         List<RegisteredObject> list = new();
 
@@ -250,6 +255,14 @@ public static class DiagnosticManager
                     list.Add(obj);
             }
         }
+
+        foreach (RegisteredObject discovered in _configuration.FindRegisteredObjects(serviceProvider))
+        {
+            object discoveredObject = discovered?.Object;
+            if (discoveredObject != null && !list.Any(existing => ReferenceEquals(existing.Object, discoveredObject)))
+                list.Add(discovered);
+        }
+
         return list.ToArray();
     }
 
@@ -615,7 +628,17 @@ public static class DiagnosticManager
 
     public static async Task<OperationResponse> ExecuteOperation(string path, string operation, string[] arguments)
     {
-        return await ExecuteOperation(GetRegisteredObjects(), path, operation, arguments);
+        return await ExecuteOperation((IServiceProvider)null, path, operation, arguments);
+    }
+
+    public static async Task<OperationResponse> ExecuteOperation(
+        IServiceProvider serviceProvider,
+        string path,
+        string operation,
+        string[] arguments
+    )
+    {
+        return await ExecuteOperation(GetRegisteredObjects(serviceProvider), path, operation, arguments);
     }
 
     public static async Task<OperationResponse> ExecuteOperation(
@@ -797,7 +820,12 @@ public static class DiagnosticManager
 
     public static OperationResponse SetProperty(string path, string value)
     {
-        return SetProperty(GetRegisteredObjects(), path, value);
+        return SetProperty((IServiceProvider)null, path, value);
+    }
+
+    public static OperationResponse SetProperty(IServiceProvider serviceProvider, string path, string value)
+    {
+        return SetProperty(GetRegisteredObjects(serviceProvider), path, value);
     }
 
     public static OperationResponse SetProperty(IEnumerable<RegisteredObject> registeredObjects, string path, string value)

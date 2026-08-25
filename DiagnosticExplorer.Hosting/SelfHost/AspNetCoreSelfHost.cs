@@ -143,7 +143,12 @@ public sealed class SelfHostWebHub : Microsoft.AspNetCore.SignalR.Hub<ISelfHostC
 
 internal static class DiagnosticSelfHostFactory
 {
-    internal static async Task<DiagnosticSelfHost> StartAsync(string url, SelfHostOptions options, CancellationToken cancellationToken)
+    internal static async Task<DiagnosticSelfHost> StartAsync(
+        string url,
+        SelfHostOptions options,
+        CancellationToken cancellationToken,
+        IServiceProvider serviceProvider
+    )
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls(url);
@@ -152,6 +157,7 @@ internal static class DiagnosticSelfHostFactory
             configure.PathBase = options.PathBase;
             configure.EnableDetailedErrors = options.EnableDetailedErrors;
         });
+        builder.Services.AddSingleton(new SelfHostManager(serviceProvider));
 
         WebApplication app = builder.Build();
         app.MapDiagnosticSelfHost();

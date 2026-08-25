@@ -24,24 +24,16 @@
 
 using System;
 using System.ComponentModel;
+using System.Text.Json;
 using DiagnosticExplorer;
 
 namespace WidgetSample.Harness;
 
 //Widget extends DiagnosticManager in order to register itself with diagnostics
-public class Gadget : INotifyPropertyChanged
+public partial class Gadget : INotifyPropertyChanged
 {
     private static Random _rand = new Random();
     public event PropertyChangedEventHandler PropertyChanged;
-
-    public Gadget(int id)
-    {
-        Id = id;
-
-        Name = GetRandom(_names);
-        Purpose = GetRandom(_purposes);
-        DiagnosticManager.Register(this, string.Format("Gadget {0}", Id), "Gadgets");
-    }
 
     [DiagnosticMethod]
     public void Randomise()
@@ -55,6 +47,12 @@ public class Gadget : INotifyPropertyChanged
     {
         Name = null;
         Purpose = null;
+    }
+
+    public void RefreshValues()
+    {
+        Configuration.RefreshValues(0.2m);
+        _log.Info($"{FullName} Refreshed values " + JsonSerializer.Serialize(Configuration, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private void OnPropertyChanged(string propertyName)
@@ -79,6 +77,10 @@ public class Gadget : INotifyPropertyChanged
     }
 
     public int Id { get; private set; }
+
+    public string FullName => $"{Name}({Id})";
+
+    public GadgetConfig Configuration { get; } = new();
 
     private string _name;
 
@@ -106,4 +108,3 @@ public class Gadget : INotifyPropertyChanged
         }
     }
 }
-

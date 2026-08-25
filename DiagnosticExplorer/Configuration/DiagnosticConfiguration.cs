@@ -11,9 +11,18 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
 {
     private readonly Dictionary<Type, TypeConfiguration> _types = new();
     private readonly Dictionary<Type, string> _defaultFormats = new();
+    private readonly List<Func<IServiceProvider, IEnumerable<RegisteredObject>>> _registeredObjectProviders = new();
 
     public bool ApplyAttributes { get; set; } = true;
     public DiagnosticRuntimeOptions RuntimeOptions { get; } = new();
+
+    public void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects)
+    {
+        if (findObjects == null)
+            throw new ArgumentNullException(nameof(findObjects));
+
+        _registeredObjectProviders.Add(findObjects);
+    }
 
     public void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure)
     {
@@ -56,7 +65,12 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
 
     internal DiagnosticConfigurationSnapshot CreateSnapshot()
     {
-        return new DiagnosticConfigurationSnapshot(ApplyAttributes, _types.Values.Select(type => type.Clone()), _defaultFormats);
+        return new DiagnosticConfigurationSnapshot(
+            ApplyAttributes,
+            _types.Values.Select(type => type.Clone()),
+            _defaultFormats,
+            _registeredObjectProviders
+        );
     }
 }
 
@@ -105,20 +119,28 @@ internal enum PropertyStrategy
 
 internal sealed class DiagnosticConfigurationSnapshot
 {
-    public static readonly DiagnosticConfigurationSnapshot Empty = new(true, Array.Empty<TypeConfiguration>(), new Dictionary<Type, string>());
+    public static readonly DiagnosticConfigurationSnapshot Empty = new(
+        true,
+        Array.Empty<TypeConfiguration>(),
+        new Dictionary<Type, string>(),
+        Array.Empty<Func<IServiceProvider, IEnumerable<RegisteredObject>>>()
+    );
 
     private readonly IReadOnlyDictionary<Type, TypeConfiguration> _types;
     private readonly IReadOnlyDictionary<Type, string> _defaultFormats;
+    private readonly IReadOnlyList<Func<IServiceProvider, IEnumerable<RegisteredObject>>> _registeredObjectProviders;
 
     public DiagnosticConfigurationSnapshot(
         bool applyAttributes,
         IEnumerable<TypeConfiguration> types,
-        IReadOnlyDictionary<Type, string> defaultFormats
+        IReadOnlyDictionary<Type, string> defaultFormats,
+        IEnumerable<Func<IServiceProvider, IEnumerable<RegisteredObject>>> registeredObjectProviders
     )
     {
         ApplyAttributes = applyAttributes;
         _types = types.ToDictionary(type => type.Type);
         _defaultFormats = defaultFormats.ToDictionary(format => format.Key, format => format.Value);
+        _registeredObjectProviders = registeredObjectProviders.ToArray();
     }
 
     public bool ApplyAttributes { get; }
@@ -142,6 +164,11 @@ internal sealed class DiagnosticConfigurationSnapshot
     {
         Type type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
         return _defaultFormats.TryGetValue(type, out string formatString) ? formatString : null;
+    }
+
+    public IEnumerable<RegisteredObject> FindRegisteredObjects(IServiceProvider serviceProvider)
+    {
+        return _registeredObjectProviders.SelectMany(provider => provider(serviceProvider) ?? Array.Empty<RegisteredObject>());
     }
 
     private static IEnumerable<Type> GetTypeHierarchy(Type type)

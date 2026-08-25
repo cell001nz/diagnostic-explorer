@@ -84,7 +84,11 @@ namespace DiagnosticExplorer
                 return;
 
             if (options.Hosts.Any(host => host.Type == DiagnosticHostType.Remote && !string.IsNullOrWhiteSpace(host.Url)))
-                services.AddHostedService(sp => new DiagnosticHostingService(sp.GetRequiredService<IOptions<DiagExplorerOptions>>(), configureHttp));
+                services.AddHostedService(sp => new DiagnosticHostingService(
+                    sp.GetRequiredService<IOptions<DiagExplorerOptions>>(),
+                    sp,
+                    configureHttp
+                ));
             if (options.Hosts.Any(host => host.Type == DiagnosticHostType.SelfHost && !string.IsNullOrWhiteSpace(host.Url)))
                 services.AddHostedService<DiagnosticSelfHostHostedService>();
         }

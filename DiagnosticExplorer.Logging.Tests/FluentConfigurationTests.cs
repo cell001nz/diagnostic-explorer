@@ -95,8 +95,10 @@ public sealed class FluentConfigurationTests : IDisposable
                     route.Destinations,
                     destination =>
                     {
-                        Assert.Equal("Widgets", destination.SinkCategory);
-                        Assert.Equal("Widgets Events", destination.SinkName);
+                        Assert.Equal(RouteValueSource.Fixed, destination.SinkCategory.Source);
+                        Assert.Equal("Widgets", destination.SinkCategory.Value);
+                        Assert.Equal(RouteValueSource.Fixed, destination.SinkName.Source);
+                        Assert.Equal("Widgets Events", destination.SinkName.Value);
                     }
                 );
             },
@@ -107,6 +109,25 @@ public sealed class FluentConfigurationTests : IDisposable
                 Assert.Equal(LogLevel.Warning, route.MaxLevel);
             }
         );
+    }
+
+    [Fact]
+    public void RouteValuesBindFromConfiguration()
+    {
+        Dictionary<string, string> values = new()
+        {
+            ["Routes:0:CategoryPattern"] = "WidgetSample.Harness.Widget",
+            ["Routes:0:Destinations:0:SinkCategory:Source"] = "LoggerSuffix",
+            ["Routes:0:Destinations:0:SinkName"] = "Widget Events",
+        };
+        IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+
+        EventSinkRouteOptions options = configuration.Get<EventSinkRouteOptions>();
+        EventSinkDestination destination = Assert.Single(Assert.Single(options.Routes).Destinations);
+
+        Assert.Equal(RouteValueSource.LoggerSuffix, destination.SinkCategory.Source);
+        Assert.Equal(RouteValueSource.Fixed, destination.SinkName.Source);
+        Assert.Equal("Widget Events", destination.SinkName.Value);
     }
 
     [Fact]
@@ -597,6 +618,54 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new ReplacementSample());
         Assert.Null(bag.GetProperty(nameof(ReplacementSample.First)));
         Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second)));
+    }
+
+    [Fact]
+    public void ConfiguredObjectProvidersAreEvaluatedForEachRequest()
+    {
+        ReplacementSample first = new();
+        ReplacementSample second = new();
+        List<RegisteredObject> discovered = new() { new RegisteredObject(first, "Configured", "First") };
+        DiagnosticConfiguration configuration = new();
+        IServiceProvider serviceProvider = new ServiceCollection().BuildServiceProvider();
+        configuration.RegisterObjects(provider =>
+        {
+            Assert.Same(serviceProvider, provider);
+            return discovered;
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Assert.Contains(DiagnosticManager.GetRegisteredObjects(serviceProvider), item => ReferenceEquals(item.Object, first));
+
+        discovered = new List<RegisteredObject> { new RegisteredObject(second, "Configured", "Second") };
+
+        RegisteredObject registered = Assert.Single(
+            DiagnosticManager.GetRegisteredObjects(serviceProvider).Where(item => ReferenceEquals(item.Object, second))
+        );
+        Assert.Equal("Configured", registered.BagCategory);
+        Assert.Equal("Second", registered.BagName);
+        Assert.DoesNotContain(DiagnosticManager.GetRegisteredObjects(serviceProvider), item => ReferenceEquals(item.Object, first));
+    }
+
+    [Fact]
+    public void ExplicitRegistrationTakesPrecedenceOverConfiguredDiscovery()
+    {
+        ReplacementSample sample = new();
+        DiagnosticConfiguration configuration = new();
+        configuration.RegisterObjects(_ => new[] { new RegisteredObject(sample, "Discovered", "Discovered") });
+        DiagnosticManager.UseConfiguration(configuration);
+        DiagnosticManager.Register(sample, "Explicit", "Registered");
+
+        try
+        {
+            RegisteredObject registered = Assert.Single(DiagnosticManager.GetRegisteredObjects().Where(item => ReferenceEquals(item.Object, sample)));
+            Assert.Equal("Registered", registered.BagCategory);
+            Assert.Equal("Explicit", registered.BagName);
+        }
+        finally
+        {
+            DiagnosticManager.Unregister(sample);
+        }
     }
 
     [Fact]

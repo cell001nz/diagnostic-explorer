@@ -25,7 +25,7 @@ internal static class Program
                     LoggingConfiguration logging = new();
                     logging.AddDiagnosticExplorer();
                     LogManager.Configuration = logging;
-                    services.AddTransient<Form1>();
+                    services.AddSingleton<Form1>();
                 }
             )
             .Build();

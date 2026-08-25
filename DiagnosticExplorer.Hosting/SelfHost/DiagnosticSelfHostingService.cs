@@ -13,7 +13,11 @@ public static class DiagnosticSelfHostingService
     private static readonly ConcurrentDictionary<string, DiagnosticSelfHost> Hosts = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Starts a standalone listener using fluent diagnostic runtime settings.</summary>
-    public static Task<DiagnosticSelfHost> StartAsync(DiagnosticConfiguration configuration, CancellationToken cancellationToken = default)
+    public static Task<DiagnosticSelfHost> StartAsync(
+        DiagnosticConfiguration configuration,
+        CancellationToken cancellationToken = default,
+        IServiceProvider serviceProvider = null
+    )
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
@@ -22,11 +26,15 @@ public static class DiagnosticSelfHostingService
         DiagnosticRuntimeOptions runtime = configuration.RuntimeOptions;
         string selfHostUrl = runtime.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.SelfHost)?.Url;
         SelfHostOptions options = new() { Enabled = runtime.Enabled, Url = selfHostUrl ?? SelfHostOptions.DefaultUrl };
-        return StartAsync(options.Url, options, cancellationToken);
+        return StartAsync(options.Url, options, cancellationToken, serviceProvider);
     }
 
     /// <summary>Starts a standalone listener from the configured <c>SelfHost</c> entry.</summary>
-    public static Task<DiagnosticSelfHost> StartAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
+    public static Task<DiagnosticSelfHost> StartAsync(
+        IConfiguration configuration,
+        CancellationToken cancellationToken = default,
+        IServiceProvider serviceProvider = null
+    )
     {
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
@@ -40,14 +48,15 @@ public static class DiagnosticSelfHostingService
             Url = hostOptions.Hosts.FirstOrDefault(host => host.Type == DiagnosticHostType.SelfHost)?.Url ?? SelfHostOptions.DefaultUrl,
         };
         DiagnosticManager.Enabled = options.Enabled;
-        return StartAsync(options.Url, options, cancellationToken);
+        return StartAsync(options.Url, options, cancellationToken, serviceProvider);
     }
 
     /// <summary>Starts a standalone self-host listener.</summary>
     public static async Task<DiagnosticSelfHost> StartAsync(
         string url = null,
         SelfHostOptions options = null,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default,
+        IServiceProvider serviceProvider = null
     )
     {
         SelfHostOptions resolvedOptions = options ?? new SelfHostOptions();
@@ -60,7 +69,9 @@ public static class DiagnosticSelfHostingService
         if (Hosts.ContainsKey(listenerUrl))
             throw new InvalidOperationException($"A self-host listener is already running at '{listenerUrl}'.");
 
-        DiagnosticSelfHost host = await DiagnosticSelfHostFactory.StartAsync(listenerUrl, resolvedOptions, cancellationToken).ConfigureAwait(false);
+        DiagnosticSelfHost host = await DiagnosticSelfHostFactory
+            .StartAsync(listenerUrl, resolvedOptions, cancellationToken, serviceProvider)
+            .ConfigureAwait(false);
         if (!Hosts.TryAdd(listenerUrl, host))
         {
             await host.StopAsync().ConfigureAwait(false);

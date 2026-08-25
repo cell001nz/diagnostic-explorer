@@ -16,6 +16,27 @@ All adapters use `EventSinkRouteOptions` from `DiagnosticExplorer.Logging`. The 
 
 Each matching rule may set `MinLevel` and `MaxLevel`, and can write to multiple sinks. Destinations use the `SinkCategory/SinkName` shorthand; `/` is reserved and cannot appear in either value. The object form with `SinkName` and `SinkCategory` remains available for programmatic configuration. The default `AllMatches` policy preserves log4net-style fan-out: a `Widgets` event can go to both a widget sink and a global warning or error sink. `MostSpecific` selects the longest matching prefix; `FirstMatch` uses declaration order. `StopProcessing` ends rule discovery after the matching rule is included.
 
+Each destination component accepts a `RouteValue`. Strings implicitly become fixed values, while `RouteValue.LoggerSuffix` uses the logger category portion after the matched route prefix. This can provide the sink category:
+
+```csharp
+routes.Route(
+  typeof(Widget).FullName,
+  route => route.To(
+    sinkCategory: RouteValue.LoggerSuffix,
+    sinkName: "Widget Events"));
+```
+
+For example, `WidgetSample.Harness.Widget.Widget X(1)` routes to sink name `Widget Events` and sink category `Widget X(1)`. The direction can be reversed with `route.To("Widgets", RouteValue.LoggerSuffix)`, producing sink category `Widgets` and sink name `Widget X(1)`.
+
+The equivalent destination in configuration is:
+
+```json
+{
+  "SinkCategory": { "Source": "LoggerSuffix" },
+  "SinkName": "Widget Events"
+}
+```
+
 ```json
 {
   "Logging": {

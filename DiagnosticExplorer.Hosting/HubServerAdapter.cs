@@ -23,11 +23,13 @@ internal class HubServerAdapter : IDiagnosticHubClient
 
     private readonly IDiagnosticHubServer _hubServer;
     private readonly IDisposable _clientRegistration;
+    private readonly IServiceProvider _serviceProvider;
 
-    public HubServerAdapter(HubConnection hubConn)
+    public HubServerAdapter(HubConnection hubConn, IServiceProvider serviceProvider = null)
     {
         _hubServer = hubConn.CreateHubProxy<IDiagnosticHubServer>();
         _clientRegistration = hubConn.Register<IDiagnosticHubClient>(this);
+        _serviceProvider = serviceProvider;
     }
 
     public Task SubscribeEvents()
@@ -72,14 +74,13 @@ internal class HubServerAdapter : IDiagnosticHubClient
         _clientRegistration.Dispose();
     }
 
-
     public Task<byte[]> GetDiagnostics()
     {
         return Task.Run(() =>
         {
             try
             {
-                DiagnosticResponse response = DiagnosticManager.GetDiagnostics();
+                DiagnosticResponse response = DiagnosticManager.GetDiagnostics(_serviceProvider);
                 return ProtobufUtil.Compress(response, 1024);
             }
             catch (Exception ex)
@@ -96,7 +97,7 @@ internal class HubServerAdapter : IDiagnosticHubClient
         {
             try
             {
-                return DiagnosticManager.SetProperty(path, value);
+                return DiagnosticManager.SetProperty(_serviceProvider, path, value);
             }
             catch (Exception ex)
             {
@@ -112,7 +113,7 @@ internal class HubServerAdapter : IDiagnosticHubClient
         {
             try
             {
-                return await DiagnosticManager.ExecuteOperation(path, operation, args);
+                return await DiagnosticManager.ExecuteOperation(_serviceProvider, path, operation, args);
             }
             catch (Exception ex)
             {

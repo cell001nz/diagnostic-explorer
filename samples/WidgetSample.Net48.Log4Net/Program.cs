@@ -24,7 +24,7 @@ namespace WidgetSample.Net48.Log4Net
                             services.ConfigureDiagnosticExplorer(diagnostics =>
                                 DiagnosticsConfiguration.Configure(diagnostics, context.Configuration)
                             );
-                            services.AddTransient<Form1>();
+                            services.AddSingleton<Form1>();
                         }
                     )
                     .Build()

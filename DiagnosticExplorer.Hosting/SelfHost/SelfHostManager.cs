@@ -21,9 +21,11 @@ public sealed class SelfHostManager : IDisposable
     private CancellationTokenSource _diagnosticsStopToken;
     private Task _diagnosticsTask;
     private int _disposed;
+    private readonly IServiceProvider _serviceProvider;
 
-    public SelfHostManager()
+    public SelfHostManager(IServiceProvider serviceProvider = null)
     {
+        _serviceProvider = serviceProvider;
         _eventStream = EventSinkRepo.Default.CreateSinkStream(TimeSpan.FromMilliseconds(50), 100);
         _eventTask = Task.Run(StreamEventsAsync);
     }
@@ -68,7 +70,7 @@ public sealed class SelfHostManager : IDisposable
 
         try
         {
-            await client.ShowDiagnostics(LocalProcessId, DiagnosticManager.GetDiagnostics());
+            await client.ShowDiagnostics(LocalProcessId, DiagnosticManager.GetDiagnostics(_serviceProvider));
             await client.SetEvents(LocalProcessId, EventSinkRepo.Default.GetEvents());
         }
         catch (Exception ex)
@@ -92,7 +94,7 @@ public sealed class SelfHostManager : IDisposable
 
         try
         {
-            return Task.FromResult(DiagnosticManager.SetProperty(request.Path, request.Value));
+            return Task.FromResult(DiagnosticManager.SetProperty(_serviceProvider, request.Path, request.Value));
         }
         catch (Exception ex)
         {
@@ -109,7 +111,7 @@ public sealed class SelfHostManager : IDisposable
 
         try
         {
-            return await DiagnosticManager.ExecuteOperation(request.Path, request.Operation, request.Arguments);
+            return await DiagnosticManager.ExecuteOperation(_serviceProvider, request.Path, request.Operation, request.Arguments);
         }
         catch (Exception ex)
         {
@@ -140,7 +142,7 @@ public sealed class SelfHostManager : IDisposable
                 {
                     if (!_clients.IsEmpty)
                     {
-                        DiagnosticResponse diagnostics = DiagnosticManager.GetDiagnostics();
+                        DiagnosticResponse diagnostics = DiagnosticManager.GetDiagnostics(_serviceProvider);
                         await Task.WhenAll(_clients.Values.Select(client => TrySendDiagnostics(client, diagnostics)));
                     }
                 }

@@ -15,7 +15,6 @@ using log4net;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 
-
 namespace DiagnosticExplorer;
 
 public class RegistrationHandler
@@ -34,12 +33,13 @@ public class RegistrationHandler
     private Channel<IList<DiagnosticMsg>> _logChannel;
 
     private Action<HttpConnectionOptions> _configureHttp;
+    private readonly IServiceProvider _serviceProvider;
 
-
-    public RegistrationHandler(string url, Registration registration)
+    public RegistrationHandler(string url, Registration registration, IServiceProvider serviceProvider = null)
     {
         _url = url;
         _registration = registration;
+        _serviceProvider = serviceProvider;
     }
 
     public void Start(Action<HttpConnectionOptions> configureHttp = null)
@@ -47,16 +47,15 @@ public class RegistrationHandler
         _configureHttp = configureHttp;
         _stopToken = new CancellationTokenSource();
         _logChannel = Channel.CreateBounded<IList<DiagnosticMsg>>(
-            new BoundedChannelOptions(1_000_000) {
+            new BoundedChannelOptions(1_000_000)
+            {
                 FullMode = BoundedChannelFullMode.DropWrite,
                 SingleReader = true,
-                SingleWriter = false
-            });
+                SingleWriter = false,
+            }
+        );
 
-        _logSubject
-            .Buffer(TimeSpan.FromSeconds(2), 50)
-            .Where(evts => evts.Count != 0)
-            .Subscribe(evts => _logChannel?.Writer.TryWrite(evts));
+        _logSubject.Buffer(TimeSpan.FromSeconds(2), 50).Where(evts => evts.Count != 0).Subscribe(evts => _logChannel?.Writer.TryWrite(evts));
 
         _registrationLoop = Task.Run(() => RunRegistrationProcess(_stopToken.Token));
         _loggingTask = Task.Run(() => RunLoggingProcess(_stopToken.Token));
@@ -84,7 +83,9 @@ public class RegistrationHandler
                     Debug.WriteLine($"RegistrationHandler sending {data.Length} bytes");
                     await _hubAdapter.LogEvents(data).ConfigureAwait(false);
                     watch2.Stop();
-                    Debug.WriteLine($"RegistrationHandler sent {data.Length} bytes, zip/send took {watch1.ElapsedMilliseconds}ms/{watch2.ElapsedMilliseconds}ms");
+                    Debug.WriteLine(
+                        $"RegistrationHandler sent {data.Length} bytes, zip/send took {watch1.ElapsedMilliseconds}ms/{watch2.ElapsedMilliseconds}ms"
+                    );
                 }
                 catch (Exception ex)
                 {
@@ -107,7 +108,8 @@ public class RegistrationHandler
         while (!cancelToken.IsCancellationRequested)
             try
             {
-                if (delay != TimeSpan.Zero) await Task.Delay(delay, cancelToken);
+                if (delay != TimeSpan.Zero)
+                    await Task.Delay(delay, cancelToken);
 
                 delay = TimeSpan.FromSeconds(5);
 
@@ -119,9 +121,7 @@ public class RegistrationHandler
 
                 RegistrationResponse response = await _hubAdapter.Register(_registration);
 
-                delay = response.RenewTimeSeconds <= 0
-                    ? TimeSpan.FromSeconds(20)
-                    : TimeSpan.FromSeconds(response.RenewTimeSeconds);
+                delay = response.RenewTimeSeconds <= 0 ? TimeSpan.FromSeconds(20) : TimeSpan.FromSeconds(response.RenewTimeSeconds);
             }
             catch (Exception ex)
             {
@@ -161,9 +161,16 @@ public class RegistrationHandler
         {
             Debug.WriteLine("Diagnostic RegistrationHandler constructing connection");
             _connection = new HubConnectionBuilder()
-                .WithUrl(_url, _configureHttp ?? (options => {
-                    options.UseDefaultCredentials = true;
-                }))
+                .WithUrl(
+                    _url,
+                    _configureHttp
+                        ?? (
+                            options =>
+                            {
+                                options.UseDefaultCredentials = true;
+                            }
+                        )
+                )
                 .Build();
 
             _connection.Closed += HandleClosed;
@@ -172,7 +179,7 @@ public class RegistrationHandler
             await _connection.StartAsync(_stopToken.Token);
 
             Debug.WriteLine("Diagnostic RegistrationHandler connection started");
-            _hubAdapter = new HubServerAdapter(_connection);
+            _hubAdapter = new HubServerAdapter(_connection, _serviceProvider);
         }
     }
 

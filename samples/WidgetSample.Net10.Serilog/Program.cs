@@ -23,7 +23,7 @@ internal static class Program
                 {
                     services.ConfigureDiagnosticExplorer(diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration));
                     logger = new LoggerConfiguration().MinimumLevel.Verbose().WriteTo.DiagnosticExplorer().CreateLogger();
-                    services.AddTransient<Form1>();
+                    services.AddSingleton<Form1>();
                 }
             )
             .Build();

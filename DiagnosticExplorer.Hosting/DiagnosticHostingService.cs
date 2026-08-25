@@ -21,15 +21,31 @@ public class DiagnosticHostingService : IHostedService
     private RegistrationHandler[] _registrationHandlers;
 
     private Action<HttpConnectionOptions> _configureHttp;
+    private readonly IServiceProvider _serviceProvider;
 
-    private DiagnosticHostingService(DiagExplorerOptions options, Action<HttpConnectionOptions> configureHttp = null)
+    private DiagnosticHostingService(
+        DiagExplorerOptions options,
+        Action<HttpConnectionOptions> configureHttp = null,
+        IServiceProvider serviceProvider = null
+    )
     {
         _options = options;
         _configureHttp = configureHttp;
+        _serviceProvider = serviceProvider;
     }
 
     public DiagnosticHostingService(IOptions<DiagExplorerOptions> options, Action<HttpConnectionOptions> configureHttp = null)
         : this(options.Value, configureHttp)
+    {
+        Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled}");
+    }
+
+    internal DiagnosticHostingService(
+        IOptions<DiagExplorerOptions> options,
+        IServiceProvider serviceProvider,
+        Action<HttpConnectionOptions> configureHttp = null
+    )
+        : this(options.Value, configureHttp, serviceProvider)
     {
         Debug.WriteLine($"DiagnosticHostingService constructed {_options.Enabled}");
     }
@@ -74,7 +90,7 @@ public class DiagnosticHostingService : IHostedService
                 .SelectMany(host => Regex.Split(host.Url ?? string.Empty, @"\s|;|,"))
                 .Select(hubUrl => hubUrl.Trim())
                 .Where(hubUrl => !string.IsNullOrWhiteSpace(hubUrl))
-                .Select(hubUrl => new RegistrationHandler(hubUrl, registration))
+                .Select(hubUrl => new RegistrationHandler(hubUrl, registration, _serviceProvider))
                 .ToArray();
 
             foreach (RegistrationHandler handler in _registrationHandlers)

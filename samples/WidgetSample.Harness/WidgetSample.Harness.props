@@ -4,6 +4,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Form1.cs" Link="Harness\Form1.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Form1.Designer.cs" Link="Harness\Form1.Designer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Gadget.cs" Link="Harness\Gadget.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GadgetConfig.cs" Link="Harness\GadgetConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SampleLogLevel.cs" Link="Harness\SampleLogLevel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TraceScopeExample.cs" Link="Harness\TraceScopeExample.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Widget.cs" Link="Harness\Widget.cs" />

@@ -26,7 +26,7 @@ internal static class Program
                         builder.SetMinimumLevel(LogLevel.Trace);
                         builder.AddDiagnosticExplorer();
                     });
-                    services.AddTransient<Form1>();
+                    services.AddSingleton<Form1>();
                 }
             )
             .Build();
@@ -34,7 +34,6 @@ internal static class Program
 
         try
         {
-            Form1.InitializeLoggers(host.Services.GetRequiredService<ILoggerFactory>());
             ApplicationConfiguration.Initialize();
             Application.Run(host.Services.GetRequiredService<Form1>());
         }

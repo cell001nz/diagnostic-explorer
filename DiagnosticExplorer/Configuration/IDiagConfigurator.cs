@@ -8,6 +8,7 @@ namespace DiagnosticExplorer;
 public interface IDiagConfigurator
 {
     bool ApplyAttributes { get; set; }
+    void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects);
     void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure);
     void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
     void DefaultFormat<T>(string formatString);

@@ -96,6 +96,34 @@ public class EventSinkRouterTests
     }
 
     [Fact]
+    public void LoggerSuffixCanProvideDestinationCategory()
+    {
+        EventSinkRepo repo = new();
+        EventSinkRouteOptions options = new();
+        options.Route("WidgetSample.Harness.Widget", route => route.To(RouteValue.LoggerSuffix, "Widget Events"));
+        EventSinkRouter router = new(options, repo);
+
+        int writes = router.Route(new EventSinkLogEvent("WidgetSample.Harness.Widget.Widget X(1)", LogLevel.Information, "Refreshed"));
+
+        Assert.Equal(1, writes);
+        Assert.Single(repo.GetSink("Widget Events", "Widget X(1)").Events);
+    }
+
+    [Fact]
+    public void LoggerSuffixCanProvideDestinationName()
+    {
+        EventSinkRepo repo = new();
+        EventSinkRouteOptions options = new();
+        options.Route("WidgetSample.Harness.Widget", route => route.To("Widgets", RouteValue.LoggerSuffix));
+        EventSinkRouter router = new(options, repo);
+
+        int writes = router.Route(new EventSinkLogEvent("WidgetSample.Harness.Widget.Widget X(1)", LogLevel.Information, "Refreshed"));
+
+        Assert.Equal(1, writes);
+        Assert.Single(repo.GetSink("Widget X(1)", "Widgets").Events);
+    }
+
+    [Fact]
     public void DisabledDiagnosticsSuppressesDirectAndRoutedEventWrites()
     {
         bool wasEnabled = DiagnosticManager.Enabled;

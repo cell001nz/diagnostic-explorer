@@ -13,6 +13,39 @@ public enum EventSinkRouteMatchMode
     FirstMatch,
 }
 
+public enum RouteValueSource
+{
+    Fixed,
+    LoggerSuffix,
+}
+
+[TypeConverter(typeof(RouteValueConverter))]
+public sealed class RouteValue
+{
+    public RouteValueSource Source { get; set; }
+
+    public string Value { get; set; }
+
+    public static RouteValue LoggerSuffix => new() { Source = RouteValueSource.LoggerSuffix };
+
+    public static RouteValue Fixed(string value) => new() { Value = value };
+
+    public static implicit operator RouteValue(string value) => Fixed(value);
+}
+
+public sealed class RouteValueConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    {
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+    }
+
+    public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+    {
+        return value is string text ? RouteValue.Fixed(text) : base.ConvertFrom(context, culture, value);
+    }
+}
+
 public sealed class EventSinkRouteOptions
 {
     public EventSinkRouteMatchMode MatchMode { get; set; } = EventSinkRouteMatchMode.AllMatches;
@@ -65,10 +98,13 @@ public sealed class EventSinkRoute
 
     public EventSinkRoute To(string sinkCategory, string sinkName)
     {
-        if (string.IsNullOrWhiteSpace(sinkCategory))
-            throw new ArgumentException("A sink category is required.", nameof(sinkCategory));
-        if (string.IsNullOrWhiteSpace(sinkName))
-            throw new ArgumentException("A sink name is required.", nameof(sinkName));
+        return To(RouteValue.Fixed(sinkCategory), RouteValue.Fixed(sinkName));
+    }
+
+    public EventSinkRoute To(RouteValue sinkCategory, RouteValue sinkName)
+    {
+        ValidateRouteValue(sinkCategory, nameof(sinkCategory));
+        ValidateRouteValue(sinkName, nameof(sinkName));
 
         Destinations.Add(new EventSinkDestination { SinkCategory = sinkCategory, SinkName = sinkName });
         return this;
@@ -79,14 +115,24 @@ public sealed class EventSinkRoute
         StopProcessing = stopProcessing;
         return this;
     }
+
+    private static void ValidateRouteValue(RouteValue routeValue, string parameterName)
+    {
+        if (routeValue == null)
+            throw new ArgumentNullException(parameterName);
+        if (!Enum.IsDefined(typeof(RouteValueSource), routeValue.Source))
+            throw new ArgumentOutOfRangeException(parameterName, "The route value source is invalid.");
+        if (routeValue.Source == RouteValueSource.Fixed && string.IsNullOrWhiteSpace(routeValue.Value))
+            throw new ArgumentException("A fixed route value is required.", parameterName);
+    }
 }
 
 [TypeConverter(typeof(EventSinkDestinationConverter))]
 public sealed class EventSinkDestination
 {
-    public string SinkName { get; set; }
+    public RouteValue SinkName { get; set; }
 
-    public string SinkCategory { get; set; }
+    public RouteValue SinkCategory { get; set; }
 }
 
 public sealed class EventSinkDestinationConverter : TypeConverter

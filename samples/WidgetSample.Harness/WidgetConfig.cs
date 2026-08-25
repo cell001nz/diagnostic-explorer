@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using log4net.Repository.Hierarchy;
 
 namespace WidgetSample.Harness;
 
@@ -32,7 +33,7 @@ public sealed class WidgetConfig
 
     public List<WidgetConfigItem> Items { get; }
 
-    public void RandomlyChangeValues(decimal percentage)
+    public void RefreshValues(decimal percentage)
     {
         if (percentage <= 0 || percentage > 1)
             throw new ArgumentOutOfRangeException(nameof(percentage));

@@ -25,28 +25,21 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Text.Json;
 using DiagnosticExplorer;
 
 namespace WidgetSample.Harness;
 
 //Widget uses the DiagnosticManager.RegisterAsync method of registering itself with diagnostics
-public class Widget : IDisposable, INotifyPropertyChanged
+public partial class Widget : IDisposable, INotifyPropertyChanged
 {
     private static readonly Random _rand = new Random();
     private static readonly string[] _names = new[] { "Widget X", "Widget Y", "Widget Z", "Widget W" };
     private readonly int _id;
+    private readonly SampleLogger _log;
     private DateTime _dateCreated;
     private string _name;
     private Point _size;
-
-    public Widget(int id)
-    {
-        _id = id;
-
-        Randomise();
-        string bagName = $"Widget {_id}";
-        DiagnosticManager.Register(this, bagName, "Widgets");
-    }
 
     public int Id
     {
@@ -55,12 +48,20 @@ public class Widget : IDisposable, INotifyPropertyChanged
 
     public string FullName => $"{Name}({_id})";
 
+    public WidgetConfig Configuration { get; } = new();
+
     [DiagnosticMethod]
     public void Randomise()
     {
         Name = _names[_rand.Next(0, _names.Length)];
         DateCreated = DateTime.Now.AddMinutes(_rand.Next(0, 10000));
         Size = new Point(_rand.Next(), _rand.Next());
+    }
+
+    public void RefreshValues()
+    {
+        Configuration.RefreshValues(0.2m);
+        _log.Info($"{FullName} Refreshed values " + JsonSerializer.Serialize(Configuration, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     [DiagnosticMethod]
@@ -161,4 +162,3 @@ public class Widget : IDisposable, INotifyPropertyChanged
         DateCreated = dateCreated;
     }
 }
-

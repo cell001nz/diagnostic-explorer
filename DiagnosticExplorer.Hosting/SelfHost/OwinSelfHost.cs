@@ -15,12 +15,17 @@ namespace DiagnosticExplorer;
 
 internal static class DiagnosticSelfHostFactory
 {
-    internal static Task<DiagnosticSelfHost> StartAsync(string url, SelfHostOptions options, System.Threading.CancellationToken cancellationToken)
+    internal static Task<DiagnosticSelfHost> StartAsync(
+        string url,
+        SelfHostOptions options,
+        System.Threading.CancellationToken cancellationToken,
+        IServiceProvider serviceProvider
+    )
     {
         if (!string.IsNullOrEmpty(options.GetNormalizedPathBase()))
             throw new NotSupportedException("PathBase is not supported by the standalone net48 OWIN host.");
 
-        SelfHostManager manager = new();
+        SelfHostManager manager = new(serviceProvider);
         IDisposable server = WebApp.Start(url, app => Configure(app, manager, options));
         DiagnosticSelfHost host = new(
             url + options.GetNormalizedPathBase(),

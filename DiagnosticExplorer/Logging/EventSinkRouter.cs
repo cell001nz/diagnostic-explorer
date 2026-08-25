@@ -46,11 +46,16 @@ public sealed class EventSinkRouter
         {
             foreach (EventSinkDestination destination in route.Destinations)
             {
-                string key = $"{destination.SinkName}\u001f{destination.SinkCategory}";
+                string sinkName = route.Resolve(destination.SinkName, logEvent.Category);
+                string sinkCategory = route.Resolve(destination.SinkCategory, logEvent.Category);
+                if (string.IsNullOrWhiteSpace(sinkName) || string.IsNullOrWhiteSpace(sinkCategory))
+                    continue;
+
+                string key = $"{sinkName}\u001f{sinkCategory}";
                 if (!destinations.Add(key))
                     continue;
 
-                _sinkRepo.GetSink(destination.SinkName, destination.SinkCategory).LogEvent((int)logEvent.Level, logEvent.Message, logEvent.Detail);
+                _sinkRepo.GetSink(sinkName, sinkCategory).LogEvent((int)logEvent.Level, logEvent.Message, logEvent.Detail);
                 writes++;
             }
         }
@@ -107,11 +112,7 @@ public sealed class EventSinkRouter
                 throw new ArgumentException("A route minimum level cannot exceed its maximum level.", nameof(route));
             if (route.Destinations == null || route.Destinations.Count == 0)
                 throw new ArgumentException("A route must define at least one destination.", nameof(route));
-            if (
-                route.Destinations.Any(destination =>
-                    destination == null || string.IsNullOrWhiteSpace(destination.SinkName) || string.IsNullOrWhiteSpace(destination.SinkCategory)
-                )
-            )
+            if (route.Destinations.Any(destination => destination == null || !IsValid(destination.SinkName) || !IsValid(destination.SinkCategory)))
                 throw new ArgumentException("Each route destination requires a sink name and category.", nameof(route));
 
             CategoryPattern = route.CategoryPattern.Trim();
@@ -136,6 +137,25 @@ public sealed class EventSinkRouter
         public int Order { get; }
 
         public int Specificity { get; }
+
+        public string Resolve(RouteValue routeValue, string category)
+        {
+            if (routeValue.Source == RouteValueSource.Fixed)
+                return routeValue.Value;
+            if (CategoryPattern == "*")
+                return category;
+            if (category.Length <= CategoryPattern.Length)
+                return null;
+
+            return category.Substring(CategoryPattern.Length + 1);
+        }
+
+        private static bool IsValid(RouteValue routeValue)
+        {
+            return routeValue != null
+                && Enum.IsDefined(typeof(RouteValueSource), routeValue.Source)
+                && (routeValue.Source != RouteValueSource.Fixed || !string.IsNullOrWhiteSpace(routeValue.Value));
+        }
 
         public bool Matches(string category, LogLevel level)
         {

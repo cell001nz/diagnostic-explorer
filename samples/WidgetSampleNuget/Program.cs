@@ -44,16 +44,18 @@ internal static class Program
     {
         using IHost host = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((_, configuration) => configuration.AddJsonFile("config.json", optional: false, reloadOnChange: false))
-            .ConfigureServices((context, services) =>
-            {
-                services.ConfigureDiagnosticExplorer(diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration));
-                services.AddLogging(builder =>
+            .ConfigureServices(
+                (context, services) =>
                 {
-                    builder.SetMinimumLevel(LogLevel.Trace);
-                    builder.AddDiagnosticExplorer();
-                });
-                services.AddTransient<Form1>();
-            })
+                    services.ConfigureDiagnosticExplorer(diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration));
+                    services.AddLogging(builder =>
+                    {
+                        builder.SetMinimumLevel(LogLevel.Trace);
+                        builder.AddDiagnosticExplorer();
+                    });
+                    services.AddSingleton<Form1>();
+                }
+            )
             .Build();
         host.Start();
 

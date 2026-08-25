@@ -10,11 +10,13 @@ namespace DiagnosticExplorer;
 internal sealed class DiagnosticSelfHostHostedService : IHostedService
 {
     private readonly DiagExplorerOptions _options;
+    private readonly IServiceProvider _serviceProvider;
     private DiagnosticSelfHost[] _selfHosts = Array.Empty<DiagnosticSelfHost>();
 
-    public DiagnosticSelfHostHostedService(IOptions<DiagExplorerOptions> options)
+    public DiagnosticSelfHostHostedService(IOptions<DiagExplorerOptions> options, IServiceProvider serviceProvider)
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -30,7 +32,8 @@ internal sealed class DiagnosticSelfHostHostedService : IHostedService
                 DiagnosticSelfHostingService.StartAsync(
                     host.Url,
                     new SelfHostOptions { Enabled = _options.Enabled, Url = host.Url },
-                    cancellationToken
+                    cancellationToken,
+                    _serviceProvider
                 )
             )
         );

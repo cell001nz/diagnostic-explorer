@@ -51,8 +51,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private Timer _configTimer;
     private Timer _listTestTimer;
     private Task _autoLogTask;
-    private Timer _scopeTimer;
-    private Task _scopeTask;
 
     public Form1()
     {
@@ -81,25 +79,28 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
         UpdateList = new List<int> { 1, 2, 4, 5 };
 
-        //RegisterAsync this class with diagnostics
-        DiagnosticManager.Register(this, "Main Form", "Form 1");
         //			SendInitial();
         _evtTimer = new Timer(SendEvents, null, 1000, 1000);
         _counterTimer = new Timer(IncrementCount, null, 400, 400);
         _listTestTimer = new Timer(MungeNumbersList, null, 100, 100);
-        _configTimer = new Timer(ChangeConfigurationValues, null, 750, 1000);
-        FormClosed += (_, _) => _configTimer.Dispose();
+        _configTimer = new Timer(RefreshWidgetsAndGadgets, null, 750, 1000);
+        FormClosing += (_, _) => _configTimer.Dispose();
 
         txtContent.DataBindings.Add("Text", this, "InfoText", false, DataSourceUpdateMode.OnPropertyChanged);
 
-        _scopeTimer = new Timer(x => DoScopeTimerCode(), null, 500, 500);
-        _scopeTask = RunScopeTask();
+        Shown += HandleFormShown;
+    }
+
+    private void HandleFormShown(object sender, EventArgs e)
+    {
+        AddGadget();
+        AddGadget();
+        AddWidget();
+        AddWidget();
     }
 
     [ExtendedProperty]
     public Widget NullWidget => null;
-
-    public WidgetConfig Configuration { get; } = new();
 
     //		[CollectionList(Category="Numbers")]
     public List<int> UpdateList { get; }
@@ -176,9 +177,13 @@ public partial class Form1 : Form, INotifyPropertyChanged
         Counter2++;
     }
 
-    private void ChangeConfigurationValues(object state)
+    private void RefreshWidgetsAndGadgets(object state)
     {
-        Configuration.RandomlyChangeValues(0.2m);
+        foreach (Widget widget in _widgets.ToArray())
+            widget.RefreshValues();
+
+        foreach (Gadget gadget in _gadgets.ToArray())
+            gadget.RefreshValues();
     }
 
     [DiagnosticMethod]
@@ -372,23 +377,31 @@ public partial class Form1 : Form, INotifyPropertyChanged
         GC.Collect();
     }
 
-    private void bAddGadget_Click(object sender, EventArgs e)
+    private void bAddGadget_Click(object sender, EventArgs e) => AddGadget();
+
+    private void AddGadget()
     {
-        Gadget gadget = new Gadget(GadgetIdCount++);
+        Gadget gadget = CreateGadget(GadgetIdCount++);
         _gadgets.Add(gadget);
-        _gadgetLog.Info($"Added gadget {gadget.Id}");
+        gadget.LogAdded();
         _formLog.Info("Form1 added a gadget");
         GadgetEvents.Register(1);
     }
 
-    private void bAddWidget_Click(object sender, EventArgs e)
+    private partial Gadget CreateGadget(int id);
+
+    private void bAddWidget_Click(object sender, EventArgs e) => AddWidget();
+
+    private void AddWidget()
     {
-        Widget widget = new Widget(WidgetIdCount++);
+        Widget widget = CreateWidget(WidgetIdCount++);
         _widgets.Add(widget);
-        _widgetLog.Info($"Added widget {widget.Id}");
+        widget.LogAdded();
         _formLog.Info("Form1 added a widget");
         WidgetEvents.Register(1);
     }
+
+    private partial Widget CreateWidget(int id);
 
     private void bMinorProblem_Click(object sender, EventArgs e)
     {
@@ -572,49 +585,6 @@ public partial class Form1 : Form, INotifyPropertyChanged
     {
         TraceScope.Trace($"REPORT {Task.CurrentId} {message}");
         Trace.WriteLine($"REPORT {Task.CurrentId} {message}");
-    }
-
-    private async Task RunScopeTask()
-    {
-        while (true)
-        {
-            // using (var scope = new TraceScope("SYNC BLAH 1"))
-            {
-                string message =
-                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$%";
-                TraceScope.Trace(message);
-            }
-            // using (var scope = new AsyncTraceScope("ASYNC BLAH 1"))
-            {
-                string message =
-                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TASK {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$%";
-                TraceScope.Trace(message);
-            }
-
-            await Task.Delay(500);
-        }
-    }
-
-    private void DoScopeTimerCode()
-    {
-        Invoke(() =>
-        {
-            using (var scope = new TraceScope("SYNC BLAH 2"))
-            {
-                string message =
-                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$% ";
-                TraceScope.Trace(message);
-            }
-        });
-        Invoke(() =>
-        {
-            using (var scope = new TraceScope("ASYNC BLAH 2"))
-            {
-                string message =
-                    $"�$%�$%�$%�$%�$%�$%�$%�$%�$%�$% SCOPE TIMER {InvokeRequired} {DateTime.Now:d MMM yyyy HH:mm:ss} �$%�$%�$%�$%�$%�$%�$%�$%�$%�$% ";
-                TraceScope.Trace(message);
-            }
-        });
     }
 
     private void btn10_Click(object sender, EventArgs e)
