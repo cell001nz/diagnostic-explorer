@@ -26,6 +26,7 @@ internal static class DiagnosticsConfiguration
 
         ConfigureForm(config);
         ConfigureWidget(config);
+        ConfigureWidgetConfig(config);
         ConfigureGadget(config);
     }
 
@@ -46,6 +47,7 @@ internal static class DiagnosticsConfiguration
         {
             options.OptIn();
             options.Extended(form => form.NullWidget).Category("NullWidget category");
+            options.Property(form => form.Configuration).Category("Widget Configuration");
             options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
             options.Property(form => form.SetMePlease).AllowSet();
             options.Property(form => form.Counter2);
@@ -59,6 +61,7 @@ internal static class DiagnosticsConfiguration
             {
                 options.Property(form => form.WidgetIdCount);
                 options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
+                options.Collection(form => form.Widgets).List();
             }
 
             using (options.CreateCategoryScope("Gadgets"))
@@ -77,16 +80,26 @@ internal static class DiagnosticsConfiguration
                 options
                     .Collection(form => form.Gadgets)
                     .List(opt => opt.Name(g => $"{g.Id} - {g.Name}").Category(g => g.Purpose).Description(g => $"Description for {g.Name}"))
-                    .WithMaxItems(10);
+                    .WithMaxItems(int.MaxValue);
             }
 
             options
                 .CustomProperty("Computed", f => $"This form has {f.Controls.Count} controls")
                 .Description(f => $"Control Info for {f.GetHashCode()}")
                 .Category("ASDF");
-
-            options.Collection(form => form.Widgets).Categories(widget => widget.FullName).WithMaxItems(10);
         });
+    }
+
+    private static void ConfigureWidgetConfig(IDiagConfigurator config)
+    {
+        config.Configure<WidgetConfig>(options =>
+        {
+            options.OptOut();
+            options.Collection(configuration => configuration.Items).List();
+        });
+
+        config.Configure<WidgetConfigItem>(options => options.OptOut());
+        config.Configure<WidgetConnectionConfig>(options => options.OptOut());
     }
 
     private static void ConfigureWidget(IDiagConfigurator config)

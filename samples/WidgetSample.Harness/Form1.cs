@@ -48,6 +48,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private Timer _evtTimer;
 
     private string _infoText;
+    private Timer _configTimer;
     private Timer _listTestTimer;
     private Task _autoLogTask;
     private Timer _scopeTimer;
@@ -86,6 +87,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
         _evtTimer = new Timer(SendEvents, null, 1000, 1000);
         _counterTimer = new Timer(IncrementCount, null, 400, 400);
         _listTestTimer = new Timer(MungeNumbersList, null, 100, 100);
+        _configTimer = new Timer(ChangeConfigurationValues, null, 750, 1000);
+        FormClosed += (_, _) => _configTimer.Dispose();
 
         txtContent.DataBindings.Add("Text", this, "InfoText", false, DataSourceUpdateMode.OnPropertyChanged);
 
@@ -95,6 +98,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     [ExtendedProperty]
     public Widget NullWidget => null;
+
+    public WidgetConfig Configuration { get; } = new();
 
     //		[CollectionList(Category="Numbers")]
     public List<int> UpdateList { get; }
@@ -169,6 +174,11 @@ public partial class Form1 : Form, INotifyPropertyChanged
     {
         SetMePlease++;
         Counter2++;
+    }
+
+    private void ChangeConfigurationValues(object state)
+    {
+        Configuration.RandomlyChangeValues(0.2m);
     }
 
     [DiagnosticMethod]
