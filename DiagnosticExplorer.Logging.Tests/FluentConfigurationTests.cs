@@ -530,6 +530,45 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void DrillDownResolvesStaticAndInstanceEventViews()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Child).WithDrillDown();
+        });
+        configuration.ConfigureDrillDown<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Route("Widgets", LoggerNameMatchMode.Prefix, route => route.To("Events", "All Widgets"));
+            type.Route(child => child.LoggerName, LoggerNameMatchMode.Exact, route => route.To("Events", "Selected Widget"));
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(new DrillDownRoot(), "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+        );
+
+        Assert.Collection(
+            response.EventViews,
+            view =>
+            {
+                Assert.Equal(("Events", "All Widgets"), (view.Category, view.Name));
+                DrillDownEventMatcher matcher = Assert.Single(view.Matchers);
+                Assert.Equal(("Widgets", LoggerNameMatchMode.Prefix), (matcher.LoggerName, matcher.MatchMode));
+            },
+            view =>
+            {
+                Assert.Equal(("Events", "Selected Widget"), (view.Category, view.Name));
+                DrillDownEventMatcher matcher = Assert.Single(view.Matchers);
+                Assert.Equal(("Widgets.Nested", LoggerNameMatchMode.Exact), (matcher.LoggerName, matcher.MatchMode));
+            }
+        );
+    }
+
+    [Fact]
     public void DrillDownFallsBackToNormalTypeConfiguration()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
@@ -987,6 +1026,7 @@ public sealed class FluentConfigurationTests : IDisposable
     private sealed class ChildSample
     {
         public string Name { get; } = "Nested";
+        public string LoggerName { get; } = "Widgets.Nested";
         public string Excluded { get; } = "Nested";
         public GrandChildSample Details { get; } = new();
         public string Editable { get; set; } = "Initial";

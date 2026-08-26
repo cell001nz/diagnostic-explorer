@@ -7,9 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Common;
+using DiagnosticExplorer.Logging;
 
 namespace DiagWebService.ClientHandlers;
-
 
 public class DiagnosticSubscription
 {
@@ -23,9 +23,9 @@ public class DiagnosticSubscription
     private DiagnosticResponse? _lastResponse;
     public string ProcessId => Process.Id;
     private IDiagnosticClient? _eventSubscriptionOwnerClient;
-    private IDisposable? _eventSetSubscription;
-    private IDisposable? _eventStreamSubscription;
-    private readonly EventSinkRepo _eventRepo = new();
+    private IDisposable? _logStreamInitializationSubscription;
+    private IDisposable? _logStreamEventSubscription;
+    private readonly LogEventRelayStore _eventStore = new();
     private readonly object _startStopLock = new();
     private bool _streamingStarted = false;
     private bool _eventSubscriptionStopInProgress = false;
@@ -85,20 +85,16 @@ public class DiagnosticSubscription
         if (_lastResponse != null)
             await TrySend(webClient, _lastResponse);
 
-        if (DiagnosticClient == null)
-            await webClient.SetEvents(ProcessId, _eventRepo.GetEvents());
-
         lock (_startStopLock)
         {
             bool added = _webClients.TryAdd(webClient.ConnectionId, webClient);
 
-            if (added && _streamingStarted)
-                webClient.StartStreamingEvents(Process.Id, _eventRepo);
+            if (added)
+                webClient.InitializeLogStream(ProcessId, _eventStore.CreateInitialization());
 
             StartIfRequired();
         }
     }
-
 
     public void RemoveWebClient(WebClientHandler webClient)
     {
@@ -121,13 +117,17 @@ public class DiagnosticSubscription
     {
         lock (_startStopLock)
         {
-            if (_webClients.Any() && DiagnosticClient != null && _eventStreamSubscription == null
-                && !_eventSubscriptionStopInProgress && !_eventSubscriptionRestartBlocked)
+            if (
+                _webClients.Any()
+                && DiagnosticClient != null
+                && _logStreamEventSubscription == null
+                && !_eventSubscriptionStopInProgress
+                && !_eventSubscriptionRestartBlocked
+            )
                 StartDiagClientEvents();
 
             if (_webClients.Any() && DiagnosticClient != null && _requestLoop == null)
                 StartRequestLoop();
-
         }
     }
 
@@ -142,57 +142,59 @@ public class DiagnosticSubscription
         _requestLoopCancelSource?.Cancel();
         _requestLoop = null;
     }
-    
+
     private void StartDiagClientEvents()
     {
-        _eventRepo.Clear();
         IDiagnosticClient diagnosticClient = DiagnosticClient!;
-        //Debug.WriteLine($"@@@@@@@@@@ DiagnosticSubscription StartEventSubscriptions");
-        IDisposable? eventSetSubscription = null;
-        IDisposable? eventStreamSubscription = null;
-        eventStreamSubscription = diagnosticClient.EventsStreamed.Subscribe(evt =>
-            HandleStreamedEventsArrived(diagnosticClient, eventSetSubscription!, eventStreamSubscription, evt));
-        eventSetSubscription = diagnosticClient.EventsSet.Subscribe(events =>
-            HandleInitialEventsArrived(diagnosticClient, eventSetSubscription, eventStreamSubscription!, events));
+        IDisposable? initializationSubscription = null;
+        IDisposable? eventSubscription = null;
+        initializationSubscription = diagnosticClient.LogStreamInitialized.Subscribe(initialization =>
+            HandleInitialEventsArrived(diagnosticClient, initializationSubscription!, eventSubscription!, initialization)
+        );
+        eventSubscription = diagnosticClient.LogStreamEvents.Subscribe(events =>
+            HandleStreamedEventsArrived(diagnosticClient, initializationSubscription!, eventSubscription!, events)
+        );
         _eventSubscriptionOwnerClient = diagnosticClient;
-        _eventSetSubscription = eventSetSubscription;
-        _eventStreamSubscription = eventStreamSubscription;
-        RunDetached(() => diagnosticClient.SubscribeEvents(),
-            ex => HandleSubscribeEventsFailure(diagnosticClient, eventSetSubscription, eventStreamSubscription, ex));
+        _logStreamInitializationSubscription = initializationSubscription;
+        _logStreamEventSubscription = eventSubscription;
+        RunDetached(
+            () => diagnosticClient.SubscribeEvents(),
+            ex => HandleSubscribeEventsFailure(diagnosticClient, initializationSubscription, eventSubscription, ex)
+        );
     }
 
     private void StopDiagClientEvents(IDiagnosticClient? diagnosticClientToUnsubscribe = null)
     {
-        IDisposable? eventSetSubscription;
-        IDisposable? eventStreamSubscription;
+        IDisposable? initializationSubscription;
+        IDisposable? eventSubscription;
         IDiagnosticClient? diagnosticClient;
         lock (_startStopLock)
         {
-            if (_eventSetSubscription == null && _eventStreamSubscription == null)
+            if (_logStreamInitializationSubscription == null && _logStreamEventSubscription == null)
                 return;
 
-            eventSetSubscription = _eventSetSubscription;
-            eventStreamSubscription = _eventStreamSubscription;
+            initializationSubscription = _logStreamInitializationSubscription;
+            eventSubscription = _logStreamEventSubscription;
             diagnosticClient = diagnosticClientToUnsubscribe ?? _eventSubscriptionOwnerClient;
             _streamingStarted = false;
             _eventSubscriptionOwnerClient = null;
-            _eventSetSubscription = null;
-            _eventStreamSubscription = null;
+            _logStreamInitializationSubscription = null;
+            _logStreamEventSubscription = null;
             _eventSubscriptionStopInProgress = diagnosticClient != null;
             _eventSubscriptionStopClient = diagnosticClient;
         }
 
-        eventSetSubscription?.Dispose();
-        eventStreamSubscription?.Dispose();
+        initializationSubscription?.Dispose();
+        eventSubscription?.Dispose();
 
         if (diagnosticClient != null)
             RunDetached(
                 () => diagnosticClient.UnsubscribeEvents(),
                 ex => HandleUnsubscribeEventsCompletion(diagnosticClient, ex),
-                () => HandleUnsubscribeEventsCompletion(diagnosticClient, null));
+                () => HandleUnsubscribeEventsCompletion(diagnosticClient, null)
+            );
     }
 
-  
     private void RunDetached(Func<Task> action, Action<Exception>? onError = null, Action? onSuccess = null)
     {
         try
@@ -229,7 +231,8 @@ public class DiagnosticSubscription
         IDiagnosticClient diagnosticClient,
         IDisposable eventSetSubscription,
         IDisposable eventStreamSubscription,
-        Exception ex)
+        Exception ex
+    )
     {
         lock (_startStopLock)
         {
@@ -239,8 +242,8 @@ public class DiagnosticSubscription
             eventSetSubscription.Dispose();
             eventStreamSubscription.Dispose();
             _eventSubscriptionOwnerClient = null;
-            _eventSetSubscription = null;
-            _eventStreamSubscription = null;
+            _logStreamInitializationSubscription = null;
+            _logStreamEventSubscription = null;
             _streamingStarted = false;
         }
 
@@ -257,8 +260,7 @@ public class DiagnosticSubscription
             _eventSubscriptionStopInProgress = false;
             _eventSubscriptionStopClient = null;
 
-            if (!_eventSubscriptionRestartBlocked
-                && _webClients.Any() && DiagnosticClient != null && _eventStreamSubscription == null)
+            if (!_eventSubscriptionRestartBlocked && _webClients.Any() && DiagnosticClient != null && _logStreamEventSubscription == null)
                 StartDiagClientEvents();
         }
 
@@ -269,21 +271,21 @@ public class DiagnosticSubscription
     private bool MatchesCurrentEventSubscriptions(
         IDiagnosticClient diagnosticClient,
         IDisposable eventSetSubscription,
-        IDisposable eventStreamSubscription)
+        IDisposable eventStreamSubscription
+    )
     {
         return ReferenceEquals(DiagnosticClient, diagnosticClient)
-            && ReferenceEquals(_eventSetSubscription, eventSetSubscription)
-            && ReferenceEquals(_eventStreamSubscription, eventStreamSubscription);
+            && ReferenceEquals(_logStreamInitializationSubscription, eventSetSubscription)
+            && ReferenceEquals(_logStreamEventSubscription, eventStreamSubscription);
     }
 
     private void HandleInitialEventsArrived(
         IDiagnosticClient diagnosticClient,
         IDisposable eventSetSubscription,
         IDisposable eventStreamSubscription,
-        SystemEvent[] events)
+        LogStreamInitialization initialization
+    )
     {
-        //Debug.WriteLine($"@@@@@@@@@@ DiagnosticSubscription {_instance} initial events arrived {events.Length}");
-
         lock (_startStopLock)
         {
             if (!MatchesCurrentEventSubscriptions(diagnosticClient, eventSetSubscription, eventStreamSubscription))
@@ -292,11 +294,12 @@ public class DiagnosticSubscription
             if (_streamingStarted)
                 return;
 
-            _eventRepo.LogEvents(events);
+            _eventStore.MergeInitialization(initialization);
             _streamingStarted = true;
 
+            LogStreamInitialization currentInitialization = _eventStore.CreateInitialization();
             foreach (WebClientHandler handler in _webClients.Values)
-                handler.StartStreamingEvents(Process.Id, _eventRepo);
+                handler.InitializeLogStream(Process.Id, currentInitialization);
         }
     }
 
@@ -304,15 +307,21 @@ public class DiagnosticSubscription
         IDiagnosticClient diagnosticClient,
         IDisposable eventSetSubscription,
         IDisposable eventStreamSubscription,
-        SystemEvent[] events)
+        LogStreamEvent[] events
+    )
     {
         lock (_startStopLock)
         {
             if (!MatchesCurrentEventSubscriptions(diagnosticClient, eventSetSubscription, eventStreamSubscription))
                 return;
 
-            //Debug.WriteLine($"@@@@@@@@@@ DiagnosticSubscription {_instance} received single event {events.FirstOrDefault()?.Id}");
-            _eventRepo.LogEvents(events);
+            LogStreamEvent[] acceptedEvents = _eventStore.Append(events);
+            if (acceptedEvents.Length == 0)
+                return;
+
+            LogStreamInitialization resynchronization = _eventStore.CreateInitialization();
+            foreach (WebClientHandler handler in _webClients.Values)
+                handler.QueueLogEvents(Process.Id, acceptedEvents, resynchronization);
         }
     }
 
@@ -323,11 +332,10 @@ public class DiagnosticSubscription
             if (_webClients.Count == 0 && _requestLoop != null)
                 StopRequestLoop();
 
-            if (_webClients.Count == 0 && _eventStreamSubscription != null)
+            if (_webClients.Count == 0 && _logStreamEventSubscription != null)
                 StopDiagClientEvents();
         }
     }
-
 
     private async Task RunLoop(IDiagnosticClient client, CancellationToken cancelToken)
     {
@@ -355,8 +363,8 @@ public class DiagnosticSubscription
                 await Task.Delay(2000, cancelToken);
             }
         }
-        catch (TaskCanceledException) {}
-        catch (OperationCanceledException) {}
+        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
 
         //Debug.WriteLine($"@@@@@@@@@@ RunLoop {Process.Id} exit");
     }

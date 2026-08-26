@@ -12,18 +12,16 @@ namespace DiagnosticExplorer.Log4Net;
 public class RoutingDiagnosticAppender : AppenderSkeleton
 {
     private const int MaxMessageLength = 150;
-    private readonly EventSinkRepo _sinkRepo;
+    private readonly LogEventStore _eventStore;
     private EventSinkRouter _router;
 
     public RoutingDiagnosticAppender()
         : this(null) { }
 
-    public RoutingDiagnosticAppender(EventSinkRepo sinkRepo)
+    public RoutingDiagnosticAppender(LogEventStore eventStore)
     {
-        _sinkRepo = sinkRepo ?? EventSinkRepo.Default;
-        PatternLayout layout = new(
-            "%-4timestamp [%thread] %-5level %logger %ndc - %message%newline"
-        );
+        _eventStore = eventStore ?? DiagnosticManager.LogEventStore;
+        PatternLayout layout = new("%-4timestamp [%thread] %-5level %logger %ndc - %message%newline");
         layout.ActivateOptions();
         Layout = layout;
     }
@@ -37,7 +35,7 @@ public class RoutingDiagnosticAppender : AppenderSkeleton
     public override void ActivateOptions()
     {
         base.ActivateOptions();
-        _router = new EventSinkRouter(RoutingOptions ?? LoadRoutingOptions(), _sinkRepo);
+        _router = new EventSinkRouter(RoutingOptions ?? LoadRoutingOptions(), _eventStore);
     }
 
     protected override void Append(LoggingEvent loggingEvent)
@@ -50,14 +48,7 @@ public class RoutingDiagnosticAppender : AppenderSkeleton
             return;
 
         string renderedMessage = loggingEvent.RenderedMessage;
-        _router.Route(
-            new EventSinkLogEvent(
-                loggingEvent.LoggerName,
-                level,
-                GetHeadline(renderedMessage),
-                GetDetail(loggingEvent)
-            )
-        );
+        _router.Route(new EventSinkLogEvent(loggingEvent.LoggerName, level, GetHeadline(renderedMessage), GetDetail(loggingEvent)));
     }
 
     private EventSinkRouteOptions LoadRoutingOptions()
@@ -67,14 +58,9 @@ public class RoutingDiagnosticAppender : AppenderSkeleton
         if (string.IsNullOrWhiteSpace(ConfigurationSection))
             throw new InvalidOperationException("A routing configuration section is required.");
         if (!File.Exists(ConfigurationFile))
-            throw new FileNotFoundException(
-                "The routing configuration file was not found.",
-                ConfigurationFile
-            );
+            throw new FileNotFoundException("The routing configuration file was not found.", ConfigurationFile);
 
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddJsonFile(ConfigurationFile, optional: false, reloadOnChange: false)
-            .Build();
+        IConfiguration configuration = new ConfigurationBuilder().AddJsonFile(ConfigurationFile, optional: false, reloadOnChange: false).Build();
         IConfigurationSection section = configuration.GetSection(ConfigurationSection);
         if (!section.Exists())
             throw new InvalidOperationException(
@@ -82,9 +68,7 @@ public class RoutingDiagnosticAppender : AppenderSkeleton
             );
 
         return section.Get<EventSinkRouteOptions>()
-            ?? throw new InvalidOperationException(
-                $"The routing configuration section '{ConfigurationSection}' is invalid."
-            );
+            ?? throw new InvalidOperationException($"The routing configuration section '{ConfigurationSection}' is invalid.");
     }
 
     private static string GetHeadline(string message)
@@ -96,9 +80,7 @@ public class RoutingDiagnosticAppender : AppenderSkeleton
         if (newLine >= 0)
             message = message.Substring(0, newLine);
 
-        return message.Length <= MaxMessageLength
-            ? message
-            : message.Substring(0, MaxMessageLength) + "...";
+        return message.Length <= MaxMessageLength ? message : message.Substring(0, MaxMessageLength) + "...";
     }
 
     private string GetDetail(LoggingEvent loggingEvent)

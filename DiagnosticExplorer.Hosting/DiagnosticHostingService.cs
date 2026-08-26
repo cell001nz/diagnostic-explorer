@@ -78,7 +78,7 @@ public class DiagnosticHostingService : IHostedService
             Registration registration = new()
             {
                 ProcessId = Process.GetCurrentProcess().Id,
-                InstanceId = Guid.NewGuid().ToString("N"),
+                InstanceId = DiagnosticManager.LogEventStore.StreamId,
                 UserDomain = Environment.UserDomainName,
                 UserName = Environment.UserName,
                 MachineName = Environment.MachineName,

@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { Subject } from 'rxjs';
-import { DiagnosticResponse, DrillDownRequest, DrillDownResponse, SystemEvent } from '@domain/DiagResponse';
+import { DiagnosticResponse, DrillDownRequest, DrillDownResponse, LogStreamEvent, LogStreamInitialization } from '@domain/DiagResponse';
 import { DiagProcess } from '@domain/DiagProcess';
 import { LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
 import { selfHostTransport } from './transport';
@@ -43,9 +43,8 @@ export class SelfHostDiagHubService {
     readonly error = signal('');
     readonly process = signal<DiagProcess | undefined>(undefined);
     readonly diagsArrived$ = new Subject<{ processId: string; response: DiagnosticResponse }>();
-    readonly clearEvents$ = new Subject<{ processId: string }>();
-    readonly streamEvents$ = new Subject<{ processId: string; events: SystemEvent[] }>();
-    readonly loadEvents$ = new Subject<LoadEventData>();
+    readonly logStreamInitialized$ = new Subject<{ processId: string; initialization: LogStreamInitialization }>();
+    readonly logStreamEvents$ = new Subject<{ processId: string; events: LogStreamEvent[] }>();
     #connection?: Promise<SelfHostConnection>;
     #hubProxyLoad?: Promise<void>;
     #reconnectTimer?: ReturnType<typeof setTimeout>;
@@ -193,12 +192,11 @@ export class SelfHostDiagHubService {
             });
         });
         registerLogged('ShowDiagnosticsError', (_processId: string, message: string) => this.error.set(message));
-        registerLogged('SetEvents', (processId: string, events: SystemEvent[]) => {
-            this.clearEvents$.next({ processId });
-            this.loadEvents$.next({ requestId: '', clientId: '', processId, events });
+        registerLogged('InitializeLogStream', (processId: string, initialization: LogStreamInitialization) => {
+            this.logStreamInitialized$.next({ processId, initialization });
         });
-        registerLogged('StreamEvents', (processId: string, events: SystemEvent[]) => {
-            this.streamEvents$.next({ processId, events });
+        registerLogged('StreamLogEvents', (processId: string, events: LogStreamEvent[]) => {
+            this.logStreamEvents$.next({ processId, events });
         });
     }
 

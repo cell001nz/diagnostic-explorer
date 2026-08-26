@@ -8,21 +8,22 @@ namespace DiagnosticExplorer.Logging;
 public sealed class EventSinkRouter
 {
     private static readonly StringComparer Comparer = StringComparer.OrdinalIgnoreCase;
-    private readonly EventSinkRepo _sinkRepo;
+    private readonly LogEventStore _eventStore;
     private readonly CompiledRoute[] _routes;
-    private readonly EventSinkRouteMatchMode _matchMode;
 
-    public EventSinkRouter(EventSinkRouteOptions options, EventSinkRepo sinkRepo = null)
+    public EventSinkRouter(EventSinkRouteOptions options, LogEventStore eventStore = null)
     {
         if (options == null)
             throw new ArgumentNullException(nameof(options));
         if (!Enum.IsDefined(typeof(EventSinkRouteMatchMode), options.MatchMode))
             throw new ArgumentOutOfRangeException(nameof(options), "The configured match mode is invalid.");
 
-        _sinkRepo = sinkRepo ?? EventSinkRepo.Default;
-        _matchMode = options.MatchMode;
+        _eventStore = eventStore ?? global::DiagnosticExplorer.DiagnosticManager.LogEventStore;
         _routes = options.Routes?.Select((route, index) => new CompiledRoute(route, index)).ToArray() ?? Array.Empty<CompiledRoute>();
+        _eventStore.ConfigureRouting(options.CreateSnapshot());
     }
+
+    public LogEventStore EventStore => _eventStore;
 
     public bool IsEnabled(string category, LogLevel level)
     {
@@ -40,27 +41,8 @@ public sealed class EventSinkRouter
         if (routes.Count == 0)
             return 0;
 
-        HashSet<string> destinations = new(Comparer);
-        int writes = 0;
-        foreach (CompiledRoute route in SelectRoutes(routes))
-        {
-            foreach (EventSinkDestination destination in route.Destinations)
-            {
-                string sinkName = route.Resolve(destination.SinkName, logEvent.Category);
-                string sinkCategory = route.Resolve(destination.SinkCategory, logEvent.Category);
-                if (string.IsNullOrWhiteSpace(sinkName) || string.IsNullOrWhiteSpace(sinkCategory))
-                    continue;
-
-                string key = $"{sinkName}\u001f{sinkCategory}";
-                if (!destinations.Add(key))
-                    continue;
-
-                _sinkRepo.GetSink(sinkName, sinkCategory).LogEvent((int)logEvent.Level, logEvent.Message, logEvent.Detail);
-                writes++;
-            }
-        }
-
-        return writes;
+        _eventStore.Publish(logEvent);
+        return 1;
     }
 
     private List<CompiledRoute> FindMatchingRoutes(string category, LogLevel level)
@@ -78,24 +60,6 @@ public sealed class EventSinkRouter
         }
 
         return matches;
-    }
-
-    private IEnumerable<CompiledRoute> SelectRoutes(List<CompiledRoute> routes)
-    {
-        switch (_matchMode)
-        {
-            case EventSinkRouteMatchMode.AllMatches:
-                return routes;
-
-            case EventSinkRouteMatchMode.MostSpecific:
-                return new[] { routes.OrderByDescending(route => route.Specificity).ThenBy(route => route.Order).First() };
-
-            case EventSinkRouteMatchMode.FirstMatch:
-                return new[] { routes[0] };
-
-            default:
-                throw new InvalidOperationException("The configured match mode is invalid.");
-        }
     }
 
     private sealed class CompiledRoute
@@ -118,10 +82,7 @@ public sealed class EventSinkRouter
             CategoryPattern = route.CategoryPattern.Trim();
             MinLevel = route.MinLevel;
             MaxLevel = route.MaxLevel;
-            Destinations = route.Destinations.ToArray();
             StopProcessing = route.StopProcessing;
-            Order = order;
-            Specificity = CategoryPattern == "*" ? 0 : CategoryPattern.Length;
         }
 
         public string CategoryPattern { get; }
@@ -130,25 +91,7 @@ public sealed class EventSinkRouter
 
         public LogLevel? MaxLevel { get; }
 
-        public EventSinkDestination[] Destinations { get; }
-
         public bool StopProcessing { get; }
-
-        public int Order { get; }
-
-        public int Specificity { get; }
-
-        public string Resolve(RouteValue routeValue, string category)
-        {
-            if (routeValue.Source == RouteValueSource.Fixed)
-                return routeValue.Value;
-            if (CategoryPattern == "*")
-                return category;
-            if (category.Length <= CategoryPattern.Length)
-                return null;
-
-            return category.Substring(CategoryPattern.Length + 1);
-        }
 
         private static bool IsValid(RouteValue routeValue)
         {

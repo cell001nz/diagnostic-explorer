@@ -1,6 +1,8 @@
-# Event Sink Routing
+# Replayable Logging Stream
 
-`DiagnosticExplorer` now provides one route model for Microsoft.Extensions.Logging, Serilog, and NLog. A route selects one or more Diagnostic Explorer event sinks from a logging category, which is normally a type-derived namespace.
+`DiagnosticExplorer` keeps one bounded raw logging stream per process for Microsoft.Extensions.Logging, Serilog, NLog, and log4net. A source event has one stream identity (`StreamId`, `Sequence`) even when several configured views display it. The process admits matching events into a five-minute, 5,000-event replay buffer; DiagnosticService maintains one matching relay buffer per process and fans out through small per-browser queues.
+
+Routes admit events process-side and are sent to viewers with each stream initialization. The viewer applies the same ordered rules to project an event into configured categories, overlapping severity views, and resolved drilldown tables. A drilldown route never expands capture beyond the global `ConfigureEventRouting` admission boundary.
 
 All adapters use `EventSinkRouteOptions` from `DiagnosticExplorer.Logging`. The adapters determine a category from their native event as follows:
 
@@ -14,7 +16,7 @@ All adapters use `EventSinkRouteOptions` from `DiagnosticExplorer.Logging`. The 
 
 `CategoryPattern` is case-insensitive. It matches its exact category and child categories separated by `.`, so `Widgets` matches `Widgets` and `Widgets.Rendering`, but not `WidgetShop`. `*` matches every category.
 
-Each matching rule may set `MinLevel` and `MaxLevel`, and can write to multiple sinks. Destinations use the `SinkCategory/SinkName` shorthand; `/` is reserved and cannot appear in either value. The object form with `SinkName` and `SinkCategory` remains available for programmatic configuration. The default `AllMatches` policy preserves log4net-style fan-out: a `Widgets` event can go to both a widget sink and a global warning or error sink. `MostSpecific` selects the longest matching prefix; `FirstMatch` uses declaration order. `StopProcessing` ends rule discovery after the matching rule is included.
+Each matching rule may set `MinLevel` and `MaxLevel`, and can project into multiple destinations. Destinations use the `SinkCategory/SinkName` shorthand; `/` is reserved and cannot appear in either value. The object form with `SinkName` and `SinkCategory` remains available for programmatic configuration. The default `AllMatches` policy preserves overlapping views: a `Widgets` event can appear in both a widget table and a global warning or error table without being copied in the replay buffer. `MostSpecific` selects the longest matching prefix; `FirstMatch` uses declaration order. `StopProcessing` ends rule discovery after the matching rule is included.
 
 Each destination component accepts a `RouteValue`. Strings implicitly become fixed values, while `RouteValue.LoggerSuffix` uses the logger category portion after the matched route prefix. This can provide the sink category:
 
@@ -67,6 +69,20 @@ The equivalent destination in configuration is:
 ```
 
 Invalid patterns, level ranges, and destinations fail when the adapter is constructed. Route configuration is read at startup; change it by restarting the process.
+
+## Drilldown event views
+
+Use `ConfigureDrillDown` to add repeatable tables for the currently materialized object or collection. Static matchers define a type-wide table; instance matchers resolve a stable logger identity for each displayed object. Collection predicates targeting the same category and table are merged with OR semantics.
+
+```csharp
+config.ConfigureDrillDown<Widget>(options =>
+  options.Route(
+    widget => $"{typeof(Widget).FullName}.{widget.FullName}",
+    LoggerNameMatchMode.Exact,
+    route => route.To("Widgets", "Widget Events")));
+```
+
+The returned drilldown definition only projects events already admitted to the raw stream. Opening or refreshing a drilldown does not add another process subscription or replay buffer.
 
 ## Microsoft.Extensions.Logging
 

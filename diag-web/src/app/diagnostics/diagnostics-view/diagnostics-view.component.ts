@@ -60,26 +60,19 @@ export class DiagnosticsViewComponent implements OnDestroy {
             });
         // .subscribe(processId => this.#appContext.processId.set(processId));
 
-        this.#hubService.clearEvents$
+        this.#hubService.logStreamInitialized$
             .pipe(
                 filter((d) => d.processId === this.processId()),
                 takeUntilDestroyed()
             )
-            .subscribe((d) => this.processModel().clearEvents());
+            .subscribe((d) => this.processModel().initializeLogStream(d.initialization));
 
-        this.#hubService.streamEvents$
+        this.#hubService.logStreamEvents$
             .pipe(
                 filter((d) => d.processId === this.processId()),
                 takeUntilDestroyed()
             )
-            .subscribe((d) => this.processModel().streamEvents(d.events));
-
-        this.#hubService.loadEvents$
-            .pipe(
-                filter((d) => d.processId === this.processId()),
-                takeUntilDestroyed()
-            )
-            .subscribe((d) => this.processModel().loadEvents(d));
+            .subscribe((d) => this.processModel().appendLogStreamEvents(d.events));
 
         this.#hubService.diagsArrived$
             .pipe(
@@ -202,7 +195,10 @@ export class DiagnosticsViewComponent implements OnDestroy {
 
     private async trySubscribe(process: DiagProcess | undefined) {
         try {
-            if (process) await this.#hubService.subscribeProcess(process.id);
+            if (process) {
+                this.processModel().setProcessId(process.id);
+                await this.#hubService.subscribeProcess(process.id);
+            }
             this.console.log('Subscribed to ', process?.id);
         } catch (err) {
             console.log(err);

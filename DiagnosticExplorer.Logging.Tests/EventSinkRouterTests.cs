@@ -10,7 +10,7 @@ public class EventSinkRouterTests
     [Fact]
     public void AllMatchesFansOutToNamespaceAndSeverityDestinations()
     {
-        EventSinkRepo repo = new();
+        LogEventStore store = new();
         EventSinkRouter router = new(
             new EventSinkRouteOptions
             {
@@ -35,92 +35,93 @@ public class EventSinkRouterTests
                     },
                 },
             },
-            repo
+            store
         );
 
         int writes = router.Route(new EventSinkLogEvent("Widgets.Rendering", LogLevel.Warning, "Paint failed"));
 
-        Assert.Equal(2, writes);
-        Assert.Single(repo.GetSink("Widgets", "Application").Events);
-        Assert.Single(repo.GetSink("Warnings", "System").Events);
+        Assert.Equal(1, writes);
+        LogStreamEvent streamEvent = GetReplayEvents(store).Single();
+        Assert.Equal("Widgets.Rendering", streamEvent.LoggerCategory);
+        Assert.Equal((int)LogLevel.Warning, streamEvent.Level);
     }
 
     [Fact]
     public void MostSpecificSelectsTheLongestNamespacePrefix()
     {
-        EventSinkRepo repo = new();
+        LogEventStore store = new();
         EventSinkRouter router = new(
             new EventSinkRouteOptions
             {
                 MatchMode = EventSinkRouteMatchMode.MostSpecific,
                 Routes = { CreateRoute("Widgets", "Widgets"), CreateRoute("Widgets.Rendering", "Rendering") },
             },
-            repo
+            store
         );
 
         router.Route(new EventSinkLogEvent("Widgets.Rendering.Canvas", LogLevel.Information, "Rendered"));
 
-        Assert.Empty(repo.GetSink("Widgets", "Application").Events);
-        Assert.Single(repo.GetSink("Rendering", "Application").Events);
+        Assert.Single(GetReplayEvents(store));
     }
 
     [Fact]
     public void FirstMatchUsesDeclarationOrderAndPrefixBoundaries()
     {
-        EventSinkRepo repo = new();
+        LogEventStore store = new();
         EventSinkRouter router = new(
             new EventSinkRouteOptions
             {
                 MatchMode = EventSinkRouteMatchMode.FirstMatch,
                 Routes = { CreateRoute("Widgets", "Widgets"), CreateRoute("*", "Fallback") },
             },
-            repo
+            store
         );
 
         router.Route(new EventSinkLogEvent("WidgetShop", LogLevel.Information, "Not a widget"));
 
-        Assert.Empty(repo.GetSink("Widgets", "Application").Events);
-        Assert.Single(repo.GetSink("Fallback", "Application").Events);
+        Assert.Single(GetReplayEvents(store));
     }
 
     [Fact]
     public void DuplicateDestinationsAreWrittenOnce()
     {
-        EventSinkRepo repo = new();
-        EventSinkRouter router = new(new EventSinkRouteOptions { Routes = { CreateRoute("Widgets", "Shared"), CreateRoute("*", "Shared") } }, repo);
+        LogEventStore store = new();
+        EventSinkRouter router = new(new EventSinkRouteOptions { Routes = { CreateRoute("Widgets", "Shared"), CreateRoute("*", "Shared") } }, store);
 
         int writes = router.Route(new EventSinkLogEvent("Widgets", LogLevel.Information, "Created"));
 
         Assert.Equal(1, writes);
-        Assert.Single(repo.GetSink("Shared", "Application").Events);
+        Assert.Single(GetReplayEvents(store));
     }
 
     [Fact]
     public void LoggerSuffixCanProvideDestinationCategory()
     {
-        EventSinkRepo repo = new();
+        LogEventStore store = new();
         EventSinkRouteOptions options = new();
         options.Route("WidgetSample.Harness.Widget", route => route.To(RouteValue.LoggerSuffix, "Widget Events"));
-        EventSinkRouter router = new(options, repo);
+        EventSinkRouter router = new(options, store);
 
         int writes = router.Route(new EventSinkLogEvent("WidgetSample.Harness.Widget.Widget X(1)", LogLevel.Information, "Refreshed"));
 
         Assert.Equal(1, writes);
-        Assert.Single(repo.GetSink("Widget Events", "Widget X(1)").Events);
+        LogStreamRoute route = GetReplayRouting(store).Routes.Single();
+        Assert.Equal(RouteValueSource.LoggerSuffix, route.Destinations.Single().Category.Source);
     }
 
     [Fact]
     public void LoggerSuffixCanProvideDestinationName()
     {
-        EventSinkRepo repo = new();
+        LogEventStore store = new();
         EventSinkRouteOptions options = new();
         options.Route("WidgetSample.Harness.Widget", route => route.To("Widgets", RouteValue.LoggerSuffix));
-        EventSinkRouter router = new(options, repo);
+        EventSinkRouter router = new(options, store);
 
         int writes = router.Route(new EventSinkLogEvent("WidgetSample.Harness.Widget.Widget X(1)", LogLevel.Information, "Refreshed"));
 
         Assert.Equal(1, writes);
-        Assert.Single(repo.GetSink("Widget X(1)", "Widgets").Events);
+        LogStreamRoute route = GetReplayRouting(store).Routes.Single();
+        Assert.Equal(RouteValueSource.LoggerSuffix, route.Destinations.Single().Name.Source);
     }
 
     [Fact]
@@ -131,7 +132,7 @@ public class EventSinkRouterTests
         {
             DiagnosticManager.Enabled = false;
             EventSinkRepo repo = new();
-            EventSinkRouter router = new(new EventSinkRouteOptions { Routes = { CreateRoute("Widgets", "Widgets") } }, repo);
+            EventSinkRouter router = new(new EventSinkRouteOptions { Routes = { CreateRoute("Widgets", "Widgets") } }, new LogEventStore());
 
             int writes = router.Route(new EventSinkLogEvent("Widgets", LogLevel.Information, "Ignored"));
             repo.GetSink("Direct", "Application").Info("Ignored");
@@ -178,5 +179,17 @@ public class EventSinkRouterTests
                 new EventSinkDestination { SinkName = sinkName, SinkCategory = "Application" },
             },
         };
+    }
+
+    private static LogStreamEvent[] GetReplayEvents(LogEventStore store)
+    {
+        using LogEventStore.LogEventStoreSubscription subscription = store.CreateSubscription();
+        return subscription.Initialization.ReplayEvents;
+    }
+
+    private static LogStreamRoutingConfiguration GetReplayRouting(LogEventStore store)
+    {
+        using LogEventStore.LogEventStoreSubscription subscription = store.CreateSubscription();
+        return subscription.Initialization.Routing;
     }
 }

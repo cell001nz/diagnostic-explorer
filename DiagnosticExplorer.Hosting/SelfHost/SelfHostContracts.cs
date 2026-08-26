@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
 
@@ -8,8 +9,8 @@ public interface ISelfHostClient
 {
     Task ShowDiagnostics(string processId, DiagnosticResponse response);
     Task ShowDiagnosticsError(string processId, string message);
-    Task SetEvents(string processId, SystemEvent[] events);
-    Task StreamEvents(string processId, SystemEvent[] events);
+    Task InitializeLogStream(string processId, LogStreamInitialization initialization);
+    Task StreamLogEvents(string processId, LogStreamEvent[] events);
 }
 
 /// <summary>SignalR operations exposed by a self-host viewer.</summary>

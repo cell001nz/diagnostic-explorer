@@ -28,6 +28,7 @@ using System.Drawing;
 using System.Drawing.Printing;
 using System.Text.Json;
 using DiagnosticExplorer;
+using DiagnosticExplorer.Logging;
 
 namespace WidgetSample.Harness;
 
@@ -78,6 +79,11 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.Property(widget => widget.Configuration).Named("Widget Config").AsDrillDownIcon();
             options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
             options.Property(widget => widget.Size).Category("Info").AllowSet();
+            options.Route(
+                widget => $"{typeof(Widget).FullName}.{widget.FullName}",
+                LoggerNameMatchMode.Exact,
+                route => route.To("Widgets", "Widget Events")
+            );
         });
     }
 

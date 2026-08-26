@@ -149,8 +149,9 @@ internal sealed class OwinSelfHostClient : ISelfHostClient
 
     public Task ShowDiagnosticsError(string processId, string message) => _client.ShowDiagnosticsError(processId, message);
 
-    public Task SetEvents(string processId, SystemEvent[] events) => _client.SetEvents(processId, events);
+    public Task InitializeLogStream(string processId, Logging.LogStreamInitialization initialization) =>
+        _client.InitializeLogStream(processId, initialization);
 
-    public Task StreamEvents(string processId, SystemEvent[] events) => _client.StreamEvents(processId, events);
+    public Task StreamLogEvents(string processId, Logging.LogStreamEvent[] events) => _client.StreamLogEvents(processId, events);
 }
 #endif

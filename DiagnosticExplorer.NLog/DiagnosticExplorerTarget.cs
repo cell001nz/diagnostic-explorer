@@ -14,16 +14,16 @@ namespace DiagnosticExplorer.NLog;
 [Target("DiagnosticExplorer")]
 public sealed class DiagnosticExplorerTarget : TargetWithLayout
 {
-    private readonly EventSinkRepo _sinkRepo;
+    private readonly LogEventStore _eventStore;
     private EventSinkRouter _router;
 
     public DiagnosticExplorerTarget()
         : this(new EventSinkRouteOptions()) { }
 
-    public DiagnosticExplorerTarget(EventSinkRouteOptions options, EventSinkRepo sinkRepo = null)
+    public DiagnosticExplorerTarget(EventSinkRouteOptions options, LogEventStore eventStore = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
-        _sinkRepo = sinkRepo ?? EventSinkRepo.Default;
+        _eventStore = eventStore ?? DiagnosticManager.LogEventStore;
         Layout = new SimpleLayout("${message}");
     }
 
@@ -34,7 +34,7 @@ public sealed class DiagnosticExplorerTarget : TargetWithLayout
     protected override void InitializeTarget()
     {
         base.InitializeTarget();
-        _router = new EventSinkRouter(Options, _sinkRepo);
+        _router = new EventSinkRouter(Options, _eventStore);
     }
 
     protected override void Write(LogEventInfo logEvent)
@@ -42,23 +42,14 @@ public sealed class DiagnosticExplorerTarget : TargetWithLayout
         if (logEvent == null)
             throw new ArgumentNullException(nameof(logEvent));
 
-        EventSinkRouter router = _router ?? new EventSinkRouter(Options, _sinkRepo);
-        string category = string.IsNullOrWhiteSpace(logEvent.LoggerName)
-            ? FallbackCategory
-            : logEvent.LoggerName;
+        EventSinkRouter router = _router ?? new EventSinkRouter(Options, _eventStore);
+        string category = string.IsNullOrWhiteSpace(logEvent.LoggerName) ? FallbackCategory : logEvent.LoggerName;
         MicrosoftLogLevel level = ToLogLevel(logEvent.Level);
         if (!router.IsEnabled(category, level))
             return;
 
         string renderedMessage = RenderLogEvent(Layout, logEvent);
-        router.Route(
-            new EventSinkLogEvent(
-                category,
-                level,
-                GetHeadline(renderedMessage),
-                CreateDetail(logEvent, renderedMessage)
-            )
-        );
+        router.Route(new EventSinkLogEvent(category, level, GetHeadline(renderedMessage), CreateDetail(logEvent, renderedMessage)));
     }
 
     private static MicrosoftLogLevel ToLogLevel(NLogLevel level)
@@ -91,10 +82,7 @@ public sealed class DiagnosticExplorerTarget : TargetWithLayout
     private static string CreateDetail(LogEventInfo logEvent, string renderedMessage)
     {
         StringBuilder detail = new();
-        if (
-            !string.IsNullOrEmpty(renderedMessage)
-            && renderedMessage.Length != GetHeadline(renderedMessage).Length
-        )
+        if (!string.IsNullOrEmpty(renderedMessage) && renderedMessage.Length != GetHeadline(renderedMessage).Length)
             detail.AppendLine(renderedMessage);
         if (logEvent.Exception != null)
             detail.AppendLine(logEvent.Exception.ToString());
@@ -103,11 +91,7 @@ public sealed class DiagnosticExplorerTarget : TargetWithLayout
         {
             foreach (DictionaryEntry property in properties)
             {
-                detail
-                    .Append("Property.")
-                    .Append(property.Key)
-                    .Append(": ")
-                    .AppendLine(property.Value?.ToString());
+                detail.Append("Property.").Append(property.Key).Append(": ").AppendLine(property.Value?.ToString());
             }
         }
 

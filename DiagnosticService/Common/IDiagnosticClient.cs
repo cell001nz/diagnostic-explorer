@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
+using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
 
@@ -13,6 +14,6 @@ public interface IDiagnosticClient
     Task SubscribeEvents();
     Task UnsubscribeEvents();
 
-    Subject<SystemEvent[]> EventsSet { get; }
-    Subject<SystemEvent[]> EventsStreamed { get; }
+    Subject<LogStreamInitialization> LogStreamInitialized { get; }
+    Subject<LogStreamEvent[]> LogStreamEvents { get; }
 }

@@ -21,6 +21,21 @@ export interface DrillDownResponse {
     isTruncated: boolean;
     errorMessage?: string;
     errorDetail?: string;
+    eventViews: DrillDownEventViewDefinition[];
+}
+
+export interface DrillDownEventMatcher {
+    loggerName: string;
+    matchMode: number;
+    minLevel?: number;
+    maxLevel?: number;
+}
+
+export interface DrillDownEventViewDefinition {
+    id: string;
+    category: string;
+    name: string;
+    matchers: DrillDownEventMatcher[];
 }
 
 export interface PropertyBag {
@@ -70,6 +85,50 @@ export interface SystemEvent {
     level: number;
     sinkName: string;
     sinkCategory: string;
+}
+
+export interface LogStreamEvent {
+    streamId: string;
+    sequence: number;
+    timestampUtc: string | Date;
+    loggerCategory: string;
+    level: number;
+    message: string;
+    detail: string;
+    eventId: number;
+    eventName?: string;
+}
+
+export interface LogStreamRouteValue {
+    source: number;
+    value?: string;
+}
+
+export interface LogStreamRouteDestination {
+    category: LogStreamRouteValue;
+    name: LogStreamRouteValue;
+}
+
+export interface LogStreamRoute {
+    order: number;
+    loggerName: string;
+    loggerNameMatchMode: number;
+    minLevel?: number;
+    maxLevel?: number;
+    stopProcessing: boolean;
+    destinations: LogStreamRouteDestination[];
+}
+
+export interface LogStreamRoutingConfiguration {
+    matchMode: number;
+    routes: LogStreamRoute[];
+}
+
+export interface LogStreamInitialization {
+    streamId: string;
+    routing: LogStreamRoutingConfiguration;
+    replayEvents: LogStreamEvent[];
+    highWatermark: number;
 }
 
 export interface OperationSet {

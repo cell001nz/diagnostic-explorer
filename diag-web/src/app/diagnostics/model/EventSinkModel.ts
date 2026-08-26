@@ -2,17 +2,15 @@
 import {CategoryModel} from './CategoryModel';
 import {EventModel} from './EventModel';
 import {FilterCriteria} from './FilterCriteria';
-import {signal} from '@angular/core';
+import {computed, Signal, signal} from '@angular/core';
 import {Level} from './Level';
 
 import pluralize from 'pluralize-esm';
 
 export class EventSinkModel {
     name = '';
-    events = signal<EventModel[]>([]);
-    filteredEvents = signal<EventModel[]>([]);
-    private latestReceived = 0;
-    message = '';
+    events: Signal<EventModel[]>;
+    filteredEvents: Signal<EventModel[]>;
     isCollapsed = signal(false)
 
     filterVisible = false;
@@ -38,23 +36,34 @@ export class EventSinkModel {
         if (closing) {
             this.filterText.set('');
             this.minLevel.set(0);
-            this.filterEvents();
         }
     }
 
     setFilterText(text: string): void {
         this.filterText.set(text);
-        this.filterEvents();
     }
 
     setMinLevel(level: number): void {
         this.minLevel.set(level);
-        this.filterEvents();
     }
 
-    constructor(readonly cat: CategoryModel, name: string) {
+    constructor(readonly cat: CategoryModel, name: string, private readonly eventProvider: () => EventModel[] = () => []) {
         this.watchEnabled = true;
         this.name = name;
+        this.events = computed(() => this.eventProvider());
+        this.filteredEvents = computed(() => {
+            const events = this.events();
+            const text = this.filterText().trim().toLowerCase();
+            const minLevel = this.minLevel();
+            return events.filter((event) =>
+                (minLevel === 0 || event.level >= minLevel) &&
+                (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text))
+            );
+        });
+    }
+
+    get message(): string {
+        return pluralize('events', this.events().length, true);
     }
 
     toggleCollapsed() {
@@ -62,29 +71,11 @@ export class EventSinkModel {
     }
 
     public addEvents(evts: SystemEvent[]): void {
-
-        // this.latestReceived = evt;
-
-        const evtModels = evts.map(evt => new EventModel(evt));
-        const currentEvents = this.events();
-
-        let newEvents: EventModel[];
-        if (this.filterCriteria.isBlank) {
-            newEvents = [...evtModels, ...currentEvents];
-        } else {
-            newEvents = [...evtModels, ...currentEvents];
-        }
-        if (newEvents.length > 500)
-            newEvents = newEvents.slice(0, 500);
-
-        this.events.set(newEvents);
-        this.filterEvents();
+        void evts;
     }
 
     public clearEvents(): void {
-        this.events.set([]);
-        this.filteredEvents.set([]);
-        this.message = '';
+        // Event arrays are projections over the owning ProcessEventStore.
     }
 
     private onCriteriaChanged(): void {
@@ -92,35 +83,7 @@ export class EventSinkModel {
     }
 
     private filterEvents(): void {
-        const currentEvents = this.events();
-        const text = this.filterText().trim().toLowerCase();
-        const minLvl = this.minLevel();
-
-        let filtered = currentEvents;
-
-        // Apply min-level filter
-        if (minLvl > 0) {
-            filtered = filtered.filter(evt => evt.level >= minLvl);
-        }
-
-        // Apply text filter
-        if (text) {
-            filtered = filtered.filter(evt =>
-                evt.message?.toLowerCase().includes(text) ||
-                evt.detail?.toLowerCase().includes(text)
-            );
-        }
-
-        this.filteredEvents.set(filtered);
-
-        if (text || minLvl > 0) {
-            this.message = `${filtered.length} of ${currentEvents.length} ` + pluralize('event', currentEvents.length);
-        } else {
-            this.message = pluralize('events', currentEvents.length, true);
-        }
-
-        if (this.latestReceived)
-            this.message += ` (+${this.latestReceived})`;
+        // Filters are computed from source events and filter signals.
     }
 
     private onFilterVisibleChanged(): void {

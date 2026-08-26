@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
+using DiagnosticExplorer.Logging;
 using DiagnosticExplorer.Util;
 using log4net;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -32,34 +31,55 @@ internal class HubServerAdapter : IDiagnosticHubClient
         _serviceProvider = serviceProvider;
     }
 
-    public Task SubscribeEvents()
+    public async Task SubscribeEvents()
     {
+        await UnsubscribeEvents();
         _writeEventCancel = new CancellationTokenSource();
         _writeEventTask = Task.Run(() => SendEventStream(_writeEventCancel.Token), _writeEventCancel.Token);
-        return Task.CompletedTask;
     }
 
-    public Task UnsubscribeEvents()
+    public async Task UnsubscribeEvents()
     {
-        _writeEventCancel?.Cancel();
+        CancellationTokenSource cancel = _writeEventCancel;
+        Task writeEventTask = _writeEventTask;
         _writeEventCancel = null;
         _writeEventTask = null;
-        return Task.CompletedTask;
+        cancel?.Cancel();
+        if (writeEventTask != null)
+        {
+            try
+            {
+                await writeEventTask;
+            }
+            catch (OperationCanceledException) { }
+        }
+        cancel?.Dispose();
     }
 
     private async Task SendEventStream(CancellationToken cancel)
     {
-        using EventSinkStream stream = EventSinkRepo.Default.CreateSinkStream(TimeSpan.FromMilliseconds(50), 100);
-
         try
         {
-            SystemEvent[] initial = stream.InitialEvents;
-            await _hubServer.SetEvents(initial);
-
-            while (await stream.EventChannel.Reader.WaitToReadAsync(cancel))
+            while (!cancel.IsCancellationRequested)
             {
-                IList<SystemEvent> item = await stream.EventChannel.Reader.ReadAsync(cancel);
-                await _hubServer.StreamEvents(item.ToArray());
+                using LogEventStore.LogEventStoreSubscription stream = DiagnosticManager.LogEventStore.CreateSubscription();
+                await _hubServer.InitializeLogStream(stream.Initialization);
+
+                while (await stream.Events.WaitToReadAsync(cancel))
+                {
+                    List<LogStreamEvent> batch = new();
+                    while (batch.Count < 100 && stream.Events.TryRead(out LogStreamEvent streamEvent))
+                        batch.Add(streamEvent);
+
+                    if (batch.Count == 0)
+                        continue;
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(50), cancel);
+                    while (batch.Count < 100 && stream.Events.TryRead(out LogStreamEvent streamEvent))
+                        batch.Add(streamEvent);
+
+                    await _hubServer.StreamLogEvents(batch.ToArray());
+                }
             }
         }
         catch (OperationCanceledException)

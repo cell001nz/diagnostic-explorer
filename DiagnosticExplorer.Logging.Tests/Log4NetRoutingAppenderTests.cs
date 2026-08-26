@@ -22,21 +22,20 @@ public class Log4NetRoutingAppenderTests
             .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
             .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors"));
 
-        EventSinkRepo sinkRepo = new();
-        TestRoutingDiagnosticAppender appender = new(sinkRepo) { RoutingOptions = routes };
+        LogEventStore store = new();
+        TestRoutingDiagnosticAppender appender = new(store) { RoutingOptions = routes };
 
         appender.ActivateOptions();
         appender.AppendForTest(CreateEvent("Widgets.Component", Level.Warn, "Paint failed"));
 
-        Assert.Single(sinkRepo.GetSink("Widgets Events", "Widgets").Events);
-        Assert.Single(sinkRepo.GetSink("Warnings", "System").Events);
+        Assert.Single(GetReplayEvents(store));
     }
 
     [Fact]
     public void RoutesLoggerNameThroughSharedRules()
     {
-        EventSinkRepo sinkRepo = new();
-        TestRoutingDiagnosticAppender appender = new(sinkRepo)
+        LogEventStore store = new();
+        TestRoutingDiagnosticAppender appender = new(store)
         {
             RoutingOptions = new EventSinkRouteOptions
             {
@@ -72,8 +71,7 @@ public class Log4NetRoutingAppenderTests
         {
             appender.AppendForTest(CreateEvent("Widgets.Component", Level.Warn, "Paint failed", repository));
 
-            Assert.Single(sinkRepo.GetSink("Widget Events", "Widgets").Events);
-            Assert.Single(sinkRepo.GetSink("Warnings", "System").Events);
+            Assert.Single(GetReplayEvents(store));
         }
         finally
         {
@@ -83,8 +81,8 @@ public class Log4NetRoutingAppenderTests
 
     private sealed class TestRoutingDiagnosticAppender : RoutingDiagnosticAppender
     {
-        public TestRoutingDiagnosticAppender(EventSinkRepo sinkRepo)
-            : base(sinkRepo) { }
+        public TestRoutingDiagnosticAppender(LogEventStore store)
+            : base(store) { }
 
         public void AppendForTest(LoggingEvent loggingEvent)
         {
@@ -95,5 +93,11 @@ public class Log4NetRoutingAppenderTests
     private static LoggingEvent CreateEvent(string loggerName, Level level, string message, log4net.Repository.ILoggerRepository repository = null)
     {
         return new LoggingEvent(typeof(Log4NetRoutingAppenderTests), repository ?? LogManager.GetRepository(), loggerName, level, message, null);
+    }
+
+    private static LogStreamEvent[] GetReplayEvents(LogEventStore store)
+    {
+        using LogEventStore.LogEventStoreSubscription subscription = store.CreateSubscription();
+        return subscription.Initialization.ReplayEvents;
     }
 }

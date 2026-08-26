@@ -132,6 +132,19 @@ internal static class DiagnosticsConfiguration
             options.Property(gadget => gadget.Purpose).AllowSet();
             options.Extended(gadget => gadget.Configuration).Category("Configuration");
         });
+
+        config.ConfigureDrillDown<Gadget>(options =>
+        {
+            options.OptOut();
+            options.Property(gadget => gadget.Name).AllowSet();
+            options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
+            options.Extended(gadget => gadget.Configuration);
+            options.Route(
+                gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
+                LoggerNameMatchMode.Exact,
+                route => route.To("Gadget", "Gadget Events")
+            );
+        });
     }
 
     private static void ConfigureGadgetConfig(IDiagConfigurator config)

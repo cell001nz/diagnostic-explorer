@@ -24,23 +24,9 @@
         <div class="drilldown-state">No diagnostics available.</div>
     } @else {
         <div class="drilldown-content" [class.drilldown-refreshing]="loading()">
-            @if (processModel.categories().length === 1) {
-                <app-category-view [category]="processModel.categories()[0]" [process]="process()" [flatRoot]="true" />
-            } @else {
-                <p-tabs [value]="processModel.activeCatName()" (valueChange)="onCategoryChange($event)" class="h-full">
-                    <p-tablist>
-                        @for (category of processModel.categories(); track category.name()) {
-                            <p-tab [value]="category.name()">{{ category.name() }}</p-tab>
-                        }
-                    </p-tablist>
-                    <p-tabpanels>
-                        @for (category of processModel.categories(); track category.name()) {
-                            <p-tabpanel [value]="category.name()">
-                                <app-category-view [category]="category" [process]="process()" [flatRoot]="true" />
-                            </p-tabpanel>
-                        }
-                    </p-tabpanels>
-                </p-tabs>
+            @for (category of processModel.categories(); track category.name()) {
+                <app-category-view [category]="category" [process]="process()" [flatRoot]="true"
+                                   (eventSelected)="onEventSelected($event)" />
             }
         </div>
     }
@@ -49,5 +35,14 @@
         <footer class="drilldown-footer">
             Showing {{ displayedCount() }}@if (totalCount() !== undefined) { of {{ totalCount() }} } items
         </footer>
+    }
+
+    @if (selectedEvent()) {
+        <div class="detail-divider" (mousedown)="startResize($event)" title="Drag to resize">
+            <span class="detail-divider-grip"></span>
+        </div>
+        <div class="detail-panel-row" [style.height.px]="detailHeight()">
+            <app-event-detail-panel [event]="selectedEvent()!" (closed)="closeDetail()" />
+        </div>
     }
 </div>

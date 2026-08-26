@@ -25,6 +25,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
 
@@ -45,8 +46,8 @@ public interface IDiagnosticHubServer
     Task<RpcResult<RegistrationResponse>> Register(Registration registration);
     Task<RpcResult> Deregister(Registration registration);
     Task<RpcResult> LogEvents(byte[] eventData);
-    Task SetEvents(SystemEvent[] events);
-    Task StreamEvents(SystemEvent[] evt);
+    Task InitializeLogStream(LogStreamInitialization initialization);
+    Task StreamLogEvents(LogStreamEvent[] events);
 }
 
 public class RpcResult<T> : RpcResult

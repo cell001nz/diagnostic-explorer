@@ -28,9 +28,9 @@ export class SelfHostComponent implements OnInit, OnDestroy {
     #resizeStartHeight = 0;
 
     constructor() {
-        this.hub.clearEvents$.pipe(takeUntilDestroyed()).subscribe(() => this.processModel().clearEvents());
-        this.hub.loadEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().loadEvents(data));
-        this.hub.streamEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().streamEvents(data.events));
+        this.processModel().setProcessId(LOCAL_PROCESS_ID);
+        this.hub.logStreamInitialized$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().initializeLogStream(data.initialization));
+        this.hub.logStreamEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().appendLogStreamEvents(data.events));
         this.hub.diagsArrived$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().update(data.response));
 
         window.addEventListener('keydown', this.onWindowKeyDown, true);

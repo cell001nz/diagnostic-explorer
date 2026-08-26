@@ -40,6 +40,8 @@ public interface ITypeConfigurator<T>
     IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property);
     IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(Expression<Func<T, TProperty>> property);
+    ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
+    ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
 }
 
 public interface IPropertyConfigurator

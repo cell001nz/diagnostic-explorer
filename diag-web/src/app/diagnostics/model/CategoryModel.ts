@@ -1,6 +1,7 @@
 ﻿import {EventResponse, PropertyBag, SystemEvent} from '@domain/DiagResponse';
 import {customMerge} from '@util/merge';
 import {EventSinkModel} from './EventSinkModel';
+import {EventModel} from './EventModel';
 import {BagModel} from './BagModel';
 import {ProcessModel} from './ProcessModel';
 import * as _ from 'lodash-es';
@@ -37,16 +38,16 @@ export class CategoryModel {
             (s, t) => t.update(s)));
     }
 
-    getSink(name: string): EventSinkModel {
+    getSink(name: string, eventProvider: () => EventModel[] = () => []): EventSinkModel {
         let sink = this.eventSinks().find(c => strEqCI(c.name, name));
         if (!sink) {
-            sink = new EventSinkModel(this, name);
+            sink = new EventSinkModel(this, name, eventProvider);
             this.eventSinks.update(sinks => [...sinks, sink!]);
         }
 
         return sink;
     }
-        
+
     expandCollapse(): void {
         console.log('expandCollapse', this.name())
         const expandable: { isCollapsed: WritableSignal<boolean> }[] = [];
@@ -72,11 +73,11 @@ export class CategoryModel {
         for (const sinkName in grouped)
             this.getSink(sinkName).addEvents(grouped[sinkName]);
     }
-    
+
     clearEvents() {
         for (let sink of this.eventSinks()) {
             sink.clearEvents();
-        }            
+        }
     }
 
 

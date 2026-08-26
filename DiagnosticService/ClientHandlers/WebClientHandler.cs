@@ -2,30 +2,33 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Common;
+using DiagnosticExplorer.Logging;
 using Diagnostics.Service.Common.Hubs;
 
 namespace DiagWebService.ClientHandlers;
 
 public class WebClientHandler
 {
+    private const int OutboundQueueCapacity = 256;
     private IWebHubClient _client;
     private IDisposable? _processSubscription;
     private IDisposable? _processRemoveSubscription;
     private Task? _eventStreamTask;
     private CancellationTokenSource? _eventStreamCancel;
     private readonly object _eventStreamLock = new();
-    private string? _pendingEventStreamId;
-    private EventSinkRepo? _pendingEventStreamRepo;
+    private Channel<LogStreamFrame>? _eventChannel;
+    private string? _activeProcessId;
+    private LogStreamFrame? _pendingRestartFrame;
 
     public WebClientHandler(string connectionId, IWebHubClient client)
     {
         ConnectionId = connectionId;
         _client = client;
     }
-
 
     public string ConnectionId { get; }
 
@@ -40,6 +43,7 @@ public class WebClientHandler
     {
         _processSubscription?.Dispose();
         _processRemoveSubscription?.Dispose();
+        StopStreamingEvents();
     }
 
     private void HandleProcessesChanged(DiagProcess changed)
@@ -57,35 +61,50 @@ public class WebClientHandler
         await _client.ShowDiagnostics(id, response);
     }
 
-    public async Task SetEvents(string id, SystemEvent[] events)
-    {
-        await _client.SetEvents(id, events);
-    }
-
     public async Task ShowDiagnosticsError(string id, string message)
     {
         await _client.ShowDiagnosticsError(id, message);
     }
 
-    public void StartStreamingEvents(string id, EventSinkRepo sinkRepo)
+    public void InitializeLogStream(string id, LogStreamInitialization initialization)
     {
-        //Debug.WriteLine($"########## WebClientHandler.StartStreamingEvents connection {ConnectionId}");
+        if (initialization == null)
+            throw new ArgumentNullException(nameof(initialization));
+
+        LogStreamFrame frame = LogStreamFrame.ForInitialization(id, initialization);
         lock (_eventStreamLock)
         {
             if (_eventStreamTask is { IsCompleted: false })
             {
-                if (_eventStreamCancel?.IsCancellationRequested == true)
+                if (string.Equals(_activeProcessId, id, StringComparison.Ordinal) && _eventStreamCancel?.IsCancellationRequested != true)
                 {
-                    _pendingEventStreamId = id;
-                    _pendingEventStreamRepo = sinkRepo;
+                    ReplacePendingFramesLocked(frame);
+                    return;
                 }
 
+                _pendingRestartFrame = frame;
+                _eventStreamCancel?.Cancel();
+                _eventChannel?.Writer.TryComplete();
                 return;
             }
 
-            _pendingEventStreamId = null;
-            _pendingEventStreamRepo = null;
-            StartStreamingEventsLocked(id, sinkRepo);
+            StartStreamingEventsLocked(frame);
+        }
+    }
+
+    public void QueueLogEvents(string id, LogStreamEvent[] events, LogStreamInitialization resynchronization)
+    {
+        if (events == null || events.Length == 0)
+            return;
+
+        lock (_eventStreamLock)
+        {
+            if (!string.Equals(_activeProcessId, id, StringComparison.Ordinal) || _eventStreamCancel?.IsCancellationRequested == true)
+                return;
+            if (_eventChannel?.Writer.TryWrite(LogStreamFrame.ForEvents(id, events)) == true)
+                return;
+
+            ReplacePendingFramesLocked(LogStreamFrame.ForInitialization(id, resynchronization));
         }
     }
 
@@ -94,50 +113,69 @@ public class WebClientHandler
         //Debug.WriteLine($"########## WebClientHandler.StopStreamingEvents {ConnectionId}");
         lock (_eventStreamLock)
         {
-            _pendingEventStreamId = null;
-            _pendingEventStreamRepo = null;
+            _pendingRestartFrame = null;
             _eventStreamCancel?.Cancel();
+            _eventChannel?.Writer.TryComplete();
         }
     }
 
-    private void StartStreamingEventsLocked(string id, EventSinkRepo sinkRepo)
+    private void StartStreamingEventsLocked(LogStreamFrame initialization)
     {
+        Channel<LogStreamFrame> eventChannel = Channel.CreateBounded<LogStreamFrame>(
+            new BoundedChannelOptions(OutboundQueueCapacity)
+            {
+                FullMode = BoundedChannelFullMode.Wait,
+                SingleReader = true,
+                SingleWriter = true,
+            }
+        );
         CancellationTokenSource eventStreamCancel = new();
-        Task eventStreamTask = StreamEvents(id, sinkRepo, eventStreamCancel.Token);
+        eventChannel.Writer.TryWrite(initialization);
+        Task eventStreamTask = StreamEvents(eventChannel, eventStreamCancel.Token);
+        _activeProcessId = initialization.ProcessId;
+        _eventChannel = eventChannel;
         _eventStreamCancel = eventStreamCancel;
         _eventStreamTask = eventStreamTask;
-        _ = ObserveEventStream(eventStreamTask, eventStreamCancel);
+        _ = ObserveEventStream(eventStreamTask, eventStreamCancel, eventChannel);
     }
 
-    private async Task StreamEvents(string id, EventSinkRepo sinkRepo, CancellationToken cancel)
+    private void ReplacePendingFramesLocked(LogStreamFrame initialization)
     {
-        using EventSinkStream? stream = sinkRepo.CreateSinkStream(TimeSpan.FromMilliseconds(25), 100);
+        if (_eventChannel == null)
+            return;
+
+        while (_eventChannel.Reader.TryRead(out _)) { }
+        if (!_eventChannel.Writer.TryWrite(initialization))
+        {
+            _pendingRestartFrame = initialization;
+            _eventStreamCancel?.Cancel();
+            _eventChannel.Writer.TryComplete();
+        }
+    }
+
+    private async Task StreamEvents(Channel<LogStreamFrame> eventChannel, CancellationToken cancel)
+    {
         try
         {
-            //Debug.WriteLine($"########## WebClientHandler calling _client.SetEvents({id}, {stream.InitialEvents.Length} events)");
-            await _client.SetEvents(id, stream.InitialEvents);
-
-            while (!cancel.IsCancellationRequested)
+            while (await eventChannel.Reader.WaitToReadAsync(cancel))
             {
-                IList<SystemEvent>? evts = await stream.EventChannel.Reader.ReadAsync(cancel);
-                if (evts != null)
+                while (eventChannel.Reader.TryRead(out LogStreamFrame frame))
                 {
-                    await _client.StreamEvents(id, evts);
-                    //Debug.WriteLine($"########## WebClientHandler calling _client.StreamEvent({id}, 1 event)");
+                    if (frame.Initialization != null)
+                        await _client.InitializeLogStream(frame.ProcessId, frame.Initialization);
+                    else
+                        await _client.StreamLogEvents(frame.ProcessId, frame.Events!);
                 }
             }
         }
-        catch (OperationCanceledException)
-        {
-            //Debug.WriteLine("########## Stream event task cancelled");
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            //Debug.WriteLine($"########## Stream event exception {ex}");
+            Trace.WriteLine($"WebClientHandler stream failed: {ex.Message}");
         }
     }
 
-    private async Task ObserveEventStream(Task eventStreamTask, CancellationTokenSource eventStreamCancel)
+    private async Task ObserveEventStream(Task eventStreamTask, CancellationTokenSource eventStreamCancel, Channel<LogStreamFrame> eventChannel)
     {
         try
         {
@@ -150,22 +188,41 @@ public class WebClientHandler
                 if (ReferenceEquals(_eventStreamTask, eventStreamTask))
                 {
                     _eventStreamTask = null;
-                    if (_pendingEventStreamId != null && _pendingEventStreamRepo != null)
+                    _eventStreamCancel = null;
+                    _eventChannel = null;
+                    _activeProcessId = null;
+                    if (_pendingRestartFrame is LogStreamFrame pendingRestartFrame)
                     {
-                        string pendingEventStreamId = _pendingEventStreamId;
-                        EventSinkRepo pendingEventStreamRepo = _pendingEventStreamRepo;
-                        _pendingEventStreamId = null;
-                        _pendingEventStreamRepo = null;
-                        StartStreamingEventsLocked(pendingEventStreamId, pendingEventStreamRepo);
+                        _pendingRestartFrame = null;
+                        StartStreamingEventsLocked(pendingRestartFrame);
                     }
                 }
-
-                if (ReferenceEquals(_eventStreamCancel, eventStreamCancel))
-                    _eventStreamCancel = null;
             }
-
             eventStreamCancel.Dispose();
         }
     }
 
+    private sealed class LogStreamFrame
+    {
+        private LogStreamFrame(string processId, LogStreamInitialization? initialization, LogStreamEvent[]? events)
+        {
+            ProcessId = processId;
+            Initialization = initialization;
+            Events = events;
+        }
+
+        public string ProcessId { get; }
+        public LogStreamInitialization? Initialization { get; }
+        public LogStreamEvent[]? Events { get; }
+
+        public static LogStreamFrame ForInitialization(string processId, LogStreamInitialization initialization)
+        {
+            return new LogStreamFrame(processId, initialization, null);
+        }
+
+        public static LogStreamFrame ForEvents(string processId, LogStreamEvent[] events)
+        {
+            return new LogStreamFrame(processId, null, events);
+        }
+    }
 }

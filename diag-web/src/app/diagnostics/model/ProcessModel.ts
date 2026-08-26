@@ -1,4 +1,4 @@
-﻿import { DiagnosticResponse, OperationSet, PropertyBag, SystemEvent } from '@domain/DiagResponse';
+﻿import { DiagnosticResponse, DrillDownEventMatcher, DrillDownEventViewDefinition, LogStreamEvent, LogStreamInitialization, OperationSet, PropertyBag } from '@domain/DiagResponse';
 import * as _ from 'lodash-es';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { CategoryModel } from './CategoryModel';
@@ -8,8 +8,7 @@ import { ObservableDisposable } from '@model/ObservableDisposable';
 import { Subject } from 'rxjs';
 import { DiagnosticModelFactory } from '@model/DiagnosticModelFactory';
 import { strEqCI } from '@util/stringUtil';
-import { LoadEventData } from '@domain/SetPropertyRequest';
-import { DiagProcess } from '@domain/DiagProcess';
+import { ProcessEventStore } from './ProcessEventStore';
 
 @Injectable({ providedIn: 'root' })
 export class ProcessModel implements ObservableDisposable {
@@ -21,9 +20,33 @@ export class ProcessModel implements ObservableDisposable {
     serverDate = signal<Date | undefined>(undefined);
     activeCatName = signal('');
     activeCat = computed(() => this.categories().find((c) => c.name() === this.activeCatName()));
+    private eventStore?: ProcessEventStore;
+    private drillDownEventViews: DrillDownEventViewDefinition[] = [];
+    private includeGlobalEventViews = true;
 
     setObjectPaths(objectPaths: readonly string[]): void {
         this.objectPaths = Object.freeze([...objectPaths]);
+    }
+
+    setProcessId(processId: string, includeGlobalEventViews = true): void {
+        this.eventStore = ProcessEventStore.forProcess(processId);
+        this.includeGlobalEventViews = includeGlobalEventViews;
+        this.reconcileEventViews();
+    }
+
+    initializeLogStream(initialization: LogStreamInitialization): void {
+        this.eventStore?.initialize(initialization);
+        this.reconcileEventViews();
+    }
+
+    appendLogStreamEvents(events: LogStreamEvent[]): void {
+        this.eventStore?.append(events);
+        this.reconcileEventViews();
+    }
+
+    setDrillDownEventViews(eventViews: DrillDownEventViewDefinition[] | undefined): void {
+        this.drillDownEventViews = eventViews ?? [];
+        this.reconcileEventViews();
     }
 
     clear() {
@@ -60,6 +83,7 @@ export class ProcessModel implements ObservableDisposable {
 
         this.categories.set(cats);
         this.operationSets.set(response.operationSets);
+        this.reconcileEventViews();
 
         if (!this.activeCatName() && this.categories().length) this.activeCatName.set(this.categories()[0].name());
     }
@@ -70,26 +94,6 @@ export class ProcessModel implements ObservableDisposable {
         return this.operationSets().find((s) => s.id === setName) ?? null;
     }
 
-    clearEvents(): void {
-        for (let cat of this.categories()) {
-            cat.clearEvents();
-        }
-    }
-
-    loadEvents(data: LoadEventData) {
-        // evts.forEach(evt => this.setEventLevel(evt));
-        var grouped = _.groupBy<SystemEvent>(data.events, (evt) => evt.sinkCategory);
-        for (const cat in grouped) this.getCat(cat).addEvents(grouped[cat]);
-    }
-
-    streamEvents(evts: SystemEvent[]) {
-        // evts.forEach(evt => this.setEventLevel(evt));
-        evts.reverse();
-
-        var grouped = _.groupBy<SystemEvent>(evts, (evt) => evt.sinkCategory);
-        for (const cat in grouped) this.getCat(cat).addEvents(grouped[cat]);
-    }
-
     private getCat(name: string): CategoryModel {
         let cat = this.categories().find((c) => strEqCI(c.name(), name));
         if (!cat) {
@@ -98,6 +102,66 @@ export class ProcessModel implements ObservableDisposable {
         }
 
         return cat;
+    }
+
+    private reconcileEventViews(): void {
+        const store = this.eventStore;
+        if (!store) return;
+
+        const addDestination = (category: string, name: string): void => {
+            this.getCat(category).getSink(name, () => store.eventsForDestination(category, name));
+        };
+
+        if (this.includeGlobalEventViews) {
+            for (const destination of [...store.configuredDestinations(), ...store.resolvedDestinations()]) {
+                addDestination(destination.category, destination.name);
+            }
+        }
+
+        const drillDownEventCategory = this.includeGlobalEventViews
+            ? undefined
+            : this.categories().find((category) => category.bags().length > 0)?.name() ?? 'DrillDown';
+        const duplicateDrillDownViewNames = new Set(
+            this.drillDownEventViews
+                .filter((view) => this.drillDownEventViews.filter((candidate) => candidate.name === view.name).length > 1)
+                .map((view) => view.name)
+        );
+
+        for (const view of this.drillDownEventViews) {
+            const sinkName = !this.includeGlobalEventViews && duplicateDrillDownViewNames.has(view.name)
+                ? `${view.category}: ${view.name}`
+                : view.name;
+            this.getCat(drillDownEventCategory ?? view.category).getSink(sinkName, () =>
+                store.events().filter((event) => view.matchers.some((matcher) => this.matchesDrillDownEvent(event, matcher)))
+            );
+        }
+
+        if (this.includeGlobalEventViews) {
+            const liveEvents = this.getCat('Live Events');
+            liveEvents.getSink('All Events', () => store.events());
+            liveEvents.getSink('Warnings', () => store.events().filter((event) => event.level === 3));
+            liveEvents.getSink('Errors', () => store.events().filter((event) => event.level >= 4));
+        }
+    }
+
+    private matchesDrillDownEvent(event: EventModel, matcher: DrillDownEventMatcher): boolean {
+        if (matcher.minLevel != null && event.level < matcher.minLevel) return false;
+        if (matcher.maxLevel != null && event.level > matcher.maxLevel) return false;
+
+        const loggerName = event.loggerCategory.toLocaleLowerCase();
+        const expected = matcher.loggerName.toLocaleLowerCase();
+        switch (matcher.matchMode) {
+            case 0:
+                return loggerName === expected;
+            case 1:
+                return loggerName === expected || loggerName.startsWith(`${expected}.`);
+            case 2:
+                return loggerName.includes(expected);
+            case 3:
+                return true;
+            default:
+                return false;
+        }
     }
 
     dispose(): void {}

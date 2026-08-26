@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
+using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
 
@@ -13,10 +15,12 @@ public sealed class SelfHostManager : IDisposable
 {
     public const string LocalProcessId = "self";
 
-    private readonly ConcurrentDictionary<string, ISelfHostClient> _clients = new();
+    private const int OutboundQueueCapacity = 256;
+    private readonly ConcurrentDictionary<string, SelfHostClientHandler> _clients = new();
     private readonly CancellationTokenSource _stopToken = new();
-    private readonly EventSinkStream _eventStream;
+    private readonly LogEventStore.LogEventStoreSubscription _eventStream;
     private readonly Task _eventTask;
+    private readonly object _eventLock = new();
     private readonly object _diagnosticsLock = new();
     private CancellationTokenSource _diagnosticsStopToken;
     private Task _diagnosticsTask;
@@ -26,7 +30,7 @@ public sealed class SelfHostManager : IDisposable
     public SelfHostManager(IServiceProvider serviceProvider = null)
     {
         _serviceProvider = serviceProvider;
-        _eventStream = EventSinkRepo.Default.CreateSinkStream(TimeSpan.FromMilliseconds(50), 100);
+        _eventStream = DiagnosticManager.LogEventStore.CreateSubscription();
         _eventTask = Task.Run(StreamEventsAsync);
     }
 
@@ -49,19 +53,30 @@ public sealed class SelfHostManager : IDisposable
             throw new ArgumentNullException(nameof(connectionId));
         if (client == null)
             throw new ArgumentNullException(nameof(client));
-        _clients[connectionId] = client;
+        _clients.AddOrUpdate(
+            connectionId,
+            _ => new SelfHostClientHandler(client),
+            (_, existing) =>
+            {
+                existing.Dispose();
+                return new SelfHostClientHandler(client);
+            }
+        );
         StartDiagnosticsLoop();
     }
 
     public void RemoveClient(string connectionId)
     {
-        if (connectionId != null && _clients.TryRemove(connectionId, out _))
+        if (connectionId != null && _clients.TryRemove(connectionId, out SelfHostClientHandler client))
+        {
+            client.Dispose();
             StopDiagnosticsLoopIfIdle();
+        }
     }
 
     public async Task SubscribeAsync(string connectionId, string processId)
     {
-        ISelfHostClient client = GetClient(connectionId);
+        SelfHostClientHandler client = GetClient(connectionId);
         if (!IsLocalProcess(processId))
         {
             await client.ShowDiagnosticsError(processId, "This self-host viewer exposes only its owning process.");
@@ -71,7 +86,8 @@ public sealed class SelfHostManager : IDisposable
         try
         {
             await client.ShowDiagnostics(LocalProcessId, DiagnosticManager.GetDiagnostics(_serviceProvider));
-            await client.SetEvents(LocalProcessId, EventSinkRepo.Default.GetEvents());
+            lock (_eventLock)
+                client.InitializeLogStream(LocalProcessId, DiagnosticManager.LogEventStore.CreateInitialization());
         }
         catch (Exception ex)
         {
@@ -131,10 +147,20 @@ public sealed class SelfHostManager : IDisposable
     {
         try
         {
-            while (await _eventStream.EventChannel.Reader.WaitToReadAsync(_stopToken.Token))
+            while (await _eventStream.Events.WaitToReadAsync(_stopToken.Token))
             {
-                IList<SystemEvent> events = await _eventStream.EventChannel.Reader.ReadAsync(_stopToken.Token);
-                await BroadcastEventsAsync(events.ToArray());
+                List<LogStreamEvent> events = new();
+                while (events.Count < 100 && _eventStream.Events.TryRead(out LogStreamEvent streamEvent))
+                    events.Add(streamEvent);
+
+                if (events.Count == 0)
+                    continue;
+
+                await Task.Delay(TimeSpan.FromMilliseconds(50), _stopToken.Token);
+                while (events.Count < 100 && _eventStream.Events.TryRead(out LogStreamEvent streamEvent))
+                    events.Add(streamEvent);
+
+                BroadcastEvents(events.ToArray());
             }
         }
         catch (OperationCanceledException) { }
@@ -211,7 +237,7 @@ public sealed class SelfHostManager : IDisposable
         }
     }
 
-    private async Task TrySendDiagnostics(ISelfHostClient client, DiagnosticResponse diagnostics)
+    private async Task TrySendDiagnostics(SelfHostClientHandler client, DiagnosticResponse diagnostics)
     {
         try
         {
@@ -220,7 +246,7 @@ public sealed class SelfHostManager : IDisposable
         catch { }
     }
 
-    private async Task TrySendDiagnosticsError(ISelfHostClient client, string message)
+    private async Task TrySendDiagnosticsError(SelfHostClientHandler client, string message)
     {
         try
         {
@@ -229,25 +255,19 @@ public sealed class SelfHostManager : IDisposable
         catch { }
     }
 
-    private async Task BroadcastEventsAsync(SystemEvent[] events)
+    private void BroadcastEvents(LogStreamEvent[] events)
     {
-        foreach (KeyValuePair<string, ISelfHostClient> pair in _clients.ToArray())
+        lock (_eventLock)
         {
-            try
-            {
-                await pair.Value.StreamEvents(LocalProcessId, events);
-            }
-            catch
-            {
-                if (_clients.TryRemove(pair.Key, out _))
-                    StopDiagnosticsLoopIfIdle();
-            }
+            LogStreamInitialization resynchronization = DiagnosticManager.LogEventStore.CreateInitialization();
+            foreach (SelfHostClientHandler client in _clients.Values)
+                client.QueueLogEvents(LocalProcessId, events, resynchronization);
         }
     }
 
-    private ISelfHostClient GetClient(string connectionId)
+    private SelfHostClientHandler GetClient(string connectionId)
     {
-        if (connectionId == null || !_clients.TryGetValue(connectionId, out ISelfHostClient client))
+        if (connectionId == null || !_clients.TryGetValue(connectionId, out SelfHostClientHandler client))
             throw new InvalidOperationException("The viewer connection is no longer available.");
 
         return client;
@@ -276,7 +296,114 @@ public sealed class SelfHostManager : IDisposable
 
         _stopToken.Cancel();
         _eventStream.Dispose();
+        foreach (SelfHostClientHandler client in _clients.Values)
+            client.Dispose();
         _clients.Clear();
         _stopToken.Dispose();
+    }
+
+    private sealed class SelfHostClientHandler : IDisposable
+    {
+        private readonly ISelfHostClient _client;
+        private readonly Channel<LogStreamFrame> _channel = Channel.CreateBounded<LogStreamFrame>(
+            new BoundedChannelOptions(OutboundQueueCapacity)
+            {
+                FullMode = BoundedChannelFullMode.Wait,
+                SingleReader = true,
+                SingleWriter = true,
+            }
+        );
+        private readonly CancellationTokenSource _stopToken = new();
+        private readonly object _sync = new();
+        private readonly Task _senderTask;
+        private bool _subscribed;
+
+        public SelfHostClientHandler(ISelfHostClient client)
+        {
+            _client = client;
+            _senderTask = Task.Run(SendAsync);
+        }
+
+        public Task ShowDiagnostics(string processId, DiagnosticResponse diagnostics) => _client.ShowDiagnostics(processId, diagnostics);
+
+        public Task ShowDiagnosticsError(string processId, string message) => _client.ShowDiagnosticsError(processId, message);
+
+        public void InitializeLogStream(string processId, LogStreamInitialization initialization)
+        {
+            lock (_sync)
+            {
+                _subscribed = true;
+                ReplacePendingFrames(LogStreamFrame.ForInitialization(processId, initialization));
+            }
+        }
+
+        public void QueueLogEvents(string processId, LogStreamEvent[] events, LogStreamInitialization resynchronization)
+        {
+            lock (_sync)
+            {
+                if (!_subscribed)
+                    return;
+                if (_channel.Writer.TryWrite(LogStreamFrame.ForEvents(processId, events)))
+                    return;
+
+                ReplacePendingFrames(LogStreamFrame.ForInitialization(processId, resynchronization));
+            }
+        }
+
+        private void ReplacePendingFrames(LogStreamFrame initialization)
+        {
+            while (_channel.Reader.TryRead(out _)) { }
+            _channel.Writer.TryWrite(initialization);
+        }
+
+        private async Task SendAsync()
+        {
+            try
+            {
+                while (await _channel.Reader.WaitToReadAsync(_stopToken.Token))
+                {
+                    while (_channel.Reader.TryRead(out LogStreamFrame frame))
+                    {
+                        if (frame.Initialization != null)
+                            await _client.InitializeLogStream(frame.ProcessId, frame.Initialization);
+                        else
+                            await _client.StreamLogEvents(frame.ProcessId, frame.Events!);
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch { }
+        }
+
+        public void Dispose()
+        {
+            _stopToken.Cancel();
+            _channel.Writer.TryComplete();
+            _stopToken.Dispose();
+        }
+    }
+
+    private sealed class LogStreamFrame
+    {
+        private LogStreamFrame(string processId, LogStreamInitialization? initialization, LogStreamEvent[]? events)
+        {
+            ProcessId = processId;
+            Initialization = initialization;
+            Events = events;
+        }
+
+        public string ProcessId { get; }
+        public LogStreamInitialization? Initialization { get; }
+        public LogStreamEvent[]? Events { get; }
+
+        public static LogStreamFrame ForInitialization(string processId, LogStreamInitialization initialization)
+        {
+            return new LogStreamFrame(processId, initialization, null);
+        }
+
+        public static LogStreamFrame ForEvents(string processId, LogStreamEvent[] events)
+        {
+            return new LogStreamFrame(processId, null, events);
+        }
     }
 }

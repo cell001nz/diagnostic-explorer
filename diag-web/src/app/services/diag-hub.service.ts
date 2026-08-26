@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DiagProcess } from '@domain/DiagProcess';
 import { Observable, Subject, firstValueFrom } from 'rxjs';
 import { LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
-import { DiagnosticResponse, DrillDownRequest, DrillDownResponse, SystemEvent } from '@domain/DiagResponse';
+import { DiagnosticResponse, DrillDownRequest, DrillDownResponse, LogStreamEvent, LogStreamInitialization } from '@domain/DiagResponse';
 import { RetroQuery, RetroSearchResult } from '@model/RetroQuery';
 
 const TAB_ID_KEY = 'tabIdStorageKey';
@@ -21,13 +21,13 @@ export class DiagHubService implements OnDestroy {
     processArrived$ = new Subject<DiagProcess>();
     processesArrived$ = new Subject<DiagProcess[]>();
     diagsArrived$ = new Subject<{ processId: string; response: DiagnosticResponse }>();
-    clearEvents$ = new Subject<{ processId: string }>();
-    streamEvents$ = new Subject<{ processId: string; events: SystemEvent[] }>();
-    loadEvents$ = new Subject<LoadEventData>();
+    logStreamInitialized$ = new Subject<{ processId: string; initialization: LogStreamInitialization }>();
+    logStreamEvents$ = new Subject<{ processId: string; events: LogStreamEvent[] }>();
     retroResults$ = new Subject<RetroSearchResult>();
     retroSearchEnd$ = new Subject<number>();
     retroSearchError$ = new Subject<{ searchId: number; error: string; detail: string }>();
     tabId = '';
+    #selectedProcessId?: string;
 
     constructor() {
         this.initTabId();
@@ -60,12 +60,11 @@ export class DiagHubService implements OnDestroy {
                 register('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
                     this.diagsArrived$.next({ processId, response });
                 });
-                register('SetEvents', (processId: string, events: SystemEvent[]) => {
-                    this.clearEvents$.next({ processId });
-                    this.streamEvents$.next({ processId, events });
+                register('InitializeLogStream', (processId: string, initialization: LogStreamInitialization) => {
+                    this.logStreamInitialized$.next({ processId, initialization });
                 });
-                register('StreamEvents', (processId: string, events: SystemEvent[]) => {
-                    this.streamEvents$.next({ processId, events });
+                register('StreamLogEvents', (processId: string, events: LogStreamEvent[]) => {
+                    this.logStreamEvents$.next({ processId, events });
                 });
                 register('ProcessSearchResults', (result: RetroSearchResult) => {
                     this.retroResults$.next(result);
@@ -77,7 +76,11 @@ export class DiagHubService implements OnDestroy {
                     this.retroSearchError$.next({ searchId, error, detail });
                 });
                 console.log('Hub connection configured');
+                hub.onreconnected(() => {
+                    if (this.#selectedProcessId) void hub.invoke('Subscribe', this.#selectedProcessId);
+                });
                 hub.onclose((error) => this.handleConnectionClosed(error));
+                if (this.#selectedProcessId) await hub.invoke('Subscribe', this.#selectedProcessId);
                 resolve(hub);
             });
         }
@@ -104,12 +107,14 @@ export class DiagHubService implements OnDestroy {
 
     async subscribeProcess(processId: string) {
         let hub = await this.getHubConnection();
+        this.#selectedProcessId = processId;
         await hub.invoke('Subscribe', processId);
     }
 
     async unsubscribeProcess(processId: string) {
         let hub = await this.getHubConnection();
-        await hub.invoke('Subscribe', processId);
+        await hub.invoke('Unsubscribe', processId);
+        if (this.#selectedProcessId === processId) this.#selectedProcessId = undefined;
     }
 
     async setPropertyValue(processId: string, request: SetPropertyRequest): Promise<OperationResponse> {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using DiagnosticExplorer.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace DiagnosticExplorer;
 
@@ -50,6 +51,14 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
             throw new ArgumentNullException(nameof(configure));
 
         configure(RuntimeOptions.Routing);
+    }
+
+    public void ConfigureLogEventRetention(Action<LogEventRetentionOptions> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        configure(RuntimeOptions.LogEventRetention);
     }
 
     public void DefaultFormat<T>(string formatString)
@@ -103,6 +112,7 @@ public sealed class DiagnosticRuntimeOptions : IDiagnosticHostingConfigurator
     public bool Enabled { get; private set; } = true;
     public List<DiagnosticHostOptions> Hosts { get; } = new();
     public EventRetentionOptions EventRetention { get; } = new();
+    public LogEventRetentionOptions LogEventRetention { get; } = new();
     public EventSinkRouteOptions Routing { get; } = new();
 
     IDiagnosticHostingConfigurator IDiagnosticHostingConfigurator.Enabled(bool enabled)
@@ -234,6 +244,7 @@ internal sealed class TypeConfiguration
 {
     private readonly Dictionary<string, PropertyConfiguration> _properties = new(StringComparer.Ordinal);
     private readonly Dictionary<string, CustomPropertyConfiguration> _customProperties = new(StringComparer.Ordinal);
+    private readonly List<DrillDownEventRouteTemplate> _eventRoutes = new();
 
     public TypeConfiguration(Type type)
     {
@@ -244,6 +255,12 @@ internal sealed class TypeConfiguration
     public bool? OptIn { get; set; }
     public IEnumerable<PropertyConfiguration> Properties => _properties.Values;
     public IEnumerable<CustomPropertyConfiguration> CustomProperties => _customProperties.Values;
+    public IEnumerable<DrillDownEventRouteTemplate> EventRoutes => _eventRoutes;
+
+    public void AddEventRoute(DrillDownEventRouteTemplate route)
+    {
+        _eventRoutes.Add(route ?? throw new ArgumentNullException(nameof(route)));
+    }
 
     public PropertyConfiguration GetOrAdd(PropertyInfo property)
     {
@@ -276,6 +293,7 @@ internal sealed class TypeConfiguration
             clone._properties.Add(GetPropertyKey(property.Property), property.Clone());
         foreach (CustomPropertyConfiguration property in _customProperties.Values)
             clone._customProperties.Add(property.Name, property.Clone());
+        clone._eventRoutes.AddRange(_eventRoutes.Select(route => route.Clone()));
         return clone;
     }
 
@@ -292,11 +310,89 @@ internal sealed class TypeConfiguration
 
         foreach (CustomPropertyConfiguration sourceProperty in source.CustomProperties)
             _customProperties[sourceProperty.Name] = sourceProperty.Clone();
+
+        _eventRoutes.AddRange(source.EventRoutes.Select(route => route.Clone()));
     }
 
     private static string GetPropertyKey(PropertyInfo property)
     {
         return property.Name;
+    }
+}
+
+public sealed class DrillDownEventRoute
+{
+    internal string Category { get; private set; }
+    internal string Name { get; private set; }
+    internal LogLevel? MinLevel { get; private set; }
+    internal LogLevel? MaxLevel { get; private set; }
+
+    public DrillDownEventRoute To(string category, string name)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            throw new ArgumentException("An event-view category is required.", nameof(category));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("An event-view name is required.", nameof(name));
+
+        Category = category;
+        Name = name;
+        return this;
+    }
+
+    public DrillDownEventRoute AtLeast(LogLevel minLevel)
+    {
+        MinLevel = minLevel;
+        return this;
+    }
+
+    public DrillDownEventRoute AtMost(LogLevel maxLevel)
+    {
+        MaxLevel = maxLevel;
+        return this;
+    }
+
+    internal void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Category) || string.IsNullOrWhiteSpace(Name))
+            throw new InvalidOperationException("A drilldown event route must define one destination.");
+        if (MinLevel > MaxLevel)
+            throw new InvalidOperationException("A drilldown event route minimum level cannot exceed its maximum level.");
+    }
+}
+
+internal sealed class DrillDownEventRouteTemplate
+{
+    public DrillDownEventRouteTemplate(string staticLoggerName, LoggerNameMatchMode matchMode, DrillDownEventRoute route)
+    {
+        LoggerName = staticLoggerName;
+        MatchMode = matchMode;
+        Route = route;
+    }
+
+    public DrillDownEventRouteTemplate(Func<object, string> loggerName, LoggerNameMatchMode matchMode, DrillDownEventRoute route)
+    {
+        LoggerNameFactory = loggerName;
+        MatchMode = matchMode;
+        Route = route;
+    }
+
+    public string LoggerName { get; }
+    public Func<object, string> LoggerNameFactory { get; }
+    public LoggerNameMatchMode MatchMode { get; }
+    public DrillDownEventRoute Route { get; }
+
+    public string ResolveLoggerName(object target) => LoggerNameFactory?.Invoke(target) ?? LoggerName;
+
+    public DrillDownEventRouteTemplate Clone()
+    {
+        DrillDownEventRoute route = new DrillDownEventRoute().To(Route.Category, Route.Name);
+        if (Route.MinLevel.HasValue)
+            route.AtLeast(Route.MinLevel.Value);
+        if (Route.MaxLevel.HasValue)
+            route.AtMost(Route.MaxLevel.Value);
+        return LoggerNameFactory == null
+            ? new DrillDownEventRouteTemplate(LoggerName, MatchMode, route)
+            : new DrillDownEventRouteTemplate(LoggerNameFactory, MatchMode, route);
     }
 }
 
@@ -564,6 +660,22 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
     }
 
+    public ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure)
+    {
+        if (string.IsNullOrWhiteSpace(loggerName))
+            throw new ArgumentException("A logger name is required.", nameof(loggerName));
+        return AddEventRoute(new DrillDownEventRouteTemplate(loggerName, matchMode, ConfigureRoute(configure)));
+    }
+
+    public ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure)
+    {
+        if (loggerName == null)
+            throw new ArgumentNullException(nameof(loggerName));
+
+        Func<T, string> compiled = loggerName.Compile();
+        return AddEventRoute(new DrillDownEventRouteTemplate(target => compiled((T)target), matchMode, ConfigureRoute(configure)));
+    }
+
     private IDateConfigurator<T> ConfigureDate(LambdaExpression property)
     {
         PropertyConfiguration configuration = GetProperty(property);
@@ -584,6 +696,25 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         CategoryScope scope = _categoryScope.Value;
         if (scope != null)
             configuration.Category = new ConfiguredValue<string>(scope.Category);
+    }
+
+    private ITypeConfigurator<T> AddEventRoute(DrillDownEventRouteTemplate route)
+    {
+        if (!Enum.IsDefined(typeof(LoggerNameMatchMode), route.MatchMode))
+            throw new ArgumentOutOfRangeException(nameof(route));
+        route.Route.Validate();
+        _configuration.AddEventRoute(route);
+        return this;
+    }
+
+    private static DrillDownEventRoute ConfigureRoute(Action<DrillDownEventRoute> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        DrillDownEventRoute route = new();
+        configure(route);
+        return route;
     }
 
     private sealed class CategoryScope : IDisposable

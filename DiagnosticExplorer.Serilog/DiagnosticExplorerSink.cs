@@ -13,20 +13,13 @@ public sealed class DiagnosticExplorerSink : ILogEventSink
     private const string SourceContextProperty = "SourceContext";
     private readonly string _fallbackCategory;
 
-    public DiagnosticExplorerSink(
-        EventSinkRouteOptions options,
-        string fallbackCategory = "Application",
-        EventSinkRepo sinkRepo = null
-    )
+    public DiagnosticExplorerSink(EventSinkRouteOptions options, string fallbackCategory = "Application", LogEventStore eventStore = null)
     {
         if (string.IsNullOrWhiteSpace(fallbackCategory))
-            throw new ArgumentException(
-                "A fallback category is required.",
-                nameof(fallbackCategory)
-            );
+            throw new ArgumentException("A fallback category is required.", nameof(fallbackCategory));
 
         _fallbackCategory = fallbackCategory;
-        Router = new EventSinkRouter(options, sinkRepo);
+        Router = new EventSinkRouter(options, eventStore);
     }
 
     public EventSinkRouter Router { get; }
@@ -42,14 +35,7 @@ public sealed class DiagnosticExplorerSink : ILogEventSink
             return;
 
         string renderedMessage = logEvent.RenderMessage();
-        Router.Route(
-            new EventSinkLogEvent(
-                category,
-                level,
-                GetHeadline(renderedMessage),
-                CreateDetail(logEvent, renderedMessage)
-            )
-        );
+        Router.Route(new EventSinkLogEvent(category, level, GetHeadline(renderedMessage), CreateDetail(logEvent, renderedMessage)));
     }
 
     private string GetCategory(LogEvent logEvent)
@@ -100,10 +86,7 @@ public sealed class DiagnosticExplorerSink : ILogEventSink
     private static string CreateDetail(LogEvent logEvent, string renderedMessage)
     {
         StringBuilder detail = new();
-        if (
-            !string.IsNullOrEmpty(renderedMessage)
-            && renderedMessage.Length != GetHeadline(renderedMessage).Length
-        )
+        if (!string.IsNullOrEmpty(renderedMessage) && renderedMessage.Length != GetHeadline(renderedMessage).Length)
             detail.AppendLine(renderedMessage);
         if (logEvent.Exception != null)
             detail.AppendLine(logEvent.Exception.ToString());
@@ -113,11 +96,7 @@ public sealed class DiagnosticExplorerSink : ILogEventSink
             if (property.Key == SourceContextProperty)
                 continue;
 
-            detail
-                .Append("Property.")
-                .Append(property.Key)
-                .Append(": ")
-                .AppendLine(property.Value.ToString());
+            detail.Append("Property.").Append(property.Key).Append(": ").AppendLine(property.Value.ToString());
         }
 
         return detail.Length == 0 ? null : detail.ToString().TrimEnd();

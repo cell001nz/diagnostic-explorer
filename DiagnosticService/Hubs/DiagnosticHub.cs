@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
+using DiagnosticExplorer.Logging;
 using DiagnosticExplorer.Util;
 using DiagWebService.ClientHandlers;
 using log4net;
@@ -74,7 +75,7 @@ public class DiagnosticHub : Hub<IDiagnosticHubClient>, IDiagnosticHubServer
             DiagnosticMsg[]? messages = ProtobufUtil.Decompress<DiagnosticMsg[]>(eventData);
             if (messages?.Any() == true)
             {
-                 _rtManager.RegisterAlertLevel(Context.ConnectionId, messages);
+                _rtManager.RegisterAlertLevel(Context.ConnectionId, messages);
 
                 _retroManager.LogEvents(messages);
             }
@@ -88,18 +89,17 @@ public class DiagnosticHub : Hub<IDiagnosticHubClient>, IDiagnosticHubServer
         }
     }
 
-
-    public Task SetEvents(SystemEvent[] events)
+    public Task InitializeLogStream(LogStreamInitialization initialization)
     {
         var client = _rtManager.GetClientHandler(Context.ConnectionId);
-        client.SetEvents(events);
+        client.InitializeLogStream(initialization);
         return Task.CompletedTask;
     }
 
-    public Task StreamEvents(SystemEvent[] evts)
+    public Task StreamLogEvents(LogStreamEvent[] events)
     {
         var client = _rtManager.GetClientHandler(Context.ConnectionId);
-        client.StreamEvents(evts);
+        client.StreamLogEvents(events);
         return Task.CompletedTask;
     }
 }

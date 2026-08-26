@@ -453,6 +453,12 @@ public class RealtimeManager : IHostedService
         return true;
     }
 
+    public void UnsubscribeWebClient(string webConnectionId)
+    {
+        if (_webClients.TryGetValue(webConnectionId, out WebClientHandler? webClient))
+            RemoveClientFromSubscriptions(webClient);
+    }
+
     private DiagnosticSubscription GetSubscription(DiagProcess process)
     {
         return _subscriptions.GetOrAdd(process, key => new(process));

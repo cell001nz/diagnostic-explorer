@@ -14,6 +14,7 @@ namespace Diagnostics.Service.Common.Hubs;
 public interface IWebHub
 {
     Task Subscribe(string processId);
+    Task Unsubscribe(string processId);
     Task RemoveProcess(string processId);
     Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request);
     Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request);
@@ -52,6 +53,12 @@ public class WebHub : Hub<IWebHubClient>, IWebHub
     public async Task Subscribe(string processId)
     {
         await _realtimeManager.SubscribeWebClient(Context.ConnectionId, processId);
+    }
+
+    public Task Unsubscribe(string processId)
+    {
+        _realtimeManager.UnsubscribeWebClient(Context.ConnectionId);
+        return Task.CompletedTask;
     }
 
     public Task RemoveProcess(string processId)

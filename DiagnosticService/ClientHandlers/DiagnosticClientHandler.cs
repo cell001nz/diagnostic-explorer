@@ -7,6 +7,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
+using DiagnosticExplorer.Logging;
 using DiagnosticExplorer.Util;
 using Diagnostics.Service.Common.Hubs;
 using Microsoft.AspNetCore.SignalR;
@@ -18,8 +19,8 @@ public class DiagnosticClientHandler : IDiagnosticClient
     private readonly IHubContext<DiagnosticHub, IDiagnosticHubClient> _hubContext;
     private readonly HubCallerContext _callerContext;
     public event EventHandler Disconnected;
-    public Subject<SystemEvent[]> EventsSet { get; } = new();
-    public Subject<SystemEvent[]> EventsStreamed { get; } = new();
+    public Subject<LogStreamInitialization> LogStreamInitialized { get; } = new();
+    public Subject<LogStreamEvent[]> LogStreamEvents { get; } = new();
 
     public DiagnosticClientHandler(HubCallerContext callerContext, IHubContext<DiagnosticHub, IDiagnosticHubClient> hubContext)
     {
@@ -79,14 +80,14 @@ public class DiagnosticClientHandler : IDiagnosticClient
         await Client.UnsubscribeEvents();
     }
 
-    public void SetEvents(SystemEvent[] events)
+    public void InitializeLogStream(LogStreamInitialization initialization)
     {
-        EventsSet.OnNext(events);
+        LogStreamInitialized.OnNext(initialization);
     }
 
-    public void StreamEvents(SystemEvent[] evt)
+    public void StreamLogEvents(LogStreamEvent[] events)
     {
-        EventsStreamed.OnNext(evt);
+        LogStreamEvents.OnNext(events);
     }
 
     public void CloseConnection()

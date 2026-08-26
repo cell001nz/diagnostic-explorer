@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using DiagnosticExplorer.Logging;
 using DiagnosticExplorer.Util;
 
 namespace DiagnosticExplorer;
@@ -30,6 +31,7 @@ public static class DiagnosticManager
     public const string EnabledConfigurationKey = "DiagnosticExplorer:Enabled";
     public static bool Enabled { get; set; } = true;
     public static DiagnosticConfiguration CurrentConfiguration { get; private set; } = new();
+    public static LogEventStore LogEventStore { get; } = new();
     internal static int DrillDownMaxItems => _configuration.DrillDownMaxItems;
 
     static DiagnosticManager()
@@ -63,6 +65,7 @@ public static class DiagnosticManager
 
         Enabled = configuration.RuntimeOptions.Enabled;
         EventSinkRepo.Default.ConfigureEventRetention(configuration.RuntimeOptions.EventRetention);
+        LogEventStore.Configure(configuration.RuntimeOptions.LogEventRetention, configuration.RuntimeOptions.Routing.CreateSnapshot());
         DiagnosticConfigurationSnapshot snapshot = configuration.CreateSnapshot();
         lock (_propertyGetterLock)
         {
@@ -1029,6 +1032,7 @@ public static class DiagnosticManager
                 DisplayedCount = materialized.DisplayedCount,
                 TotalCount = materialized.TotalCount,
                 IsTruncated = materialized.IsTruncated,
+                EventViews = ResolveDrillDownEventViews(materialized.RegisteredObjects),
             };
         }
         catch (Exception ex)
@@ -1049,6 +1053,56 @@ public static class DiagnosticManager
             return false;
 
         return true;
+    }
+
+    private static List<DrillDownEventViewDefinition> ResolveDrillDownEventViews(IEnumerable<RegisteredObject> registeredObjects)
+    {
+        Dictionary<string, DrillDownEventViewDefinition> views = new(StringComparer.OrdinalIgnoreCase);
+        foreach (RegisteredObject registeredObject in registeredObjects)
+        {
+            object target = registeredObject?.Object;
+            if (target == null)
+                continue;
+
+            TypeConfiguration configuration = _configuration.GetEffectiveTypeConfiguration(target.GetType(), drillDown: true);
+            foreach (DrillDownEventRouteTemplate route in configuration.EventRoutes)
+            {
+                string loggerName = route.ResolveLoggerName(target);
+                if (string.IsNullOrWhiteSpace(loggerName))
+                    continue;
+
+                string id = $"{route.Route.Category}\u001f{route.Route.Name}";
+                if (!views.TryGetValue(id, out DrillDownEventViewDefinition view))
+                {
+                    view = new DrillDownEventViewDefinition
+                    {
+                        Id = id,
+                        Category = route.Route.Category,
+                        Name = route.Route.Name,
+                    };
+                    views.Add(id, view);
+                }
+
+                DrillDownEventMatcher matcher = new()
+                {
+                    LoggerName = loggerName,
+                    MatchMode = route.MatchMode,
+                    MinLevel = route.Route.MinLevel.HasValue ? (int)route.Route.MinLevel.Value : null,
+                    MaxLevel = route.Route.MaxLevel.HasValue ? (int)route.Route.MaxLevel.Value : null,
+                };
+                if (
+                    !view.Matchers.Any(existing =>
+                        existing.LoggerName == matcher.LoggerName
+                        && existing.MatchMode == matcher.MatchMode
+                        && existing.MinLevel == matcher.MinLevel
+                        && existing.MaxLevel == matcher.MaxLevel
+                    )
+                )
+                    view.Matchers.Add(matcher);
+            }
+        }
+
+        return views.Values.OrderBy(view => view.Category).ThenBy(view => view.Name).ToList();
     }
 
     private static DrillDownTarget ResolveDrillDownTarget(IEnumerable<RegisteredObject> registeredObjects, IReadOnlyList<string> objectPaths)

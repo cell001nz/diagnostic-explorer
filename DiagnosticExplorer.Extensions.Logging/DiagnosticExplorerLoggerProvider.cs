@@ -7,27 +7,19 @@ namespace DiagnosticExplorer.Extensions.Logging;
 
 public sealed class DiagnosticExplorerLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
-    private readonly ConcurrentDictionary<string, DiagnosticExplorerLogger> _loggers = new(
-        StringComparer.Ordinal
-    );
+    private readonly ConcurrentDictionary<string, DiagnosticExplorerLogger> _loggers = new(StringComparer.Ordinal);
     private IExternalScopeProvider _scopeProvider;
 
-    public DiagnosticExplorerLoggerProvider(
-        EventSinkRouteOptions options,
-        EventSinkRepo sinkRepo = null
-    )
+    public DiagnosticExplorerLoggerProvider(EventSinkRouteOptions options, LogEventStore eventStore = null)
     {
-        Router = new EventSinkRouter(options, sinkRepo);
+        Router = new EventSinkRouter(options, eventStore);
     }
 
     public EventSinkRouter Router { get; }
 
     public ILogger CreateLogger(string categoryName)
     {
-        return _loggers.GetOrAdd(
-            categoryName ?? string.Empty,
-            category => new DiagnosticExplorerLogger(category, this)
-        );
+        return _loggers.GetOrAdd(categoryName ?? string.Empty, category => new DiagnosticExplorerLogger(category, this));
     }
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
