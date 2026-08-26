@@ -110,12 +110,11 @@ internal static class DiagnosticsConfiguration
                 .Collection(configuration => configuration.Items)
                 .List(items =>
                     items
-                        .Name(item => item.Name)
-                        .Category(item => item.Purpose)
+                        .Name(item => $"Item: {item.Name}")
+                        .Category(item => "Items")
                         .Value(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
                         .Description(item => $"Installed {item.InstalledDate:d MMM yyyy}")
                 )
-                .Categories(item => item.Purpose)
                 .WithDrillDown();
         });
 
