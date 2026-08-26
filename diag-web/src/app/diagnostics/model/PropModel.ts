@@ -20,6 +20,7 @@ export class PropModel {
     operationSet = signal('');
     canSet = signal(false);
     canDrillDown = signal(false);
+    drillDownIconOnly = signal(false);
     alerts = signal<PropertyAlert[]>([]);
     alertSeverity = computed(() => Math.max(0, ...this.alerts().map(getAlertSeverity)));
     alertTooltip = computed(() =>
@@ -35,11 +36,12 @@ export class PropModel {
     }
 
     update(source: Property): void {
-        this.value.set(source.value);
+        this.value.set(source.value ?? '');
         this.description.set(source.description);
         this.operationSet.set(source.operationSet);
         this.canSet.set(source.canSet);
         this.canDrillDown.set(source.canDrillDown);
+        this.drillDownIconOnly.set(source.drillDownIconOnly ?? false);
         this.alerts.set(source.alerts ?? []);
     }
 

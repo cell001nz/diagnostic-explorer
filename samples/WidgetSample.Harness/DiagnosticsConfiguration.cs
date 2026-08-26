@@ -29,7 +29,7 @@ internal static class DiagnosticsConfiguration
         config.DefaultFormat<Point>("Located at {0}");
 
         ConfigureForm(config);
-        ConfigureWidget(config);
+        Widget.ConfigureDiagnostics(config);
         ConfigureWidgetConfig(config);
         ConfigureGadget(config);
         ConfigureGadgetConfig(config);
@@ -121,31 +121,6 @@ internal static class DiagnosticsConfiguration
 
         config.Configure<WidgetConfigItem>(options => options.OptOut());
         config.Configure<WidgetConnectionConfig>(options => options.OptOut());
-    }
-
-    private static void ConfigureWidget(IDiagConfigurator config)
-    {
-        config.Configure<Widget>(options =>
-        {
-            options.OptOut();
-            options.Exclude(widget => widget.IgnoredProperty);
-            options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.Configuration).Named("View Widget Config").WithDrillDown();
-            using (options.CreateCategoryScope("Info"))
-            {
-                options.Property(widget => widget.DateCreated).AllowSet();
-                options.Property(widget => widget.Size).AllowSet();
-            }
-        });
-
-        config.ConfigureDrillDown<Widget>(options =>
-        {
-            options.OptIn();
-            options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.Configuration).WithDrillDown();
-            options.Property(widget => widget.DateCreated);
-            options.Property(widget => widget.Size);
-        });
     }
 
     private static void ConfigureGadget(IDiagConfigurator config)

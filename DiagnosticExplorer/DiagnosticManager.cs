@@ -299,6 +299,8 @@ public static class DiagnosticManager
             bag.Name = bagName;
             bag.Category = bagCategory;
             bag.SourceObject = obj;
+            bag.CanDrillDown =
+                renderMode == DiagnosticRenderMode.Normal && obj is not Type && _configuration.HasDrillDownConfiguration(obj.GetType());
 
             List<PropertyGetter> valueGetters = GetPropertyGetters(obj);
 

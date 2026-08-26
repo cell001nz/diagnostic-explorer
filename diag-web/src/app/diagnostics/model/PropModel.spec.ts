@@ -10,6 +10,7 @@ function createProperty(severity: PropertyAlert['severity']): Property {
         operationSet: '',
         canSet: false,
         canDrillDown: true,
+        drillDownIconOnly: false,
         alerts: [{ severity, message: 'Widget count alert', category: 'Widget count' }]
     };
 }

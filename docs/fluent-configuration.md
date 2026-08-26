@@ -129,6 +129,10 @@ configuration.Configure<MyService>(type =>
     type.Property(service => service.Connection)
         .WithDrillDown();
 
+    type.Property(service => service.Configuration)
+        .Named("View configuration")
+        .AsDrillDownIcon();
+
     type.CustomProperty("Pending items", service => service.PendingItems)
         .WithDrillDown(maxItems: 25);
 
@@ -138,6 +142,8 @@ configuration.Configure<MyService>(type =>
         .WithDrillDown();
 });
 ```
+
+`WithDrillDown()` renders the property name and value as links. `AsDrillDownIcon()` renders the property name as ordinary text, suppresses its display value, and places a drilldown icon beside the name. Both methods accept an optional `maxItems` argument for enumerable targets.
 
 Collection list links target the collection item, even when `Value(...)` displays another value. Category-mode collections show a drilldown link beside each generated subbag name. Complex property and custom-property values target their returned object. Null and scalar values do not produce drilldown links.
 
@@ -153,6 +159,8 @@ configuration.ConfigureDrillDown<WorkItem>(type =>
     type.Property(item => item.Owner).WithDrillDown();
 });
 ```
+
+When a registered object's runtime type has an explicit drilldown profile, its bag header also shows a drilldown control. This provides an entry point to the detailed profile when the normal `Configure<T>()` view intentionally exposes only a subset of the object's properties.
 
 When no drilldown profile exists for the runtime type or its configured base types, rendering falls back to the normal `Configure<T>()` profile as a whole. Drilldown dialogs remain interactive: property setters, operations, and further drilldowns resolve through the ordered parent path chain. Multiple sibling and nested dialogs can remain open independently.
 

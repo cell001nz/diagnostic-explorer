@@ -67,6 +67,7 @@ public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurat
 {
     IPropertyConfigurator<T, TProperty> Format(Func<TProperty, string> format);
     IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null);
+    IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message, string category);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, Func<T, string> message);

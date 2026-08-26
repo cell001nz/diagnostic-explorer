@@ -555,6 +555,70 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void DrillDownIconSuppressesDisplayValueButRetainsTarget()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Child).AsDrillDownIcon();
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        PropertyBag bag = DiagnosticManager.ObjectToPropertyBag(root, "Root", "Tests");
+        Property property = bag.GetProperty(nameof(DrillDownRoot.Child), "General");
+
+        Assert.True(property.CanDrillDown);
+        Assert.True(property.DrillDownIconOnly);
+        Assert.Null(property.Value);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+        );
+
+        Assert.Equal("Nested", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(ChildSample.Name), "General").Value);
+    }
+
+    [Fact]
+    public void ExplicitDrillDownProfileMakesRegisteredObjectBagDrillable()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Name);
+        });
+        configuration.ConfigureDrillDown<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Excluded);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        ChildSample child = new();
+        RegisteredObject registered = new(child, "Tests", "Child");
+        PropertyBag bag = DiagnosticManager.ObjectToPropertyBag(child, "Child", "Tests");
+
+        Assert.True(bag.CanDrillDown);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { registered },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Child" } }
+        );
+
+        PropertyBag childBag = Assert.Single(response.Diagnostics.PropertyBags);
+        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Excluded), "General").Value);
+        Assert.Null(childBag.GetProperty(nameof(ChildSample.Name), "General"));
+    }
+
+    [Fact]
     public void CollectionListDrillsIntoItemRatherThanDisplayedValue()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };

@@ -56,6 +56,33 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
 
     public WidgetConfig Configuration { get; } = new();
 
+    #region ConfigureDiagnostics
+
+    internal static void ConfigureDiagnostics(IDiagConfigurator config)
+    {
+        config.Configure<Widget>(options =>
+        {
+            options.OptOut();
+            options.Exclude(widget => widget.IgnoredProperty);
+            options.Property(widget => widget.Name).AllowSet();
+            options.Property(widget => widget.Configuration).Named("Widget Config").AsDrillDownIcon();
+        });
+
+        config.ConfigureDrillDown<Widget>(options =>
+        {
+            options.OptIn();
+            options.CustomProperty("Some Prop", widget => widget._someProp);
+            options.CustomProperty("Private String", widget => widget._privateString);
+            options.CustomProperty("My Decimal", widget => widget._myDecimal);
+            options.Property(widget => widget.Name).AllowSet();
+            options.Property(widget => widget.Configuration).Named("Widget Config").AsDrillDownIcon();
+            options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
+            options.Property(widget => widget.Size).Category("Info").AllowSet();
+        });
+    }
+
+    #endregion
+
     [DiagnosticMethod]
     public void Randomise()
     {

@@ -164,7 +164,7 @@ export class DiagnosticsViewComponent implements OnDestroy {
         this.closeDetail();
     };
 
-    detailHeight = signal(200);
+    detailHeight = signal(720);
 
     #resizeStartY = 0;
     #resizeStartHeight = 0;

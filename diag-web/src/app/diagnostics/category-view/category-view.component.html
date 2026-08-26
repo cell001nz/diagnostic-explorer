@@ -5,6 +5,13 @@
          <ng-template #header>
              <div class="flex-1 cursor-pointer select-none" (click)="bag.toggleCollapsed()">
                  {{bag.name()}}
+                 @if (bag.canDrillDown()) {
+                     <button type="button" class="diag-icon-link ml-1"
+                             title="Open drilldown" aria-label="Open drilldown"
+                             (click)="showDrillDown(bag.getOperationPath()); $event.stopPropagation()">
+                         <i class="pi pi-external-link"></i>
+                     </button>
+                 }
                  @if (bag.operationSet()) {
                      <button type="button" class="diag-icon-link text-yellow-500 ml-1"
                              title="Executable operations" aria-label="Executable operations"
@@ -50,7 +57,7 @@
                              [class.text-amber-400]="prop.alertSeverity() === 1"
                              [class.text-red-400]="prop.alertSeverity() === 2"
                              [attr.title]="prop.alertTooltip() || prop.description() || null">
-                        @if (prop.canDrillDown()) {
+                        @if (prop.canDrillDown() && !prop.drillDownIconOnly()) {
                             <button type="button" class="diag-drilldown-link truncate"
                                     (click)="showDrillDown(prop.getOperationPath())">{{ prop.name() }}</button>
                         } @else {
@@ -82,11 +89,18 @@
                             [class.text-amber-400]="prop.alertSeverity() === 1"
                             [class.text-red-400]="prop.alertSeverity() === 2"
                               [attr.title]="prop.alertTooltip() || null">
-                            @if (prop.canDrillDown()) {
-                                <button type="button" class="diag-drilldown-link value-link"
-                                        (click)="showDrillDown(prop.getOperationPath())">{{ prop.value() }}</button>
+                            @if (prop.drillDownIconOnly()) {
+                                <button type="button" class="diag-icon-link" title="Open drilldown" aria-label="Open drilldown"
+                                        (click)="showDrillDown(prop.getOperationPath())">
+                                    <i class="pi pi-external-link"></i>
+                                </button>
                             } @else {
-                                {{ prop.value() }}
+                                @if (prop.canDrillDown()) {
+                                    <button type="button" class="diag-drilldown-link value-link"
+                                            (click)="showDrillDown(prop.getOperationPath())">{{ prop.value() }}</button>
+                                } @else {
+                                    {{ prop.value() }}
+                                }
                             }
                         </span>
                     }

@@ -103,6 +103,9 @@ public class Property
     [ProtoMember(7)]
     public bool CanDrillDown { get; set; }
 
+    [ProtoMember(8)]
+    public bool DrillDownIconOnly { get; set; }
+
     internal object SourceObject { get; set; }
 
     internal object ValueObject { get; set; }

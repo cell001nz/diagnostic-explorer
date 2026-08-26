@@ -44,6 +44,7 @@ internal class PropertyGetter
     private IReadOnlyList<PropertyAlertConfiguration> _alerts;
     protected bool DrillDownEnabled { get; private set; }
     protected int DrillDownMaxItems { get; private set; }
+    protected bool DrillDownIconOnly { get; private set; }
 
     protected PropertyGetter() { }
 
@@ -105,7 +106,7 @@ internal class PropertyGetter
             _alerts = configuration.Alerts;
             if (configuration.AllowSet.IsSet)
                 CanSet = propInfo.CanWrite && configuration.AllowSet.Value;
-            ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems);
+            ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly);
 
             if (configuration.UsesPropertyDefaults && string.IsNullOrWhiteSpace(Category))
                 Category = "General";
@@ -169,6 +170,8 @@ internal class PropertyGetter
             SourceProperty = PropInfo,
         };
         ApplyDrillDown(p, objectValue);
+        if (p.DrillDownIconOnly)
+            p.Value = null;
 
         string prependToCategory = PrependToCategory(catPrepend, obj);
         bag.AddProperty(p, prependToCategory);
@@ -337,7 +340,7 @@ internal class PropertyGetter
         Category = configuration.Category.IsSet ? configuration.Category.Value : "General";
         Description = configuration.Description.IsSet ? configuration.Description.Value : null;
         _alerts = configuration.Alerts;
-        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems);
+        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, default);
     }
 
     protected void ApplyDrillDown(Property property, object value)
@@ -346,14 +349,16 @@ internal class PropertyGetter
             return;
 
         property.CanDrillDown = true;
+        property.DrillDownIconOnly = DrillDownIconOnly;
         property.DrillDownObject = value;
         property.DrillDownMaxItems = DrillDownMaxItems;
     }
 
-    private void ConfigureDrillDown(ConfiguredValue<bool> enabled, ConfiguredValue<int> maxItems)
+    private void ConfigureDrillDown(ConfiguredValue<bool> enabled, ConfiguredValue<int> maxItems, ConfiguredValue<bool> iconOnly)
     {
         DrillDownEnabled = enabled.IsSet && enabled.Value;
         DrillDownMaxItems = maxItems.IsSet ? maxItems.Value : DiagnosticManager.DrillDownMaxItems;
+        DrillDownIconOnly = iconOnly.IsSet && iconOnly.Value;
     }
 
     protected string FormatValue(object val)

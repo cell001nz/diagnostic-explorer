@@ -1,8 +1,8 @@
-﻿﻿import {OperationSet, PropertyBag} from '@domain/DiagResponse';
-import {customMerge} from '@util/merge';
-import {SubBagModel} from './SubBagModel';
-import {CategoryModel} from './CategoryModel';
-import {computed, signal} from "@angular/core";
+﻿﻿import { OperationSet, PropertyBag } from '@domain/DiagResponse';
+import { customMerge } from '@util/merge';
+import { SubBagModel } from './SubBagModel';
+import { CategoryModel } from './CategoryModel';
+import { computed, signal } from '@angular/core';
 
 export class BagModel {
     cat: CategoryModel;
@@ -10,8 +10,9 @@ export class BagModel {
     subBags = signal<SubBagModel[]>([]);
     isCollapsed = signal(false);
     isExpanded = computed(() => !this.isCollapsed());
-    
+
     operationSet = signal('');
+    canDrillDown = signal(false);
 
     constructor(cat: CategoryModel, bag: PropertyBag) {
         this.cat = cat;
@@ -21,36 +22,38 @@ export class BagModel {
 
     update(bag: PropertyBag) {
         this.operationSet.set(bag.operationSet);
-        
-        this.subBags.set(customMerge(bag.categories,
-            this.subBags(),
-            s => s.name ?? "General",
-            t => t.name(),
-            s => new SubBagModel(this, s),
-            (s, t) => t.update(s)));
+        this.canDrillDown.set(bag.canDrillDown);
+
+        this.subBags.set(
+            customMerge(
+                bag.categories,
+                this.subBags(),
+                (s) => s.name ?? 'General',
+                (t) => t.name(),
+                (s) => new SubBagModel(this, s),
+                (s, t) => t.update(s)
+            )
+        );
     }
-    
+
     toggleCollapsed() {
-        this.isCollapsed.update(v => !v);
+        this.isCollapsed.update((v) => !v);
     }
-    
-    
+
     getOperationPath(): string {
-        return this.cat.name() + "|" + this.name();
+        return this.cat.name() + '|' + this.name();
     }
-    getOperationSet() : OperationSet | null {
-        if (!this.operationSet())
-            return null;
-        
+    getOperationSet(): OperationSet | null {
+        if (!this.operationSet()) return null;
+
         return this.cat.realtimeModel.getOperationSet(this.operationSet());
     }
 
     handleDoubleClick(evt: MouseEvent) {
         if (evt.detail === 2) {
             this.isCollapsed.set(false);
-            this.cat.bags().forEach(c => c.isCollapsed.set(c !== this));
-            this.cat.eventSinks().forEach(c => c.isCollapsed.set(true));
+            this.cat.bags().forEach((c) => c.isCollapsed.set(c !== this));
+            this.cat.eventSinks().forEach((c) => c.isCollapsed.set(true));
         }
     }
 }
-

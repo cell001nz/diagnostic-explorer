@@ -27,6 +27,7 @@ export interface PropertyBag {
     name: string;
     category: string;
     operationSet: string;
+    canDrillDown: boolean;
     categories: SubBag[];
 }
 
@@ -39,11 +40,12 @@ export interface SubBag {
 
 export interface Property {
     name: string;
-    value: string;
+    value: string | null;
     description: string;
     operationSet: string;
     canSet: boolean;
     canDrillDown: boolean;
+    drillDownIconOnly: boolean;
     alerts: PropertyAlert[];
 }
 

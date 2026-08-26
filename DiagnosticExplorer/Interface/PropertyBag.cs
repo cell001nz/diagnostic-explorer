@@ -86,6 +86,9 @@ public class PropertyBag
     [ProtoMember(4)]
     public List<Category> Categories { get; set; }
 
+    [ProtoMember(5)]
+    public bool CanDrillDown { get; set; }
+
     [IgnoreDataMember]
     [JsonIgnore]
     public object SourceObject { get; set; }

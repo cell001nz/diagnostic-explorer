@@ -183,6 +183,11 @@ internal sealed class DiagnosticConfigurationSnapshot
         return MergeTypeConfiguration(runtimeType, source);
     }
 
+    public bool HasDrillDownConfiguration(Type runtimeType)
+    {
+        return HasConfiguration(runtimeType, _drillDownTypes);
+    }
+
     private static TypeConfiguration MergeTypeConfiguration(Type runtimeType, IReadOnlyDictionary<Type, TypeConfiguration> configurations)
     {
         TypeConfiguration effective = null;
@@ -324,6 +329,7 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<int> MaxItems { get; set; }
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
+    public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
     public List<CollectionOutputConfiguration> CollectionOutputs { get; } = new();
 
     public PropertyConfiguration Clone()
@@ -355,6 +361,7 @@ internal sealed class PropertyConfiguration
         MaxItems = source.MaxItems.Or(MaxItems);
         DrillDown = source.DrillDown.Or(DrillDown);
         DrillDownMaxItems = source.DrillDownMaxItems.Or(DrillDownMaxItems);
+        DrillDownIconOnly = source.DrillDownIconOnly.Or(DrillDownIconOnly);
         Alerts.AddRange(source.Alerts.Select(alert => alert.Clone()));
         if (source.CollectionOutputs.Count > 0)
         {
@@ -730,16 +737,23 @@ internal sealed class PropertyConfigurator<T, TProperty>
 
     public IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null)
     {
-        ConfigureDrillDown(Configuration, enabled, maxItems);
+        ConfigureDrillDown(Configuration, enabled, maxItems, false);
         return this;
     }
 
-    private static void ConfigureDrillDown(PropertyConfiguration configuration, bool enabled, int? maxItems)
+    public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null)
+    {
+        ConfigureDrillDown(Configuration, true, maxItems, true);
+        return this;
+    }
+
+    private static void ConfigureDrillDown(PropertyConfiguration configuration, bool enabled, int? maxItems, bool iconOnly)
     {
         if (maxItems <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
 
         configuration.DrillDown = new ConfiguredValue<bool>(enabled);
+        configuration.DrillDownIconOnly = new ConfiguredValue<bool>(iconOnly);
         if (maxItems.HasValue)
             configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
     }
