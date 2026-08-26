@@ -18,6 +18,7 @@ public interface ISelfHostHub
     Task<SelfHostProcessInfo> GetProcessInfo();
     Task Subscribe(string processId);
     Task Unsubscribe(string processId);
+    Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request);
     Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request);
     Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request);
 }

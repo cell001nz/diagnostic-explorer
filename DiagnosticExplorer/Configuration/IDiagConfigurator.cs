@@ -8,11 +8,13 @@ namespace DiagnosticExplorer;
 public interface IDiagConfigurator
 {
     bool ApplyAttributes { get; set; }
+    int DrillDownMaxItems { get; set; }
     void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects);
     void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure);
     void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
     void DefaultFormat<T>(string formatString);
     void Configure<T>(Action<ITypeConfigurator<T>> configure);
+    void ConfigureDrillDown<T>(Action<ITypeConfigurator<T>> configure);
 }
 
 public interface IDiagnosticHostingConfigurator
@@ -64,6 +66,7 @@ public interface IObjectPropertyConfigurator<T, TSelf> : IPropertyConfigurator
 public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>
 {
     IPropertyConfigurator<T, TProperty> Format(Func<TProperty, string> format);
+    IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message, string category);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, Func<T, string> message);
@@ -76,6 +79,7 @@ public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurat
 
 public interface ICustomPropertyConfigurator<T>
 {
+    ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null);
     ICustomPropertyConfigurator<T> Category(string category);
     ICustomPropertyConfigurator<T> Category(Func<T, string> category);
     ICustomPropertyConfigurator<T> Description(string description);
@@ -97,6 +101,7 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> List(Action<ICollectionListConfigurator<TItem>> configure = null);
     ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null);
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
+    ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
 }
 
 public interface ICollectionListConfigurator<TItem>

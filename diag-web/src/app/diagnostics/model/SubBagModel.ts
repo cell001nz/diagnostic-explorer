@@ -8,6 +8,7 @@ export class SubBagModel {
     bag: BagModel;
     readonly name = signal('');
     readonly operationSet = signal('');
+    readonly canDrillDown = signal(false);
 
     properties = signal<PropModel[]>([]);
     alertSeverity = computed(() => Math.max(0, ...this.properties().map((property) => property.alertSeverity())));
@@ -36,6 +37,7 @@ export class SubBagModel {
     }
 
     update(propCat: SubBag) {
+        this.canDrillDown.set(propCat.canDrillDown);
         this.properties.set(
             customMerge(
                 propCat.properties,

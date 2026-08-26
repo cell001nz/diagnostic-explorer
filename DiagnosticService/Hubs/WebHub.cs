@@ -15,6 +15,7 @@ public interface IWebHub
 {
     Task Subscribe(string processId);
     Task RemoveProcess(string processId);
+    Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request);
     Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request);
     Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request);
     Task StartRetroSearch(RetroQuery query);
@@ -57,6 +58,11 @@ public class WebHub : Hub<IWebHubClient>, IWebHub
     {
         _realtimeManager.RemoveProcess(processId);
         return Task.CompletedTask;
+    }
+
+    public Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request)
+    {
+        return _realtimeManager.GetDrillDown(processId, request);
     }
 
     public async Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request)

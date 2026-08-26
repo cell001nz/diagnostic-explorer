@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { Subject } from 'rxjs';
-import { DiagnosticResponse, SystemEvent } from '@domain/DiagResponse';
+import { DiagnosticResponse, DrillDownRequest, DrillDownResponse, SystemEvent } from '@domain/DiagResponse';
 import { DiagProcess } from '@domain/DiagProcess';
 import { LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
 import { selfHostTransport } from './transport';
@@ -31,7 +31,9 @@ interface SelfHostConnection {
     subscribe(processId: string): Promise<void>;
     unsubscribe(processId: string): Promise<void>;
     setProperty(path: string, value: string): Promise<SelfHostOperationResponse>;
-    executeOperation(path: string, operation: string, args: string[]): Promise<SelfHostOperationResponse>;
+    getDrillDown(request: DrillDownRequest): Promise<DrillDownResponse>;
+    setPropertyRequest(request: SetPropertyRequest): Promise<SelfHostOperationResponse>;
+    executeOperation(request: OperationRequest): Promise<SelfHostOperationResponse>;
     stop(): Promise<void>;
 }
 
@@ -64,12 +66,16 @@ export class SelfHostDiagHubService {
     }
 
     async setPropertyValue(processId: string, request: SetPropertyRequest): Promise<OperationResponse> {
-        const response = await (await this.getConnection()).setProperty(request.path, request.value);
+        const response = await (await this.getConnection()).setPropertyRequest(request);
         return this.toOperationResponse(response);
     }
 
+    async getDrillDown(processId: string, request: DrillDownRequest): Promise<DrillDownResponse> {
+        return (await this.getConnection()).getDrillDown(request);
+    }
+
     async executeOperation(processId: string, request: OperationRequest): Promise<OperationResponse> {
-        const response = await (await this.getConnection()).executeOperation(request.path, request.operation, request.arguments);
+        const response = await (await this.getConnection()).executeOperation(request);
         return this.toOperationResponse(response);
     }
 
@@ -134,7 +140,9 @@ export class SelfHostDiagHubService {
             subscribe: (processId) => connection.invoke('Subscribe', processId),
             unsubscribe: (processId) => connection.invoke('Unsubscribe', processId),
             setProperty: (path, value) => connection.invoke<SelfHostOperationResponse>('SetProperty', LOCAL_PROCESS_ID, { path, value }),
-            executeOperation: (path, operation, args) => connection.invoke<SelfHostOperationResponse>('ExecuteOperation', LOCAL_PROCESS_ID, { path, operation, arguments: args }),
+            getDrillDown: (request) => connection.invoke<DrillDownResponse>('GetDrillDown', LOCAL_PROCESS_ID, request),
+            setPropertyRequest: (request) => connection.invoke<SelfHostOperationResponse>('SetProperty', LOCAL_PROCESS_ID, request),
+            executeOperation: (request) => connection.invoke<SelfHostOperationResponse>('ExecuteOperation', LOCAL_PROCESS_ID, request),
             stop: () => connection.stop()
         };
     }
@@ -164,24 +172,32 @@ export class SelfHostDiagHubService {
             subscribe: (processId) => this.toPromise<void>(hub.server.subscribe(processId)),
             unsubscribe: (processId) => this.toPromise<void>(hub.server.unsubscribe(processId)),
             setProperty: (path, value) => this.toPromise<SelfHostOperationResponse>(hub.server.setProperty(LOCAL_PROCESS_ID, { path, value })),
-            executeOperation: (path, operation, args) => this.toPromise<SelfHostOperationResponse>(hub.server.executeOperation(LOCAL_PROCESS_ID, { path, operation, arguments: args })),
+            getDrillDown: (request) => this.toPromise<DrillDownResponse>(hub.server.getDrillDown(LOCAL_PROCESS_ID, request)),
+            setPropertyRequest: (request) => this.toPromise<SelfHostOperationResponse>(hub.server.setProperty(LOCAL_PROCESS_ID, request)),
+            executeOperation: (request) => this.toPromise<SelfHostOperationResponse>(hub.server.executeOperation(LOCAL_PROCESS_ID, request)),
             stop: () => this.toPromise<void>(connection.stop())
         };
     }
 
     private registerCallbacks(register: (name: string, callback: (...args: any[]) => void) => void): void {
-        register('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
+        const registerLogged = (name: string, callback: (...args: any[]) => void): void =>
+            register(name, (...args: any[]) => {
+                console.log(`Server message: ${name}`, ...args);
+                callback(...args);
+            });
+
+        registerLogged('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
             this.diagsArrived$.next({
                 processId,
                 response: { ...response, serverDate: response.serverDate ?? new Date().toISOString() }
             });
         });
-        register('ShowDiagnosticsError', (_processId: string, message: string) => this.error.set(message));
-        register('SetEvents', (processId: string, events: SystemEvent[]) => {
+        registerLogged('ShowDiagnosticsError', (_processId: string, message: string) => this.error.set(message));
+        registerLogged('SetEvents', (processId: string, events: SystemEvent[]) => {
             this.clearEvents$.next({ processId });
             this.loadEvents$.next({ requestId: '', clientId: '', processId, events });
         });
-        register('StreamEvents', (processId: string, events: SystemEvent[]) => {
+        registerLogged('StreamEvents', (processId: string, events: SystemEvent[]) => {
             this.streamEvents$.next({ processId, events });
         });
     }

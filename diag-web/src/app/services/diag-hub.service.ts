@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DiagProcess } from '@domain/DiagProcess';
 import { Observable, Subject, firstValueFrom } from 'rxjs';
 import { LoadEventData, OperationRequest, OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
-import { DiagnosticResponse, SystemEvent } from '@domain/DiagResponse';
+import { DiagnosticResponse, DrillDownRequest, DrillDownResponse, SystemEvent } from '@domain/DiagResponse';
 import { RetroQuery, RetroSearchResult } from '@model/RetroQuery';
 
 const TAB_ID_KEY = 'tabIdStorageKey';
@@ -44,35 +44,36 @@ export class DiagHubService implements OnDestroy {
                 let hub = new signalR.HubConnectionBuilder().withUrl('/web-hub').withAutomaticReconnect().build();
 
                 await hub.start();
-                hub.on('say', (message) => console.log('Hub message', message));
-                hub.on('SetProcesses', (processes: DiagProcess[]) => {
-                    // console.log('DiagHubService.ReceiveProcess', processes);
+                const register = (name: string, callback: (...args: any[]) => void): void =>
+                    hub.on(name, (...args: any[]) => {
+                        console.log(`Server message: ${name}`, ...args);
+                        callback(...args);
+                    });
+
+                register('say', () => {});
+                register('SetProcesses', (processes: DiagProcess[]) => {
                     this.processesArrived$.next(processes);
                 });
-                hub.on('UpdateProcess', (process: DiagProcess) => {
-                    // console.log('DiagHubService.UpdateProcess', process);
+                register('UpdateProcess', (process: DiagProcess) => {
                     this.processArrived$.next(process);
                 });
-                hub.on('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
-                    console.log('Diagnostics arrived', processId, response);
+                register('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
                     this.diagsArrived$.next({ processId, response });
                 });
-                hub.on('SetEvents', (processId: string, events: SystemEvent[]) => {
-                    console.log('SetEvents', processId, events);
+                register('SetEvents', (processId: string, events: SystemEvent[]) => {
                     this.clearEvents$.next({ processId });
                     this.streamEvents$.next({ processId, events });
                 });
-                hub.on('StreamEvents', (processId: string, events: SystemEvent[]) => {
-                    console.log('StreamEvents', processId, events);
+                register('StreamEvents', (processId: string, events: SystemEvent[]) => {
                     this.streamEvents$.next({ processId, events });
                 });
-                hub.on('ProcessSearchResults', (result: RetroSearchResult) => {
+                register('ProcessSearchResults', (result: RetroSearchResult) => {
                     this.retroResults$.next(result);
                 });
-                hub.on('ProcessSearchEnd', (searchId: number) => {
+                register('ProcessSearchEnd', (searchId: number) => {
                     this.retroSearchEnd$.next(searchId);
                 });
-                hub.on('ProcessSearchError', (searchId: number, error: string, detail: string) => {
+                register('ProcessSearchError', (searchId: number, error: string, detail: string) => {
                     this.retroSearchError$.next({ searchId, error, detail });
                 });
                 console.log('Hub connection configured');
@@ -114,6 +115,11 @@ export class DiagHubService implements OnDestroy {
     async setPropertyValue(processId: string, request: SetPropertyRequest): Promise<OperationResponse> {
         let hub = await this.getHubConnection();
         return hub.invoke<OperationResponse>(`SetProperty`, processId, request);
+    }
+
+    async getDrillDown(processId: string, request: DrillDownRequest): Promise<DrillDownResponse> {
+        const hub = await this.getHubConnection();
+        return hub.invoke<DrillDownResponse>('GetDrillDown', processId, request);
     }
 
     async executeOperation(processId: string, request: OperationRequest): Promise<OperationResponse> {

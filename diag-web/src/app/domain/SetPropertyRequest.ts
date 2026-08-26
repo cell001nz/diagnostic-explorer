@@ -1,6 +1,7 @@
-﻿import {SystemEvent} from "@domain/DiagResponse";
+﻿import { SystemEvent } from '@domain/DiagResponse';
 
 export class SetPropertyRequest {
+    objectPaths?: string[];
     path = '';
     value = '';
 }
@@ -20,6 +21,7 @@ export interface LoadEventData {
 }
 
 export class OperationRequest {
+    objectPaths?: string[];
     path = '';
     operation = '';
     arguments: string[] = [];

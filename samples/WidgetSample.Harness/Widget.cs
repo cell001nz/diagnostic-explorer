@@ -25,6 +25,7 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.Text.Json;
 using DiagnosticExplorer;
 
@@ -45,6 +46,11 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     {
         get { return _id; }
     }
+
+    private int _someProp = 123;
+    private string _privateString = "234";
+
+    private decimal _myDecimal = 123.234m;
 
     public string FullName => $"{Name}({_id})";
 

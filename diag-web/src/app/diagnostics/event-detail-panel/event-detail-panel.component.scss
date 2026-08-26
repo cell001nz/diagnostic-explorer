@@ -103,8 +103,29 @@
   line-height: 1.5;
   padding: 8px 10px;
   border: none;
-  resize: none;
   outline: none;
   overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.json-key {
+  color: #67e8f9;
+}
+
+.json-string {
+  color: #fde68a;
+}
+
+.json-number {
+  color: #c4b5fd;
+}
+
+.json-literal {
+  color: #f9a8d4;
+}
+
+.json-punctuation {
+  color: #d1d5db;
 }
 

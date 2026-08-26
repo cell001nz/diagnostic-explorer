@@ -1,16 +1,20 @@
 <!--<div class="h-full">-->
 @for (bag of category().bags(); track bag.name()) {
-    <p-panel [toggleable]="true" [collapsed]="bag.isCollapsed()" class="mb-4 no-toggle-panel">
+    <p-panel [toggleable]="!flatRoot()" [collapsed]="bag.isCollapsed()" [unstyled]="flatRoot()" class="mb-4 no-toggle-panel" [class.flat-root-bag]="flatRoot()">
+        @if (!flatRoot()) {
          <ng-template #header>
              <div class="flex-1 cursor-pointer select-none" (click)="bag.toggleCollapsed()">
                  {{bag.name()}}
                  @if (bag.operationSet()) {
-                     <span class="text-yellow-500 ml-1 cursor-pointer"
-                           title="Has executable operations"
-                           (click)="showOperationsDialog(bag.getOperationSet()!, bag.getOperationPath()); $event.stopPropagation()">&#9733;</span>
+                     <button type="button" class="diag-icon-link text-yellow-500 ml-1"
+                             title="Executable operations" aria-label="Executable operations"
+                             (click)="showOperationsDialog(bag.getOperationSet()!, bag.getOperationPath()); $event.stopPropagation()">
+                         <i class="pi pi-bolt"></i>
+                     </button>
                  }
              </div>
          </ng-template>
+        }
         @for (subBag of bag.subBags(); track subBag.name()) {
 
             <div class="mb-4 last:mb-0">
@@ -18,6 +22,13 @@
                     <ng-template #header>
                         <div>
                             {{subBag.name()}}
+                            @if (subBag.canDrillDown()) {
+                                <button type="button" class="diag-icon-link ml-1"
+                                        title="Open drilldown" aria-label="Open drilldown"
+                                        (click)="showDrillDown(subBag.getOperationPath()); $event.stopPropagation()">
+                                    <i class="pi pi-external-link"></i>
+                                </button>
+                            }
                             @if (subBag.alertSeverity()) {
                                 <i class="bi bi-exclamation-triangle-fill ml-2"
                                    [class.text-amber-400]="subBag.alertSeverity() === 1"
@@ -34,17 +45,28 @@
                     <div class="ml-4 grid grid-cols-[200px_1fr] lg:grid-cols-[200px_1fr_200px_1fr] gap-x-2 gap-y-2 ">
                     @for (prop of subBag.properties(); track prop.name()) {
 
-                         <span class="text-s my-1"
-                             [class.text-stone-500]="!prop.alertSeverity() && !prop.canSet()"
-                             [class.text-blue-400]="!prop.alertSeverity() && prop.canSet()"
+                         <span class="text-s my-1 flex items-center gap-1 min-w-0"
+                             [class.text-stone-500]="!prop.alertSeverity()"
                              [class.text-amber-400]="prop.alertSeverity() === 1"
                              [class.text-red-400]="prop.alertSeverity() === 2"
-                             [class.cursor-pointer]="prop.canSet()"
-                             [attr.title]="prop.alertTooltip() || prop.description() || null"
-                             (click)="showSetPropertyDialog(prop)">{{ prop.name() }}
+                             [attr.title]="prop.alertTooltip() || prop.description() || null">
+                        @if (prop.canDrillDown()) {
+                            <button type="button" class="diag-drilldown-link truncate"
+                                    (click)="showDrillDown(prop.getOperationPath())">{{ prop.name() }}</button>
+                        } @else {
+                            <span class="truncate">{{ prop.name() }}</span>
+                        }
+                        @if (prop.canSet()) {
+                            <button type="button" class="diag-icon-link" title="Edit value" aria-label="Edit value"
+                                    (click)="showSetPropertyDialog(prop)">
+                                <i class="pi pi-pencil diag-pencil-icon"></i>
+                            </button>
+                        }
                         @if (prop.operationSet())                         {
-                                <span class="text-yellow-500 ml-1 cursor-pointer" title="Has executable operations"
-                                      (click)="showOperationsDialog(prop.getOperationSet()!, prop.getOperationPath()); $event.stopPropagation()">&#9733;</span>
+                                <button type="button" class="diag-icon-link text-yellow-500" title="Executable operations" aria-label="Executable operations"
+                                      (click)="showOperationsDialog(prop.getOperationSet()!, prop.getOperationPath()); $event.stopPropagation()">
+                                    <i class="pi pi-bolt"></i>
+                                </button>
                         }
                         </span>
 
@@ -55,11 +77,18 @@
 <!--                    <span class="prop-value" (dblclick)="handleDoubleClick(prop, $event)"-->
 <!--                          [matTooltip]="prop.value" [matTooltipShowDelay]="0" matTooltipPosition="below"-->
 <!--                          matTooltipClass="tooltips">{{ prop.value }}</span>-->
-                        <span class="text-s my-1"
+                        <span class="text-s my-1 min-w-0"
                             [class.text-lime-500]="!prop.alertSeverity()"
                             [class.text-amber-400]="prop.alertSeverity() === 1"
                             [class.text-red-400]="prop.alertSeverity() === 2"
-                              [attr.title]="prop.alertTooltip() || null">{{ prop.value() }}</span>
+                              [attr.title]="prop.alertTooltip() || null">
+                            @if (prop.canDrillDown()) {
+                                <button type="button" class="diag-drilldown-link value-link"
+                                        (click)="showDrillDown(prop.getOperationPath())">{{ prop.value() }}</button>
+                            } @else {
+                                {{ prop.value() }}
+                            }
+                        </span>
                     }
             </div>
 

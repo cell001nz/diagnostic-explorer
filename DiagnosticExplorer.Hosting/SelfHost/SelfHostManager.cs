@@ -85,6 +85,14 @@ public sealed class SelfHostManager : IDisposable
             RemoveClient(connectionId);
     }
 
+    public Task<DrillDownResponse> GetDrillDownAsync(string processId, DrillDownRequest request)
+    {
+        if (!IsLocalProcess(processId))
+            return Task.FromResult(new DrillDownResponse { ErrorMessage = "The requested process is not hosted here." });
+
+        return Task.FromResult(DiagnosticManager.GetDrillDown(_serviceProvider, request));
+    }
+
     public Task<OperationResponse> SetPropertyAsync(string processId, SetPropertyRequest request)
     {
         if (!IsLocalProcess(processId))
@@ -94,7 +102,7 @@ public sealed class SelfHostManager : IDisposable
 
         try
         {
-            return Task.FromResult(DiagnosticManager.SetProperty(_serviceProvider, request.Path, request.Value));
+            return Task.FromResult(DiagnosticManager.SetProperty(_serviceProvider, request));
         }
         catch (Exception ex)
         {
@@ -111,7 +119,7 @@ public sealed class SelfHostManager : IDisposable
 
         try
         {
-            return await DiagnosticManager.ExecuteOperation(_serviceProvider, request.Path, request.Operation, request.Arguments);
+            return await DiagnosticManager.ExecuteOperation(_serviceProvider, request);
         }
         catch (Exception ex)
         {

@@ -4,10 +4,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer.Util;
 
 namespace DiagnosticExplorer;
+
+internal enum DiagnosticRenderMode
+{
+    Normal,
+    DrillDown,
+}
 
 public static class DiagnosticManager
 {
@@ -17,11 +24,13 @@ public static class DiagnosticManager
     private static Dictionary<string, List<PropertyGetter>> _typeHash = new();
     private static readonly object _propertyGetterLock = new();
     private static DiagnosticConfigurationSnapshot _configuration = DiagnosticConfigurationSnapshot.Empty;
+    private static readonly AsyncLocal<DiagnosticRenderMode?> _renderMode = new();
 
     private static readonly Dictionary<Type, OperationSet> _operationLookup = new();
     public const string EnabledConfigurationKey = "DiagnosticExplorer:Enabled";
     public static bool Enabled { get; set; } = true;
     public static DiagnosticConfiguration CurrentConfiguration { get; private set; } = new();
+    internal static int DrillDownMaxItems => _configuration.DrillDownMaxItems;
 
     static DiagnosticManager()
     {
@@ -132,51 +141,60 @@ public static class DiagnosticManager
 
     public static DiagnosticResponse GetDiagnostics(IEnumerable<RegisteredObject> registeredObjects)
     {
+        return GetDiagnostics(registeredObjects, DiagnosticRenderMode.Normal);
+    }
+
+    private static DiagnosticResponse GetDiagnostics(IEnumerable<RegisteredObject> registeredObjects, DiagnosticRenderMode renderMode)
+    {
         try
         {
             DiagnosticResponse response = new();
 
-            response.PropertyBags.AddRange(registeredObjects.Select(x => ObjectToPropertyBag(x.Object, x.BagName, x.BagCategory)));
+            response.PropertyBags.AddRange(registeredObjects.Select(x => ObjectToPropertyBag(x.Object, x.BagName, x.BagCategory, renderMode)));
 
-            HashSet<OperationSet> operationSets = new();
-
-            foreach (PropertyBag bag in response.PropertyBags)
-            {
-                OperationSet bagOperations = GetOperationSet(bag.SourceObject);
-                if (bagOperations != null)
-                {
-                    bag.OperationSet = bagOperations.Id;
-                    operationSets.Add(bagOperations);
-                }
-
-                foreach (Category cat in bag.Categories)
-                {
-                    OperationSet catOperations = GetOperationSet(cat.ValueObject);
-                    if (catOperations != null)
-                    {
-                        cat.OperationSet = catOperations.Id;
-                        operationSets.Add(catOperations);
-                    }
-                }
-
-                foreach (Property prop in bag.Categories.SelectMany(x => x.Properties))
-                {
-                    OperationSet propOperations = GetOperationSet(prop.ValueObject);
-                    if (propOperations != null)
-                    {
-                        prop.OperationSet = propOperations.Id;
-                        operationSets.Add(propOperations);
-                    }
-                }
-            }
-            response.OperationSets.AddRange(operationSets);
-
+            AddOperationSets(response);
             return response;
         }
         catch (Exception ex)
         {
             return new DiagnosticResponse { ExceptionMessage = ex.Message, ExceptionDetail = ex.ToString() };
         }
+    }
+
+    private static void AddOperationSets(DiagnosticResponse response)
+    {
+        HashSet<OperationSet> operationSets = new();
+
+        foreach (PropertyBag bag in response.PropertyBags)
+        {
+            OperationSet bagOperations = GetOperationSet(bag.SourceObject);
+            if (bagOperations != null)
+            {
+                bag.OperationSet = bagOperations.Id;
+                operationSets.Add(bagOperations);
+            }
+
+            foreach (Category cat in bag.Categories)
+            {
+                OperationSet catOperations = GetOperationSet(cat.ValueObject);
+                if (catOperations != null)
+                {
+                    cat.OperationSet = catOperations.Id;
+                    operationSets.Add(catOperations);
+                }
+            }
+
+            foreach (Property prop in bag.Categories.SelectMany(x => x.Properties))
+            {
+                OperationSet propOperations = GetOperationSet(prop.ValueObject);
+                if (propOperations != null)
+                {
+                    prop.OperationSet = propOperations.Id;
+                    operationSets.Add(propOperations);
+                }
+            }
+        }
+        response.OperationSets.AddRange(operationSets);
     }
 
     private static OperationSet GetOperationSet(object sourceObject)
@@ -268,17 +286,31 @@ public static class DiagnosticManager
 
     public static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory)
     {
-        PropertyBag bag = new();
-        bag.Name = bagName;
-        bag.Category = bagCategory;
-        bag.SourceObject = obj;
+        return ObjectToPropertyBag(obj, bagName, bagCategory, DiagnosticRenderMode.Normal);
+    }
 
-        List<PropertyGetter> valueGetters = GetPropertyGetters(obj);
+    private static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory, DiagnosticRenderMode renderMode)
+    {
+        DiagnosticRenderMode? previousMode = _renderMode.Value;
+        _renderMode.Value = renderMode;
+        try
+        {
+            PropertyBag bag = new();
+            bag.Name = bagName;
+            bag.Category = bagCategory;
+            bag.SourceObject = obj;
 
-        foreach (PropertyGetter getter in valueGetters)
-            getter.GetProperties(obj, bag, null);
+            List<PropertyGetter> valueGetters = GetPropertyGetters(obj);
 
-        return bag;
+            foreach (PropertyGetter getter in valueGetters)
+                getter.GetProperties(obj, bag, null);
+
+            return bag;
+        }
+        finally
+        {
+            _renderMode.Value = previousMode;
+        }
     }
 
     public const BindingFlags PublicInstancePropertyFlags = BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance;
@@ -298,6 +330,8 @@ public static class DiagnosticManager
             type = (Type)obj;
             typeKey = "Static: " + type.AssemblyQualifiedName;
         }
+        DiagnosticRenderMode renderMode = _renderMode.Value ?? DiagnosticRenderMode.Normal;
+        typeKey = renderMode + ": " + typeKey;
 
         lock (_propertyGetterLock)
         {
@@ -306,7 +340,8 @@ public static class DiagnosticManager
 
             List<PropertyGetter> propertyList = new();
             bool applyAttributes = _configuration.ApplyAttributes;
-            TypeConfiguration typeConfiguration = obj is Type ? null : _configuration.GetEffectiveTypeConfiguration(type);
+            TypeConfiguration typeConfiguration =
+                obj is Type ? null : _configuration.GetEffectiveTypeConfiguration(type, renderMode == DiagnosticRenderMode.DrillDown);
 
             bool isStatic = obj is Type;
             IEnumerable<PropertyInfo> properties = isStatic
@@ -631,12 +666,33 @@ public static class DiagnosticManager
         return await ExecuteOperation((IServiceProvider)null, path, operation, arguments);
     }
 
-    public static async Task<OperationResponse> ExecuteOperation(
-        IServiceProvider serviceProvider,
-        string path,
-        string operation,
-        string[] arguments
-    )
+    public static async Task<OperationResponse> ExecuteOperation(OperationRequest request)
+    {
+        return await ExecuteOperation((IServiceProvider)null, request);
+    }
+
+    public static async Task<OperationResponse> ExecuteOperation(IServiceProvider serviceProvider, OperationRequest request)
+    {
+        return await ExecuteOperation(GetRegisteredObjects(serviceProvider), request);
+    }
+
+    public static async Task<OperationResponse> ExecuteOperation(IEnumerable<RegisteredObject> registeredObjects, OperationRequest request)
+    {
+        if (request == null)
+            return OperationResponse.Error("Operation request not specified");
+
+        try
+        {
+            IEnumerable<RegisteredObject> actionObjects = ResolveActionObjects(registeredObjects, request.ObjectPaths);
+            return await ExecuteOperation(actionObjects, request.Path, request.Operation, request.Arguments);
+        }
+        catch (Exception ex)
+        {
+            return OperationResponse.Error(ex.Message, ex.ToString());
+        }
+    }
+
+    public static async Task<OperationResponse> ExecuteOperation(IServiceProvider serviceProvider, string path, string operation, string[] arguments)
     {
         return await ExecuteOperation(GetRegisteredObjects(serviceProvider), path, operation, arguments);
     }
@@ -770,7 +826,17 @@ public static class DiagnosticManager
     /// <returns>An object which represents the Bag/PropCat/Prop, or exception if not found</returns>
     private static object GetSourceObject(IEnumerable<RegisteredObject> registeredObjects, PropIdent ident)
     {
-        PropertyBag bag = GetRegisteredObject(registeredObjects, ident);
+        return GetSourceTarget(registeredObjects, ident, DiagnosticRenderMode.Normal, false).Value;
+    }
+
+    private static DrillDownTarget GetSourceTarget(
+        IEnumerable<RegisteredObject> registeredObjects,
+        PropIdent ident,
+        DiagnosticRenderMode renderMode,
+        bool drillDown
+    )
+    {
+        PropertyBag bag = GetRegisteredObject(registeredObjects, ident, renderMode);
 
         if (string.IsNullOrEmpty(ident.PropCategory) && string.IsNullOrEmpty(ident.PropName))
         {
@@ -779,7 +845,7 @@ public static class DiagnosticManager
                 string msg = $"Can't invoke operation. Property bag {ident.BagCategory}|{ident.BagName} doesn't have a value.";
                 throw new ArgumentException(msg);
             }
-            return bag.SourceObject;
+            return new DrillDownTarget(bag.SourceObject, DrillDownMaxItems);
         }
 
         Category cat = bag.Categories.FindByName(ident.PropCategory);
@@ -797,7 +863,10 @@ public static class DiagnosticManager
                 string msg = $"Can't invoke operation. Category {ident.BagCategory}|{ident.BagName}|{ident.PropCategory} doesn't have a value.";
                 throw new ArgumentException(msg);
             }
-            return cat.ValueObject;
+            object categoryValue = drillDown ? cat.DrillDownObject : cat.ValueObject;
+            if (categoryValue == null)
+                throw new ArgumentException($"Category {ident} is not available for drilldown.");
+            return new DrillDownTarget(categoryValue, cat.DrillDownMaxItems);
         }
 
         Property prop = cat.Properties.FindByName(ident.PropName);
@@ -807,13 +876,16 @@ public static class DiagnosticManager
             throw new ArgumentException(msg);
         }
 
-        if (prop.ValueObject == null)
+        object propertyValue = drillDown ? prop.DrillDownObject : prop.ValueObject;
+        if (propertyValue == null)
         {
-            string msg = $"Can't invoke operation. Property {ident.BagCategory}|{ident.BagName}|{ident.PropCategory} doesn't have a value.";
+            string msg = drillDown
+                ? $"Property {ident} is not available for drilldown."
+                : $"Can't invoke operation. Property {ident.BagCategory}|{ident.BagName}|{ident.PropCategory} doesn't have a value.";
             throw new ArgumentException(msg);
         }
 
-        return prop.ValueObject;
+        return new DrillDownTarget(propertyValue, prop.DrillDownMaxItems);
     }
 
     #region SetProperty
@@ -821,6 +893,32 @@ public static class DiagnosticManager
     public static OperationResponse SetProperty(string path, string value)
     {
         return SetProperty((IServiceProvider)null, path, value);
+    }
+
+    public static OperationResponse SetProperty(SetPropertyRequest request)
+    {
+        return SetProperty((IServiceProvider)null, request);
+    }
+
+    public static OperationResponse SetProperty(IServiceProvider serviceProvider, SetPropertyRequest request)
+    {
+        return SetProperty(GetRegisteredObjects(serviceProvider), request);
+    }
+
+    public static OperationResponse SetProperty(IEnumerable<RegisteredObject> registeredObjects, SetPropertyRequest request)
+    {
+        if (request == null)
+            return OperationResponse.Error("Set-property request not specified");
+
+        try
+        {
+            IEnumerable<RegisteredObject> actionObjects = ResolveActionObjects(registeredObjects, request.ObjectPaths);
+            return SetProperty(actionObjects, request.Path, request.Value);
+        }
+        catch (Exception ex)
+        {
+            return OperationResponse.Error(ex.Message, ex.ToString());
+        }
     }
 
     public static OperationResponse SetProperty(IServiceProvider serviceProvider, string path, string value)
@@ -885,7 +983,11 @@ public static class DiagnosticManager
         }
     }
 
-    private static PropertyBag GetRegisteredObject(IEnumerable<RegisteredObject> registeredObjects, PropIdent ident)
+    private static PropertyBag GetRegisteredObject(
+        IEnumerable<RegisteredObject> registeredObjects,
+        PropIdent ident,
+        DiagnosticRenderMode renderMode = DiagnosticRenderMode.Normal
+    )
     {
         RegisteredObject regObj = registeredObjects.FindByCategoryAndName(ident.BagCategory, ident.BagName);
         if (regObj == null)
@@ -898,10 +1000,167 @@ public static class DiagnosticManager
             throw new ArgumentException(msg);
         }
 
-        return ObjectToPropertyBag(obj, ident.BagName, ident.BagCategory);
+        return ObjectToPropertyBag(obj, ident.BagName, ident.BagCategory, renderMode);
     }
 
     #endregion
+
+    public static DrillDownResponse GetDrillDown(DrillDownRequest request)
+    {
+        return GetDrillDown(GetRegisteredObjects(), request);
+    }
+
+    public static DrillDownResponse GetDrillDown(IServiceProvider serviceProvider, DrillDownRequest request)
+    {
+        return GetDrillDown(GetRegisteredObjects(serviceProvider), request);
+    }
+
+    public static DrillDownResponse GetDrillDown(IEnumerable<RegisteredObject> registeredObjects, DrillDownRequest request)
+    {
+        try
+        {
+            DrillDownTarget target = ResolveDrillDownTarget(registeredObjects, request?.ObjectPaths);
+            DrillDownMaterialization materialized = MaterializeDrillDown(target);
+            return new DrillDownResponse
+            {
+                Diagnostics = GetDiagnostics(materialized.RegisteredObjects, DiagnosticRenderMode.DrillDown),
+                DisplayedCount = materialized.DisplayedCount,
+                TotalCount = materialized.TotalCount,
+                IsTruncated = materialized.IsTruncated,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new DrillDownResponse { ErrorMessage = ex.Message, ErrorDetail = ex.ToString() };
+        }
+    }
+
+    internal static bool IsDrillDownValue(object value)
+    {
+        if (value == null || value is string)
+            return false;
+
+        Type type = Nullable.GetUnderlyingType(value.GetType()) ?? value.GetType();
+        if (type.IsPrimitive || type.IsEnum || type == typeof(decimal) || type == typeof(DateTime) || type == typeof(DateTimeOffset))
+            return false;
+        if (type == typeof(TimeSpan) || type == typeof(Guid))
+            return false;
+
+        return true;
+    }
+
+    private static DrillDownTarget ResolveDrillDownTarget(IEnumerable<RegisteredObject> registeredObjects, IReadOnlyList<string> objectPaths)
+    {
+        if (objectPaths == null || objectPaths.Count == 0)
+            throw new ArgumentException("At least one drilldown object path is required.", nameof(objectPaths));
+
+        IEnumerable<RegisteredObject> currentObjects = registeredObjects;
+        DrillDownTarget current = null;
+        for (int index = 0; index < objectPaths.Count; index++)
+        {
+            string path = objectPaths[index];
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException($"Drilldown object path {index + 1} is empty.", nameof(objectPaths));
+
+            try
+            {
+                current = GetSourceTarget(
+                    currentObjects,
+                    PropIdent.Parse(path),
+                    index == 0 ? DiagnosticRenderMode.Normal : DiagnosticRenderMode.DrillDown,
+                    true
+                );
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Unable to resolve drilldown path {index + 1} '{path}': {ex.Message}", ex);
+            }
+
+            if (index + 1 < objectPaths.Count)
+                currentObjects = MaterializeDrillDown(current).RegisteredObjects;
+        }
+        return current;
+    }
+
+    private static IEnumerable<RegisteredObject> ResolveActionObjects(
+        IEnumerable<RegisteredObject> registeredObjects,
+        IReadOnlyList<string> objectPaths
+    )
+    {
+        if (objectPaths == null || objectPaths.Count == 0)
+            return registeredObjects;
+
+        DrillDownTarget target = ResolveDrillDownTarget(registeredObjects, objectPaths);
+        return MaterializeDrillDown(target).RegisteredObjects;
+    }
+
+    private static DrillDownMaterialization MaterializeDrillDown(DrillDownTarget target)
+    {
+        IEnumerable enumerable = target.Value as IEnumerable;
+        if (enumerable == null || target.Value is string)
+        {
+            Type type = target.Value.GetType();
+            return new DrillDownMaterialization(new[] { new RegisteredObject(target.Value, "DrillDown", type.Name) }, 1, 1, false);
+        }
+
+        int maxItems = target.MaxItems > 0 ? target.MaxItems : DrillDownMaxItems;
+        List<object> items = enumerable.Cast<object>().Take(maxItems + 1).ToList();
+        bool truncated = items.Count > maxItems;
+        if (truncated)
+            items.RemoveAt(items.Count - 1);
+
+        List<RegisteredObject> registered = new();
+        for (int index = 0; index < items.Count; index++)
+        {
+            object item = items[index];
+            if (!IsDrillDownValue(item))
+                item = new DrillDownScalarValue(item);
+            registered.Add(new RegisteredObject(item, "Items", $"[{index}]"));
+        }
+
+        int? totalCount =
+            enumerable is ICollection collection ? collection.Count
+            : truncated ? null
+            : items.Count;
+        return new DrillDownMaterialization(registered, items.Count, totalCount, truncated);
+    }
+
+    private sealed class DrillDownTarget
+    {
+        public DrillDownTarget(object value, int maxItems)
+        {
+            Value = value ?? throw new ArgumentNullException(nameof(value));
+            MaxItems = maxItems;
+        }
+
+        public object Value { get; }
+        public int MaxItems { get; }
+    }
+
+    private sealed class DrillDownMaterialization
+    {
+        public DrillDownMaterialization(IReadOnlyList<RegisteredObject> registeredObjects, int displayedCount, int? totalCount, bool isTruncated)
+        {
+            RegisteredObjects = registeredObjects;
+            DisplayedCount = displayedCount;
+            TotalCount = totalCount;
+            IsTruncated = isTruncated;
+        }
+
+        public IReadOnlyList<RegisteredObject> RegisteredObjects { get; }
+        public int DisplayedCount { get; }
+        public int? TotalCount { get; }
+        public bool IsTruncated { get; }
+    }
+
+    [DiagnosticClass(AttributedPropertiesOnly = true)]
+    private sealed class DrillDownScalarValue
+    {
+        public DrillDownScalarValue(object value) => Value = value;
+
+        [DiagnosticProperty]
+        public object Value { get; }
+    }
 
     private class PropIdent
     {

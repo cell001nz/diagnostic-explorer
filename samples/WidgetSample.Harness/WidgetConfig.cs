@@ -82,8 +82,8 @@ public sealed class WidgetConfigItem
 
     internal void AddMutations(List<Action> mutations, Random random)
     {
-        mutations.Add(() => Name = Pick(random, "Northstar", "Orchard", "Beacon", "Sundial"));
-        mutations.Add(() => Purpose = Pick(random, "Telemetry", "Fulfilment", "Quality", "Calibration"));
+        // mutations.Add(() => Name = Pick(random, "Northstar", "Orchard", "Beacon", "Sundial"));
+        // mutations.Add(() => Purpose = Pick(random, "Telemetry", "Fulfilment", "Quality", "Calibration"));
         mutations.Add(() => Capacity = random.Next(1, 50));
         mutations.Add(() => Tolerance = decimal.Round((decimal)random.NextDouble() * 5m, 2));
         mutations.Add(() => InstalledDate = DateTime.Today.AddDays(-random.Next(1, 365)));

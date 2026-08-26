@@ -75,7 +75,7 @@ if ($newSemanticVersion -le $current.Version) {
 Set-Location $PSScriptRoot
 Invoke-Git -Arguments @('rev-parse', '--is-inside-work-tree') | Out-Null
 $worktreeChanges = @(Invoke-Git -Arguments @('status', '--porcelain'))
-if ($worktreeChanges.Count -gt 0) {
+if ($worktreeChanges.Count -gt 0 -and -not $Force) {
     throw 'The Git worktree is not clean. Commit or stash changes before creating a release tag.'
 }
 

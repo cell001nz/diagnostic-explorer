@@ -189,6 +189,26 @@ public class RealtimeManager : IHostedService
         }
     }
 
+    public async Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request)
+    {
+        try
+        {
+            DiagProcess? process = GetProcess(processId);
+            if (process == null)
+                return new DrillDownResponse { ErrorMessage = $"Process {processId} not found" };
+
+            IDiagnosticClient? client = GetSubscription(process)?.DiagnosticClient;
+            if (client == null)
+                return new DrillDownResponse { ErrorMessage = $"Process {processId} is not connected" };
+
+            return await client.GetDrillDown(request);
+        }
+        catch (Exception ex)
+        {
+            return new DrillDownResponse { ErrorMessage = ex.Message, ErrorDetail = ex.ToString() };
+        }
+    }
+
     public async Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request)
     {
         try

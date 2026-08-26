@@ -81,7 +81,7 @@ configuration.Configure<MyService>(type =>
 
 Only called methods override attribute values. For example, setting `Category` preserves an attributed name, description, format, and settable state.
 
-`Property`, `Collection`, `Rate`, `Date`, and `Extended` use `General` as their implicit category. `Include` only changes inclusion and leaves an otherwise unconfigured property uncategorized.
+Every property without an explicit category uses `General`, including properties selected with `Include` and properties discovered by opt-out or convention-based rendering.
 
 ## Collections
 
@@ -116,6 +116,45 @@ type.Collection(service => service.WorkItems)
 ```
 
 `WithMaxItems` limits concatenated, list, and category output. Count always reports the full collection size.
+
+## Drilldown
+
+`WithDrillDown()` makes a rendered property name and value open the underlying object in a diagnostic dialog. It applies to configured properties, custom properties, collection list items, and collection categories:
+
+```csharp
+configuration.DrillDownMaxItems = 100;
+
+configuration.Configure<MyService>(type =>
+{
+    type.Property(service => service.Connection)
+        .WithDrillDown();
+
+    type.CustomProperty("Pending items", service => service.PendingItems)
+        .WithDrillDown(maxItems: 25);
+
+    type.Collection(service => service.WorkItems)
+        .List(items => items.Name(item => item.Name).Value(item => item.Status))
+        .Categories(item => item.Group)
+        .WithDrillDown();
+});
+```
+
+Collection list links target the collection item, even when `Value(...)` displays another value. Category-mode collections show a drilldown link beside each generated subbag name. Complex property and custom-property values target their returned object. Null and scalar values do not produce drilldown links.
+
+Enumerable targets render as element bags named `[0]`, `[1]`, and so on. `DrillDownMaxItems` is the global enumerable limit and defaults to 100; the optional `maxItems` argument overrides it for one configured property or collection. This is independent of `WithMaxItems`, which limits the normal collection rendering.
+
+A separate type profile can control the contents of an overlay:
+
+```csharp
+configuration.ConfigureDrillDown<WorkItem>(type =>
+{
+    type.OptIn();
+    type.Property(item => item.Name).AllowSet();
+    type.Property(item => item.Owner).WithDrillDown();
+});
+```
+
+When no drilldown profile exists for the runtime type or its configured base types, rendering falls back to the normal `Configure<T>()` profile as a whole. Drilldown dialogs remain interactive: property setters, operations, and further drilldowns resolve through the ordered parent path chain. Multiple sibling and nested dialogs can remain open independently.
 
 ## Rate, date, and nested values
 

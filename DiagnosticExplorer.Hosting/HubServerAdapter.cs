@@ -91,6 +91,23 @@ internal class HubServerAdapter : IDiagnosticHubClient
         });
     }
 
+    public Task<byte[]> GetDrillDown(string requestId, DrillDownRequest request)
+    {
+        return Task.Run(() =>
+        {
+            try
+            {
+                DrillDownResponse response = DiagnosticManager.GetDrillDown(_serviceProvider, request);
+                return ProtobufUtil.Compress(response, 1024);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex);
+                throw;
+            }
+        });
+    }
+
     public Task<OperationResponse> SetProperty(string requestId, string path, string value)
     {
         return Task.Run(() =>
@@ -107,6 +124,11 @@ internal class HubServerAdapter : IDiagnosticHubClient
         });
     }
 
+    public Task<OperationResponse> SetPropertyWithContext(string requestId, SetPropertyRequest request)
+    {
+        return Task.Run(() => DiagnosticManager.SetProperty(_serviceProvider, request));
+    }
+
     public async Task<OperationResponse> ExecuteOperation(string requestId, string path, string operation, string[] args)
     {
         return await Task.Run(async () =>
@@ -121,6 +143,11 @@ internal class HubServerAdapter : IDiagnosticHubClient
                 return OperationResponse.Error(ex.Message, ex.ToString());
             }
         });
+    }
+
+    public Task<OperationResponse> ExecuteOperationWithContext(string requestId, OperationRequest request)
+    {
+        return DiagnosticManager.ExecuteOperation(_serviceProvider, request);
     }
 
     public async Task<RegistrationResponse> Register(Registration registration)

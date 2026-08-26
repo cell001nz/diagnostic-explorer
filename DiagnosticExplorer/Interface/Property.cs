@@ -100,9 +100,16 @@ public class Property
     [ProtoMember(6)]
     public List<PropertyAlert> Alerts { get; set; } = new();
 
+    [ProtoMember(7)]
+    public bool CanDrillDown { get; set; }
+
     internal object SourceObject { get; set; }
 
     internal object ValueObject { get; set; }
+
+    internal object DrillDownObject { get; set; }
+
+    internal int DrillDownMaxItems { get; set; }
 
     internal PropertyInfo SourceProperty { get; set; }
 

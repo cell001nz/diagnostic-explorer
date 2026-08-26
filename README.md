@@ -79,6 +79,27 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
 }
 ```
 
+Add `WithDrillDown()` to inspect a complex value or collection item in an interactive overlay. A dedicated profile can choose what the overlay renders; when it is absent, the normal type profile is reused:
+
+```csharp
+diagnostics.Configure<Widget>(options =>
+{
+    options.Property(widget => widget.Configuration).WithDrillDown();
+    options.Collection(widget => widget.Components)
+        .List(items => items.Name(component => component.Name))
+        .WithDrillDown(maxItems: 50);
+});
+
+diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
+{
+    options.OptIn();
+    options.Property(configuration => configuration.Status);
+    options.Property(configuration => configuration.Owner).WithDrillDown();
+});
+```
+
+See [fluent diagnostic configuration](Docs/fluent-configuration.md) for property, custom-property, category, limit, and nested drilldown behavior.
+
 This helper routes events from named loggers to separate event sinks:
 
 ```csharp

@@ -21,7 +21,7 @@
                         [class.text-white]="selectedOperation() === vm"
                         [class.hover:bg-gray-800]="selectedOperation() !== vm"
                         (click)="selectOperation(vm)">
-                        {{ vm.operation.signature }}
+                        {{ getOperationDisplayName(vm.operation) }}
                     </li>
                 }
             </ul>
@@ -32,7 +32,7 @@
             @if (selectedOperation(); as vm) {
                 <div class="flex-1 flex flex-col gap-3">
                     <div>
-                        <span class="text-blue-400 font-semibold text-sm">{{ vm.operation.signature }}</span>
+                        <span class="text-blue-400 font-semibold text-sm">{{ getOperationDisplayName(vm.operation) }}</span>
                         @if (vm.operation.description) {
                             <p class="text-gray-400 text-xs mt-1">{{ vm.operation.description }}</p>
                         }

@@ -7,6 +7,7 @@ namespace DiagnosticExplorer;
 public interface IDiagnosticClient
 {
     Task<DiagnosticResponse> GetDiagnostics(CancellationToken cancel);
+    Task<DrillDownResponse> GetDrillDown(DrillDownRequest request);
     Task<OperationResponse> SetProperty(SetPropertyRequest request);
     Task<OperationResponse> ExecuteOperation(OperationRequest request);
     Task SubscribeEvents();
@@ -14,5 +15,4 @@ public interface IDiagnosticClient
 
     Subject<SystemEvent[]> EventsSet { get; }
     Subject<SystemEvent[]> EventsStreamed { get; }
-
 }

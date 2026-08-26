@@ -39,8 +39,19 @@
         </button>
     </div>
 
-    <!-- Detail text area -->
-    <textarea class="event-detail-body" readonly [value]="event().detail || event().message"></textarea>
+        <div #detail class="event-detail-body" tabindex="0"
+            (pointerdown)="detail.focus()"
+            (keydown)="onDetailKeyDown($event, detail)">
+        @for (segment of detailSegments(); track $index) {
+            @if (segment.jsonTokens; as jsonTokens) {
+                @for (token of jsonTokens; track $index) {
+                    <span [class]="token.type">{{ token.text }}</span>
+                }
+            } @else {
+                {{ segment.text }}
+            }
+        }
+    </div>
 
 </div>
 

@@ -44,15 +44,16 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new AttributeSample());
 
-        Property property = bag.GetProperty(nameof(AttributeSample.Attributed));
+        Property property = bag.GetProperty(nameof(AttributeSample.Attributed), "General");
         Assert.NotNull(property);
         Assert.Equal("7", property.Value);
         Assert.Null(property.Description);
         Assert.False(property.CanSet);
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored)));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden)));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Plain)));
-        Assert.DoesNotContain(bag.Categories, category => category.Name == "Source" || category.Name == "General");
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Plain), "General"));
+        Assert.DoesNotContain(bag.Categories, category => category.Name == "Source");
+        Assert.All(bag.Categories.Single(category => category.Name == "General").Properties, item => Assert.NotNull(item));
     }
 
     [Fact]
@@ -196,16 +197,16 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new DefaultFormatSample());
 
-        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value)).Value);
-        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue)).Value);
+        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value), "General").Value);
+        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue), "General").Value);
 
         configuration.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss}");
         DiagnosticManager.UseConfiguration(configuration);
 
         bag = Render(new DefaultFormatSample());
 
-        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value)).Value);
-        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue)).Value);
+        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value), "General").Value);
+        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue), "General").Value);
     }
 
     [Fact]
@@ -371,7 +372,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         Assert.Null(bag.GetProperty("Attributed name", "Source"));
         Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden)));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden), "General"));
         Assert.Null(bag.GetProperty(nameof(AttributeSample.Plain)));
     }
 
@@ -388,12 +389,12 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new ReplacementSample());
 
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First)));
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.Second)));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
     }
 
     [Fact]
-    public void FluentPropertyDeclarationsDefaultToGeneralButIncludeDoesNot()
+    public void PropertiesWithoutCategoriesDefaultToGeneral()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<ReplacementSample>(type =>
@@ -407,8 +408,7 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new ReplacementSample());
 
         Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second)));
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
     }
 
     [Fact]
@@ -494,6 +494,187 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void DrillDownUsesSeparateTypeConfiguration()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Child).WithDrillDown();
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Name);
+        });
+        configuration.ConfigureDrillDown<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Excluded);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        RegisteredObject registered = new(root, "Tests", "Root");
+        PropertyBag rootBag = DiagnosticManager.ObjectToPropertyBag(root, "Root", "Tests");
+        Assert.True(rootBag.GetProperty(nameof(DrillDownRoot.Child), "General").CanDrillDown);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { registered },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+        );
+
+        PropertyBag childBag = Assert.Single(response.Diagnostics.PropertyBags);
+        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Excluded), "General").Value);
+        Assert.Null(childBag.GetProperty(nameof(ChildSample.Name), "General"));
+    }
+
+    [Fact]
+    public void DrillDownFallsBackToNormalTypeConfiguration()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Child).WithDrillDown();
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+        );
+
+        Assert.Equal("Nested", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(ChildSample.Name), "General").Value);
+    }
+
+    [Fact]
+    public void CollectionListDrillsIntoItemRatherThanDisplayedValue()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.OptIn();
+            type.Collection(sample => sample.Items).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithDrillDown();
+        });
+        configuration.Configure<CollectionItem>(type =>
+        {
+            type.OptIn();
+            type.Include(item => item.Value);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        CollectionSample sample = new();
+        PropertyBag bag = DiagnosticManager.ObjectToPropertyBag(sample, "Collection", "Tests");
+        Assert.True(bag.GetProperty("One", "General").CanDrillDown);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(sample, "Tests", "Collection") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|One" } }
+        );
+
+        Assert.Equal("1", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(CollectionItem.Value), "General").Value);
+    }
+
+    [Fact]
+    public void EnumerableDrillDownUsesPerPropertyLimit()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false, DrillDownMaxItems = 10 };
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Items).WithDrillDown(maxItems: 2);
+        });
+        configuration.Configure<CollectionItem>(type =>
+        {
+            type.OptIn();
+            type.Include(item => item.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        CollectionSample sample = new();
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(sample, "Tests", "Collection") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Items" } }
+        );
+
+        Assert.Equal(2, response.DisplayedCount);
+        Assert.Equal(3, response.TotalCount);
+        Assert.True(response.IsTruncated);
+        Assert.Equal(new[] { "[0]", "[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
+    }
+
+    [Fact]
+    public void NestedDrillDownUsesAnOrderedPathChain()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Child).WithDrillDown();
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Property(child => child.Details).WithDrillDown();
+        });
+        configuration.Configure<GrandChildSample>(type =>
+        {
+            type.OptIn();
+            type.Include(child => child.Value);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest
+            {
+                ObjectPaths = new List<string> { "Tests|Root|General|Child", "DrillDown|ChildSample|General|Details" },
+            }
+        );
+
+        Assert.Equal("Deep", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(GrandChildSample.Value), "General").Value);
+    }
+
+    [Fact]
+    public void SetPropertyUsesDrillDownContextBeforeTheExistingPropertyPath()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.OptIn();
+            type.Property(sample => sample.Child).WithDrillDown();
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.OptIn();
+            type.Property(child => child.Editable).AllowSet();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        OperationResponse response = DiagnosticManager.SetProperty(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new SetPropertyRequest
+            {
+                ObjectPaths = new[] { "Tests|Root|General|Child" },
+                Path = "DrillDown|ChildSample|General|Editable",
+                Value = "Changed",
+            }
+        );
+
+        Assert.True(response.IsSuccess, response.ErrorMessage);
+        Assert.Equal("Changed", root.Child.Editable);
+    }
+
+    [Fact]
     public void FluentStrategiesWorkWithoutSourceAttributesAndApplyToNestedTypes()
     {
         DiagnosticConfiguration configuration = new();
@@ -572,7 +753,7 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new DerivedSample());
 
         Assert.Equal("Base", bag.GetProperty("Derived override", "General").Value);
-        Assert.Equal("Derived", bag.GetProperty(nameof(DerivedSample.DerivedValue)).Value);
+        Assert.Equal("Derived", bag.GetProperty(nameof(DerivedSample.DerivedValue), "General").Value);
         Assert.Null(bag.GetProperty("Base configured", "General"));
     }
 
@@ -586,7 +767,7 @@ public sealed class FluentConfigurationTests : IDisposable
             type.Include(sample => sample.First);
         });
         DiagnosticManager.UseConfiguration(first);
-        Assert.NotNull(Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First)));
+        Assert.NotNull(Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), "General"));
 
         DiagnosticConfiguration second = new();
         second.Configure<ReplacementSample>(type =>
@@ -597,8 +778,8 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(second);
         PropertyBag bag = Render(new ReplacementSample());
 
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First)));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second)));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
     }
 
     [Fact]
@@ -616,8 +797,8 @@ public sealed class FluentConfigurationTests : IDisposable
         );
 
         PropertyBag bag = Render(new ReplacementSample());
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First)));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second)));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
     }
 
     [Fact]
@@ -742,7 +923,19 @@ public sealed class FluentConfigurationTests : IDisposable
     private sealed class ChildSample
     {
         public string Name { get; } = "Nested";
-        public string Excluded { get; } = "Excluded";
+        public string Excluded { get; } = "Nested";
+        public GrandChildSample Details { get; } = new();
+        public string Editable { get; set; } = "Initial";
+    }
+
+    private sealed class DrillDownRoot
+    {
+        public ChildSample Child { get; } = new();
+    }
+
+    private sealed class GrandChildSample
+    {
+        public string Value { get; } = "Deep";
     }
 
     private class BaseSample

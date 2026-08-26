@@ -13,6 +13,7 @@ import { DiagProcess } from '@domain/DiagProcess';
 
 @Injectable({ providedIn: 'root' })
 export class ProcessModel implements ObservableDisposable {
+    objectPaths: readonly string[] = Object.freeze([]);
     selectedEvent?: EventModel;
     titleMessage = signal('');
     categories = signal<CategoryModel[]>([]);
@@ -20,6 +21,10 @@ export class ProcessModel implements ObservableDisposable {
     serverDate = signal<Date | undefined>(undefined);
     activeCatName = signal('');
     activeCat = computed(() => this.categories().find((c) => c.name() === this.activeCatName()));
+
+    setObjectPaths(objectPaths: readonly string[]): void {
+        this.objectPaths = Object.freeze([...objectPaths]);
+    }
 
     clear() {
         this.titleMessage.set('...');

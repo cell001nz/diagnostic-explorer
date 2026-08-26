@@ -74,11 +74,13 @@ internal static class DiagnosticsConfiguration
                 .CustomProperty("Computed", f => $"This form has {f.Controls.Count} controls")
                 .Description(f => $"Control Info for {f.GetHashCode()}");
 
+            options.CustomProperty("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
+
             using (options.CreateCategoryScope("Widgets"))
             {
                 options.Property(form => form.WidgetIdCount);
                 options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
-                options.Collection(form => form.Widgets);
+                options.Collection(form => form.Widgets).WithDrillDown();
             }
 
             using (options.CreateCategoryScope("Gadgets"))
@@ -92,7 +94,8 @@ internal static class DiagnosticsConfiguration
                 options
                     .Collection(form => form.Gadgets)
                     .List(opt => opt.Name(g => $"{g.Id} - {g.Name}").Category(g => g.Purpose).Description(g => $"Description for {g.Name}"))
-                    .WithMaxItems(int.MaxValue);
+                    .WithMaxItems(int.MaxValue)
+                    .WithDrillDown();
             }
         });
     }
@@ -111,7 +114,9 @@ internal static class DiagnosticsConfiguration
                         .Category(item => item.Purpose)
                         .Value(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
                         .Description(item => $"Installed {item.InstalledDate:d MMM yyyy}")
-                );
+                )
+                .Categories(item => item.Purpose)
+                .WithDrillDown();
         });
 
         config.Configure<WidgetConfigItem>(options => options.OptOut());
@@ -125,12 +130,21 @@ internal static class DiagnosticsConfiguration
             options.OptOut();
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.Configuration);
+            options.Property(widget => widget.Configuration).Named("View Widget Config").WithDrillDown();
             using (options.CreateCategoryScope("Info"))
             {
                 options.Property(widget => widget.DateCreated).AllowSet();
                 options.Property(widget => widget.Size).AllowSet();
             }
+        });
+
+        config.ConfigureDrillDown<Widget>(options =>
+        {
+            options.OptIn();
+            options.Property(widget => widget.Name).AllowSet();
+            options.Property(widget => widget.Configuration).WithDrillDown();
+            options.Property(widget => widget.DateCreated);
+            options.Property(widget => widget.Size);
         });
     }
 

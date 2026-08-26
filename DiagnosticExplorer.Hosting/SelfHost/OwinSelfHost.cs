@@ -132,6 +132,8 @@ public sealed class SelfHostWebHub : Hub, ISelfHostHub
         return Task.CompletedTask;
     }
 
+    public Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request) => Manager.GetDrillDownAsync(processId, request);
+
     public Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request) => Manager.SetPropertyAsync(processId, request);
 
     public Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request) => Manager.ExecuteOperationAsync(processId, request);

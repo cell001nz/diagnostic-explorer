@@ -58,6 +58,7 @@ export class OperationsDialogComponent implements OnInit {
     operationSet = input.required<OperationSet>();
     path = input.required<string>();
     processId = input.required<string>();
+    objectPaths = input<readonly string[]>([]);
     #hubService = inject(DiagHubService);
 
     ref = inject(DynamicDialogRef);
@@ -99,6 +100,10 @@ export class OperationsDialogComponent implements OnInit {
         this.result.set(undefined);
     }
 
+    getOperationDisplayName(operation: Operation): string {
+        return operation.signature.split('(', 1)[0].trim();
+    }
+
     getParamDisplayValue(pv: OperationParamValue): string {
         switch (pv.editorKind) {
             case 'int':
@@ -114,6 +119,7 @@ export class OperationsDialogComponent implements OnInit {
 
     async onExecute(vm: OperationViewModel) {
         const request: OperationRequest = {
+            objectPaths: [...this.objectPaths()],
             path: this.path(),
             operation: vm.operation.signature,
             arguments: vm.paramValues.map((v) => this.getParamDisplayValue(v))
@@ -146,7 +152,7 @@ export class OperationsDialogComponent implements OnInit {
         this.busy.set(false);
 
         console.log(response);
-            this.result.set(response)
+        this.result.set(response);
 
         if (response.isSuccess) {
             this.status.set('success');

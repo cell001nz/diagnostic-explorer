@@ -1,2 +1,57 @@
 // Event severity level row styles — moved to event-sink-view.component.scss
 
+.diag-drilldown-link {
+	max-width: 100%;
+	padding: 0;
+	border: 0;
+	border-bottom: 1px solid currentColor;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	letter-spacing: 0;
+	text-align: left;
+	text-underline-offset: 0.15rem;
+}
+
+.diag-drilldown-link:hover,
+.diag-drilldown-link:focus-visible {
+	filter: brightness(1.25);
+}
+
+.value-link {
+	overflow-wrap: anywhere;
+}
+
+.diag-icon-link {
+	display: inline-grid;
+	width: 1.5rem;
+	height: 1.5rem;
+	flex: 0 0 1.5rem;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	opacity: 0.75;
+}
+
+.diag-icon-link:hover,
+.diag-icon-link:focus-visible {
+	opacity: 1;
+}
+
+.diag-pencil-icon {
+	font-size: 0.75rem;
+}
+
+:host ::ng-deep .flat-root-bag .p-panel {
+	border: 0;
+	background: transparent;
+}
+
+:host ::ng-deep .flat-root-bag .p-panel-content {
+	padding: 0;
+}
+

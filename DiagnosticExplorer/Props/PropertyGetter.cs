@@ -42,6 +42,8 @@ internal class PropertyGetter
     private Func<object, string> _descriptionFormatter;
     private Func<object, string> _valueFormatter;
     private IReadOnlyList<PropertyAlertConfiguration> _alerts;
+    protected bool DrillDownEnabled { get; private set; }
+    protected int DrillDownMaxItems { get; private set; }
 
     protected PropertyGetter() { }
 
@@ -103,6 +105,7 @@ internal class PropertyGetter
             _alerts = configuration.Alerts;
             if (configuration.AllowSet.IsSet)
                 CanSet = propInfo.CanWrite && configuration.AllowSet.Value;
+            ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems);
 
             if (configuration.UsesPropertyDefaults && string.IsNullOrWhiteSpace(Category))
                 Category = "General";
@@ -165,6 +168,7 @@ internal class PropertyGetter
             SourceObject = obj,
             SourceProperty = PropInfo,
         };
+        ApplyDrillDown(p, objectValue);
 
         string prependToCategory = PrependToCategory(catPrepend, obj);
         bag.AddProperty(p, prependToCategory);
@@ -333,6 +337,23 @@ internal class PropertyGetter
         Category = configuration.Category.IsSet ? configuration.Category.Value : "General";
         Description = configuration.Description.IsSet ? configuration.Description.Value : null;
         _alerts = configuration.Alerts;
+        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems);
+    }
+
+    protected void ApplyDrillDown(Property property, object value)
+    {
+        if (!DrillDownEnabled || !DiagnosticManager.IsDrillDownValue(value))
+            return;
+
+        property.CanDrillDown = true;
+        property.DrillDownObject = value;
+        property.DrillDownMaxItems = DrillDownMaxItems;
+    }
+
+    private void ConfigureDrillDown(ConfiguredValue<bool> enabled, ConfiguredValue<int> maxItems)
+    {
+        DrillDownEnabled = enabled.IsSet && enabled.Value;
+        DrillDownMaxItems = maxItems.IsSet ? maxItems.Value : DiagnosticManager.DrillDownMaxItems;
     }
 
     protected string FormatValue(object val)

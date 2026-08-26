@@ -10,6 +10,19 @@
     serverDate: Date | string;
 }
 
+export interface DrillDownRequest {
+    objectPaths: string[];
+}
+
+export interface DrillDownResponse {
+    diagnostics: DiagnosticResponse;
+    displayedCount: number;
+    totalCount?: number;
+    isTruncated: boolean;
+    errorMessage?: string;
+    errorDetail?: string;
+}
+
 export interface PropertyBag {
     name: string;
     category: string;
@@ -20,6 +33,7 @@ export interface PropertyBag {
 export interface SubBag {
     name: string;
     operationSet: string;
+    canDrillDown: boolean;
     properties: Property[];
 }
 
@@ -29,6 +43,7 @@ export interface Property {
     description: string;
     operationSet: string;
     canSet: boolean;
+    canDrillDown: boolean;
     alerts: PropertyAlert[];
 }
 

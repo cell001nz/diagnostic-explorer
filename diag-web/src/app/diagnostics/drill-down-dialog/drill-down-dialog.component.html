@@ -1,0 +1,53 @@
+<div class="drilldown-shell">
+    <header class="drilldown-header">
+        <h1 class="drilldown-title">{{ title() }}</h1>
+        <div class="flex items-center gap-2">
+            <button pButton type="button" severity="secondary" text rounded icon="pi pi-times"
+                    title="Close" aria-label="Close" (click)="close()"></button>
+        </div>
+    </header>
+
+    @if (loading() && processModel.categories().length === 0) {
+        <div class="drilldown-state">
+            <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+            <span>Loading...</span>
+        </div>
+    } @else if (errorMessage()) {
+        <div class="drilldown-state drilldown-error" role="alert">
+            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+            <strong>{{ errorMessage() }}</strong>
+            @if (errorDetail()) {
+                <pre>{{ errorDetail() }}</pre>
+            }
+        </div>
+    } @else if (processModel.categories().length === 0) {
+        <div class="drilldown-state">No diagnostics available.</div>
+    } @else {
+        <div class="drilldown-content" [class.drilldown-refreshing]="loading()">
+            @if (processModel.categories().length === 1) {
+                <app-category-view [category]="processModel.categories()[0]" [process]="process()" [flatRoot]="true" />
+            } @else {
+                <p-tabs [value]="processModel.activeCatName()" (valueChange)="onCategoryChange($event)" class="h-full">
+                    <p-tablist>
+                        @for (category of processModel.categories(); track category.name()) {
+                            <p-tab [value]="category.name()">{{ category.name() }}</p-tab>
+                        }
+                    </p-tablist>
+                    <p-tabpanels>
+                        @for (category of processModel.categories(); track category.name()) {
+                            <p-tabpanel [value]="category.name()">
+                                <app-category-view [category]="category" [process]="process()" [flatRoot]="true" />
+                            </p-tabpanel>
+                        }
+                    </p-tabpanels>
+                </p-tabs>
+            }
+        </div>
+    }
+
+    @if (isTruncated()) {
+        <footer class="drilldown-footer">
+            Showing {{ displayedCount() }}@if (totalCount() !== undefined) { of {{ totalCount() }} } items
+        </footer>
+    }
+</div>

@@ -47,14 +47,26 @@ public class DiagnosticClientHandler : IDiagnosticClient
         return ProtobufUtil.Decompress<DiagnosticResponse>(data);
     }
 
+    public async Task<DrillDownResponse> GetDrillDown(DrillDownRequest request)
+    {
+        byte[] data = await Client.GetDrillDown(Guid.NewGuid().ToString("N"), request);
+        return ProtobufUtil.Decompress<DrillDownResponse>(data);
+    }
+
     public Task<OperationResponse> SetProperty(SetPropertyRequest request)
     {
-        return Client.SetProperty(Guid.NewGuid().ToString("N"), request.Path, request.Value);
+        string requestId = Guid.NewGuid().ToString("N");
+        return request.ObjectPaths == null || request.ObjectPaths.Length == 0
+            ? Client.SetProperty(requestId, request.Path, request.Value)
+            : Client.SetPropertyWithContext(requestId, request);
     }
 
     public Task<OperationResponse> ExecuteOperation(OperationRequest request)
     {
-        return Client.ExecuteOperation(Guid.NewGuid().ToString("N"), request.Path, request.Operation, request.Arguments);
+        string requestId = Guid.NewGuid().ToString("N");
+        return request.ObjectPaths == null || request.ObjectPaths.Length == 0
+            ? Client.ExecuteOperation(requestId, request.Path, request.Operation, request.Arguments)
+            : Client.ExecuteOperationWithContext(requestId, request);
     }
 
     public async Task SubscribeEvents()
@@ -82,4 +94,3 @@ public class DiagnosticClientHandler : IDiagnosticClient
         _callerContext.Abort();
     }
 }
-

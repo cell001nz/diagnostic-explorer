@@ -177,7 +177,15 @@ internal class CollectionGetter : PropertyGetter
 
             Category cat = bag.Categories.FindByName(newPrepend);
             if (cat != null)
+            {
                 cat.ValueObject = listObject;
+                if (DrillDownEnabled && DiagnosticManager.IsDrillDownValue(listObject))
+                {
+                    cat.CanDrillDown = true;
+                    cat.DrillDownObject = listObject;
+                    cat.DrillDownMaxItems = DrillDownMaxItems;
+                }
+            }
         }
     }
 
@@ -194,6 +202,7 @@ internal class CollectionGetter : PropertyGetter
 
             Property prop = new Property(name, val, desc);
             prop.ValueObject = objectValue;
+            ApplyDrillDown(prop, obj);
             bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend, owner), cat));
         }
     }

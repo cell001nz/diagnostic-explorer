@@ -1,12 +1,12 @@
-import {ChangeDetectionStrategy, Component, inject, input, OnInit, signal} from '@angular/core';
-import {DynamicDialogRef} from "primeng/dynamicdialog";
-import {FormsModule} from "@angular/forms";
-import {toObservable} from "@angular/core/rxjs-interop";
-import {FloatLabel} from "primeng/floatlabel";
-import {InputText} from "primeng/inputtext";
-import {ButtonDirective} from "primeng/button";
-import {DiagHubService} from "@services/diag-hub.service";
-import {OperationResponse, SetPropertyRequest} from "@domain/SetPropertyRequest";
+import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
+import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { FormsModule } from '@angular/forms';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { FloatLabel } from 'primeng/floatlabel';
+import { InputText } from 'primeng/inputtext';
+import { ButtonDirective } from 'primeng/button';
+import { DiagHubService } from '@services/diag-hub.service';
+import { OperationResponse, SetPropertyRequest } from '@domain/SetPropertyRequest';
 
 export type SetPropertyStatus = 'idle' | 'executing' | 'success' | 'error' | 'timeout';
 
@@ -15,18 +15,13 @@ export type SetPropertyStatus = 'idle' | 'executing' | 'success' | 'error' | 'ti
     templateUrl: './set-property-dialog.component.html',
     styleUrls: ['./set-property-dialog.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        FormsModule,
-        FloatLabel,
-        InputText,
-        ButtonDirective
-    ]
+    imports: [FormsModule, FloatLabel, InputText, ButtonDirective]
 })
 export class SetPropertyDialogComponent implements OnInit {
-
     text = input.required<string>();
     value = input.required<string>();
     processId = input.required<string>();
+    objectPaths = input<readonly string[]>([]);
     editValue = signal('');
     ref = inject(DynamicDialogRef);
     #hubService = inject(DiagHubService);
@@ -37,11 +32,10 @@ export class SetPropertyDialogComponent implements OnInit {
     operationResult = signal<OperationResponse | undefined>(undefined);
 
     constructor() {
-        toObservable(this.value).subscribe(v => this.editValue.set(v));
+        toObservable(this.value).subscribe((v) => this.editValue.set(v));
     }
 
-    ngOnInit(): void {
-    }
+    ngOnInit(): void {}
 
     onClose(): void {
         this.ref.close();
@@ -51,13 +45,13 @@ export class SetPropertyDialogComponent implements OnInit {
         const request = new SetPropertyRequest();
         request.path = this.text();
         request.value = this.editValue();
+        request.objectPaths = [...this.objectPaths()];
 
         this.busy.set(true);
         this.status.set('executing');
         this.statusMessage.set('Setting property...');
         this.operationResult.set(undefined);
 
-      
         let response: OperationResponse;
         try {
             response = await this.#hubService.setPropertyValue(this.processId(), request);
@@ -83,11 +77,9 @@ export class SetPropertyDialogComponent implements OnInit {
     }
 
     handleKeyUp(evt: KeyboardEvent) {
-        if (evt.key === 'Enter' && !this.busy())
-            this.onSetProperty();
+        if (evt.key === 'Enter' && !this.busy()) this.onSetProperty();
 
-        if (evt.key === 'Escape')
-            this.onClose();
+        if (evt.key === 'Escape') this.onClose();
     }
 
     truncateMessage(message: string): string {
@@ -96,6 +88,4 @@ export class SetPropertyDialogComponent implements OnInit {
         const truncated = message.substring(0, limit);
         return truncated.length < message.length ? truncated + '…' : truncated;
     }
-
-
 }

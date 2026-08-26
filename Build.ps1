@@ -65,4 +65,4 @@ foreach ($packageProject in $packageProjects) {
 	}
 }
 
-& "$PSScriptRoot\Build-ServiceInstaller.ps1" -PackageVersion $PackageVersion -SkipAngularBuild
+& "$PSScriptRoot\Build-ServiceInstaller.ps1" -PackageVersion $PackageVersion

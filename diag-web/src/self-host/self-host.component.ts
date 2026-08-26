@@ -1,11 +1,11 @@
-import {ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CategoryViewComponent} from '@app/diagnostics/category-view/category-view.component';
-import {EventDetailPanelComponent} from '@app/diagnostics/event-detail-panel/event-detail-panel.component';
-import {EventModel} from '@model/EventModel';
-import {ProcessModel} from '@model/ProcessModel';
-import {Tab, TabList, TabPanel, TabPanels, Tabs} from 'primeng/tabs';
-import {SelfHostDiagHubService} from './self-host-hub.service';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CategoryViewComponent } from '@app/diagnostics/category-view/category-view.component';
+import { EventDetailPanelComponent } from '@app/diagnostics/event-detail-panel/event-detail-panel.component';
+import { EventModel } from '@model/EventModel';
+import { ProcessModel } from '@model/ProcessModel';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { SelfHostDiagHubService } from './self-host-hub.service';
 
 const LOCAL_PROCESS_ID = 'self';
 
@@ -28,29 +28,23 @@ export class SelfHostComponent implements OnInit, OnDestroy {
     #resizeStartHeight = 0;
 
     constructor() {
-        this.hub.clearEvents$
-            .pipe(takeUntilDestroyed())
-            .subscribe(() => this.processModel().clearEvents());
-        this.hub.loadEvents$
-            .pipe(takeUntilDestroyed())
-            .subscribe(data => this.processModel().loadEvents(data));
-        this.hub.streamEvents$
-            .pipe(takeUntilDestroyed())
-            .subscribe(data => this.processModel().streamEvents(data.events));
-        this.hub.diagsArrived$
-            .pipe(takeUntilDestroyed())
-            .subscribe(data => this.processModel().update(data.response));
+        this.hub.clearEvents$.pipe(takeUntilDestroyed()).subscribe(() => this.processModel().clearEvents());
+        this.hub.loadEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().loadEvents(data));
+        this.hub.streamEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().streamEvents(data.events));
+        this.hub.diagsArrived$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().update(data.response));
+
+        window.addEventListener('keydown', this.onWindowKeyDown, true);
     }
 
     async ngOnInit(): Promise<void> {
         try {
             await this.hub.openHubConnection();
             await this.refresh();
-        } catch {
-        }
+        } catch {}
     }
 
     ngOnDestroy(): void {
+        window.removeEventListener('keydown', this.onWindowKeyDown, true);
         void this.hub.stop();
     }
 
@@ -59,8 +53,7 @@ export class SelfHostComponent implements OnInit, OnDestroy {
     }
 
     onCategoryChange(category: string | number | undefined): void {
-        if (category != null)
-            this.processModel().activeCatName.set(String(category));
+        if (category != null) this.processModel().activeCatName.set(String(category));
     }
 
     expandCollapse(): void {
@@ -69,8 +62,7 @@ export class SelfHostComponent implements OnInit, OnDestroy {
 
     onEventSelected(event: EventModel): void {
         const previous = this.selectedEvent();
-        if (previous)
-            previous.isSelected = false;
+        if (previous) previous.isSelected = false;
         if (previous === event) {
             this.selectedEvent.set(null);
         } else {
@@ -81,10 +73,16 @@ export class SelfHostComponent implements OnInit, OnDestroy {
 
     closeDetail(): void {
         const selected = this.selectedEvent();
-        if (selected)
-            selected.isSelected = false;
+        if (selected) selected.isSelected = false;
         this.selectedEvent.set(null);
     }
+
+    private onWindowKeyDown = (event: KeyboardEvent): void => {
+        if (event.key !== 'Escape' || !this.selectedEvent() || CategoryViewComponent.hasActiveDrillDowns()) return;
+
+        event.preventDefault();
+        this.closeDetail();
+    };
 
     startResize(event: MouseEvent): void {
         event.preventDefault();

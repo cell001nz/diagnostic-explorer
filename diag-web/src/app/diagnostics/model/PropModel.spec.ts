@@ -9,6 +9,7 @@ function createProperty(severity: PropertyAlert['severity']): Property {
         description: '',
         operationSet: '',
         canSet: false,
+        canDrillDown: true,
         alerts: [{ severity, message: 'Widget count alert', category: 'Widget count' }]
     };
 }
@@ -27,5 +28,11 @@ describe('PropModel', () => {
         const model = new PropModel({} as SubBagModel, createProperty(1));
 
         expect(model.alertSeverity()).toBe(1);
+    });
+
+    it('preserves drilldown capability', () => {
+        const model = new PropModel({} as SubBagModel, createProperty('None'));
+
+        expect(model.canDrillDown()).toBeTrue();
     });
 });

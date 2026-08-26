@@ -10,10 +10,22 @@ namespace DiagnosticExplorer;
 public sealed class DiagnosticConfiguration : IDiagConfigurator
 {
     private readonly Dictionary<Type, TypeConfiguration> _types = new();
+    private readonly Dictionary<Type, TypeConfiguration> _drillDownTypes = new();
     private readonly Dictionary<Type, string> _defaultFormats = new();
     private readonly List<Func<IServiceProvider, IEnumerable<RegisteredObject>>> _registeredObjectProviders = new();
+    private int _drillDownMaxItems = 100;
 
     public bool ApplyAttributes { get; set; } = true;
+    public int DrillDownMaxItems
+    {
+        get => _drillDownMaxItems;
+        set
+        {
+            if (value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value), "Drilldown max items must be greater than zero.");
+            _drillDownMaxItems = value;
+        }
+    }
     public DiagnosticRuntimeOptions RuntimeOptions { get; } = new();
 
     public void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects)
@@ -51,13 +63,23 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
 
     public void Configure<T>(Action<ITypeConfigurator<T>> configure)
     {
+        ConfigureType(_types, configure);
+    }
+
+    public void ConfigureDrillDown<T>(Action<ITypeConfigurator<T>> configure)
+    {
+        ConfigureType(_drillDownTypes, configure);
+    }
+
+    private static void ConfigureType<T>(Dictionary<Type, TypeConfiguration> types, Action<ITypeConfigurator<T>> configure)
+    {
         if (configure == null)
             throw new ArgumentNullException(nameof(configure));
 
-        if (!_types.TryGetValue(typeof(T), out TypeConfiguration typeConfiguration))
+        if (!types.TryGetValue(typeof(T), out TypeConfiguration typeConfiguration))
         {
             typeConfiguration = new TypeConfiguration(typeof(T));
-            _types.Add(typeof(T), typeConfiguration);
+            types.Add(typeof(T), typeConfiguration);
         }
 
         configure(new TypeConfigurator<T>(typeConfiguration));
@@ -67,7 +89,9 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
     {
         return new DiagnosticConfigurationSnapshot(
             ApplyAttributes,
+            DrillDownMaxItems,
             _types.Values.Select(type => type.Clone()),
+            _drillDownTypes.Values.Select(type => type.Clone()),
             _defaultFormats,
             _registeredObjectProviders
         );
@@ -121,36 +145,50 @@ internal sealed class DiagnosticConfigurationSnapshot
 {
     public static readonly DiagnosticConfigurationSnapshot Empty = new(
         true,
+        100,
+        Array.Empty<TypeConfiguration>(),
         Array.Empty<TypeConfiguration>(),
         new Dictionary<Type, string>(),
         Array.Empty<Func<IServiceProvider, IEnumerable<RegisteredObject>>>()
     );
 
     private readonly IReadOnlyDictionary<Type, TypeConfiguration> _types;
+    private readonly IReadOnlyDictionary<Type, TypeConfiguration> _drillDownTypes;
     private readonly IReadOnlyDictionary<Type, string> _defaultFormats;
     private readonly IReadOnlyList<Func<IServiceProvider, IEnumerable<RegisteredObject>>> _registeredObjectProviders;
 
     public DiagnosticConfigurationSnapshot(
         bool applyAttributes,
+        int drillDownMaxItems,
         IEnumerable<TypeConfiguration> types,
+        IEnumerable<TypeConfiguration> drillDownTypes,
         IReadOnlyDictionary<Type, string> defaultFormats,
         IEnumerable<Func<IServiceProvider, IEnumerable<RegisteredObject>>> registeredObjectProviders
     )
     {
         ApplyAttributes = applyAttributes;
+        DrillDownMaxItems = drillDownMaxItems;
         _types = types.ToDictionary(type => type.Type);
+        _drillDownTypes = drillDownTypes.ToDictionary(type => type.Type);
         _defaultFormats = defaultFormats.ToDictionary(format => format.Key, format => format.Value);
         _registeredObjectProviders = registeredObjectProviders.ToArray();
     }
 
     public bool ApplyAttributes { get; }
+    public int DrillDownMaxItems { get; }
 
-    public TypeConfiguration GetEffectiveTypeConfiguration(Type runtimeType)
+    public TypeConfiguration GetEffectiveTypeConfiguration(Type runtimeType, bool drillDown = false)
+    {
+        IReadOnlyDictionary<Type, TypeConfiguration> source = drillDown && HasConfiguration(runtimeType, _drillDownTypes) ? _drillDownTypes : _types;
+        return MergeTypeConfiguration(runtimeType, source);
+    }
+
+    private static TypeConfiguration MergeTypeConfiguration(Type runtimeType, IReadOnlyDictionary<Type, TypeConfiguration> configurations)
     {
         TypeConfiguration effective = null;
         foreach (Type type in GetTypeHierarchy(runtimeType))
         {
-            if (!_types.TryGetValue(type, out TypeConfiguration configured))
+            if (!configurations.TryGetValue(type, out TypeConfiguration configured))
                 continue;
 
             if (effective == null)
@@ -158,6 +196,11 @@ internal sealed class DiagnosticConfigurationSnapshot
             effective.Merge(configured);
         }
         return effective;
+    }
+
+    private static bool HasConfiguration(Type runtimeType, IReadOnlyDictionary<Type, TypeConfiguration> configurations)
+    {
+        return GetTypeHierarchy(runtimeType).Any(configurations.ContainsKey);
     }
 
     public string GetDefaultFormat(Type propertyType)
@@ -279,6 +322,8 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<bool> ExposeElapsed { get; set; }
     public ConfiguredValue<bool> ExposeTimeUntil { get; set; }
     public ConfiguredValue<int> MaxItems { get; set; }
+    public ConfiguredValue<bool> DrillDown { get; set; }
+    public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public List<CollectionOutputConfiguration> CollectionOutputs { get; } = new();
 
     public PropertyConfiguration Clone()
@@ -308,6 +353,8 @@ internal sealed class PropertyConfiguration
         ExposeElapsed = source.ExposeElapsed.Or(ExposeElapsed);
         ExposeTimeUntil = source.ExposeTimeUntil.Or(ExposeTimeUntil);
         MaxItems = source.MaxItems.Or(MaxItems);
+        DrillDown = source.DrillDown.Or(DrillDown);
+        DrillDownMaxItems = source.DrillDownMaxItems.Or(DrillDownMaxItems);
         Alerts.AddRange(source.Alerts.Select(alert => alert.Clone()));
         if (source.CollectionOutputs.Count > 0)
         {
@@ -355,6 +402,8 @@ internal sealed class CustomPropertyConfiguration
     public ConfiguredValue<string> Description { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
+    public ConfiguredValue<bool> DrillDown { get; set; }
+    public ConfiguredValue<int> DrillDownMaxItems { get; set; }
 
     public CustomPropertyConfiguration Clone()
     {
@@ -364,6 +413,8 @@ internal sealed class CustomPropertyConfiguration
             CategoryFormatter = CategoryFormatter,
             Description = Description,
             DescriptionFormatter = DescriptionFormatter,
+            DrillDown = DrillDown,
+            DrillDownMaxItems = DrillDownMaxItems,
         };
         clone.Alerts.AddRange(Alerts.Select(alert => alert.Clone()));
         return clone;
@@ -677,6 +728,22 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
+    public IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null)
+    {
+        ConfigureDrillDown(Configuration, enabled, maxItems);
+        return this;
+    }
+
+    private static void ConfigureDrillDown(PropertyConfiguration configuration, bool enabled, int? maxItems)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        configuration.DrillDown = new ConfiguredValue<bool>(enabled);
+        if (maxItems.HasValue)
+            configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+    }
+
     public IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, Func<T, string> message)
     {
         return Warn(condition, message, null);
@@ -749,6 +816,17 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
     public CustomPropertyConfigurator(CustomPropertyConfiguration configuration)
     {
         _configuration = configuration;
+    }
+
+    public ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        _configuration.DrillDown = new ConfiguredValue<bool>(enabled);
+        if (maxItems.HasValue)
+            _configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
     }
 
     public ICustomPropertyConfigurator<T> Category(string category)
@@ -883,6 +961,17 @@ internal sealed class CollectionConfigurator<T, TItem>
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Max items must be greater than zero.");
 
         Configuration.MaxItems = new ConfiguredValue<int>(maxItems);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        Configuration.DrillDown = new ConfiguredValue<bool>(enabled);
+        if (maxItems.HasValue)
+            Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
         return this;
     }
 

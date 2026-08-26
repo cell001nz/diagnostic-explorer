@@ -136,6 +136,8 @@ public sealed class SelfHostWebHub : Microsoft.AspNetCore.SignalR.Hub<ISelfHostC
         return Task.CompletedTask;
     }
 
+    public Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request) => _manager.GetDrillDownAsync(processId, request);
+
     public Task<OperationResponse> SetProperty(string processId, SetPropertyRequest request) => _manager.SetPropertyAsync(processId, request);
 
     public Task<OperationResponse> ExecuteOperation(string processId, OperationRequest request) => _manager.ExecuteOperationAsync(processId, request);
