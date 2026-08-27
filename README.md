@@ -16,8 +16,8 @@ This package adds configuration-based Diagnostic Explorer hosting:
 <PackageReference Include="DiagnosticExplorer.Hosting" Version="5.0.0" />
 ```
 
-This `appsettings.json` section enables a local viewer and a remote service
-connection; use either host or both:
+This `appsettings.json` section enables a local viewer and a remote-service
+connection. Use either host or both, and tune retention without changing code:
 
 ```json
 {
@@ -26,37 +26,64 @@ connection; use either host or both:
     "Hosts": [
       { "Type": "SelfHost", "Url": "http://127.0.0.1:50001" },
       { "Type": "Remote", "Url": "http://localhost:50000/diagnostics" }
-    ]
+    ],
+    "EventRetention": {
+      "MaxEventsPerSink": 1000,
+      "MaxAgeMinutes": 30
+    },
+    "LogEventRetention": {
+      "MaxEvents": 5000,
+      "MaxAgeMinutes": 5
+    }
   }
 }
 ```
 
-This generic-host setup reads the configuration and starts the selected hosts
-with the application:
+This generic-host setup reads the host configuration, starts the selected
+hosts, registers diagnostic objects, and configures their presentation:
 
 ```csharp
 using DiagnosticExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-await Host.CreateDefaultBuilder(args)
-    .ConfigureServices(
-        (context, services) =>
-        {
-            services.ConfigureDiagnosticExplorer(diagnostics =>
-            {
-                diagnostics.ConfigureHosting(context.Configuration);
-                ConfigureClasses(diagnostics);
-                ConfigureEventRoutes(diagnostics);
-            });
-            services.AddHostedService<Worker>();
-        }
-    )
-    .Build()
-    .RunAsync();
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddSingleton<WidgetService>();
+builder.Services.ConfigureDiagnosticExplorer(
+    builder.Configuration,
+    diagnostics =>
+    {
+        diagnostics.RegisterObjects(RegisterObjects);
+        ConfigureClasses(diagnostics);
+        ConfigureEventRoutes(diagnostics);
+    }
+);
+
+await builder.Build().RunAsync();
 ```
 
-This helper chooses which properties to expose:
+`RegisterObjects` runs when diagnostics are collected. Resolve an application
+service, then register the dynamic objects it owns:
+
+```csharp
+private static void RegisterObjects(IDiagRegistrar registrar)
+{
+    WidgetService widgetService = registrar.GetRequiredService<WidgetService>();
+
+    registrar.RegisterService<WidgetService>("Application", "Widget service");
+    foreach (Widget widget in widgetService.Widgets)
+        registrar.Register(widget, "Widgets", widget.Name);
+}
+```
+
+`RegisterService<T>` resolves `T` from the application service provider before
+registering it. Use it for long-lived services, typically singletons.
+`Register` remains available for objects created at runtime.
+
+Without a type profile, Diagnostic Explorer displays public scalar properties,
+collection counts, and complex values as drilldown icons. Add a profile to
+choose exactly what users see and how it behaves:
 
 ```csharp
 private static void ConfigureClasses(IDiagConfigurator diagnostics)
@@ -64,74 +91,116 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
     diagnostics.Configure<Widget>(options =>
     {
         options.ExcludeAll();
-        options.Property(widget => widget.Name)
-            .Named("Widget name")
-            .Category("Details");
+
+        options.Property(widget => widget.Name).Named("Widget name").Category("Details").AllowSet();
+        options.Expanded(widget => widget.Connection).Category("Connection");
+        options.Collection(widget => widget.Components)
+            .ShowCount()
+            .AsList(list => list.Name(component => component.Name).Value(component => component.Status))
+            .WithMaxItems(50);
+        options.Property(widget => widget.Configuration).AsJson(100).WithJsonHover().WithDrillDown();
     });
 
-    diagnostics.Configure<Gadget>(options =>
+    diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
     {
-        options.IncludeAll();
-        options.Exclude(gadget => gadget.Id);
-        options.Property(gadget => gadget.Purpose)
-            .Category("Details");
+        options.ExcludeAll();
+        options.Property(instance => instance.Status);
+        options.Property(instance => instance.Owner).WithDrillDown();
     });
 }
 ```
 
-Add `WithDrillDown()` to inspect a complex value or collection item in an interactive overlay. A dedicated profile can choose what the overlay renders; when it is absent, the normal type profile is reused:
+Use `IncludeAll()` to start from every public property, or `ExcludeAll()` to
+start from none. `Property`, `Expanded`, and `Collection` add display metadata,
+nested object bags, and collection rendering. `AllowSet()` exposes an editable
+property. `AsJson()` with `WithJsonHover()` fetches JSON only on hover.
+
+`WithDrillDown()` makes a complex value, collection item, or custom property
+interactive. `AsDrillDownIcon()` provides a compact icon-only entry point. A
+dedicated drilldown profile controls the overlay; otherwise the normal type
+profile is reused:
 
 ```csharp
 diagnostics.Configure<Widget>(options =>
 {
-    options.Property(widget => widget.Configuration).WithDrillDown();
+    options.Property(widget => widget.Configuration).WithDrillDown(maxItems: 50);
     options.Collection(widget => widget.Components)
-        .List(items => items.Name(component => component.Name))
-        .WithDrillDown(maxItems: 50);
+        .AsList(list => list.Name(component => component.Name))
+        .AsDrillDownIcon();
 });
 
 diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
 {
     options.ExcludeAll();
-    options.Property(configuration => configuration.Status);
-    options.Property(configuration => configuration.Owner).WithDrillDown();
+    options.Property(instance => instance.Status);
+    options.Property(instance => instance.Owner).WithDrillDown();
 });
+```
+
+### Private fields and anonymous objects
+
+Use a named delegate property to expose computed or private state. Write the
+configuration inside the declaring type when it needs private-field access:
+
+```csharp
+private static void ConfigureDiagnostics(IDiagConfigurator diagnostics)
+{
+    diagnostics.Configure<Widget>(options =>
+    {
+        options.Property("Retry count", widget => widget._retryCount).Category("Internal");
+        options.Property("Last error", widget => widget._lastError?.Message).Category("Internal");
+    });
+}
+```
+
+Return an anonymous object for a small, read-only diagnostic snapshot. Its
+generated public properties render in the drilldown view:
+
+```csharp
+options.Property(
+        "Connection snapshot",
+        widget => new
+        {
+            widget.Connection.Endpoint,
+            widget.Connection.IsConnected,
+        }
+    )
+    .AsDrillDownIcon("View connection");
 ```
 
 See [fluent diagnostic configuration](Docs/fluent-configuration.md) for property, custom-property, category, limit, and nested drilldown behavior.
 
-This helper routes events from named loggers to separate event sinks:
+This helper routes events from named loggers to separate event sinks. Each
+integration below uses these same routes:
 
 ```csharp
 private static void ConfigureEventRoutes(IDiagConfigurator diagnostics)
 {
     diagnostics.ConfigureEventRouting(routes =>
         routes
-            .Route("Widgets", route =>
-                route.AtLeast(LogLevel.Information)
-                    .To("Widgets", "Widget Events"))
-            .Route("Gadgets", route =>
-                route.AtLeast(LogLevel.Warning)
-                    .To("Gadgets", "Gadget Warnings")));
+            .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
+            .Route("Widgets", route => route.AtLeast(LogLevel.Information).To("Widgets", "Widget Events"))
+            .Route("Gadgets", route => route.AtLeast(LogLevel.Warning).To("Gadgets", "Gadget Warnings"))
+            .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors")));
 }
 ```
 
-This registers an object so its configured properties appear in Diagnostic
-Explorer:
+For an application without a generic host, create the configuration, register
+objects directly, and start the configured hosts yourself:
 
 ```csharp
 using DiagnosticExplorer;
 
-DiagnosticManager.Register(this, "BagName", "CatName");
-```
+DiagnosticConfiguration diagnostics = DiagnosticManager.Configure(config =>
+{
+    config.ConfigureHosting(applicationConfiguration);
+    ConfigureClasses(config);
+    ConfigureEventRoutes(config);
+});
 
-This starts and stops the configured hosts in an application without a generic
-host:
+DiagnosticManager.Register(widget, "Widget 42", "Widgets");
 
-```csharp
-using DiagnosticExplorer;
-
-await DiagnosticHostingService.StartAsync(DiagnosticManager.CurrentConfiguration);
+await DiagnosticHostingService.StartAsync(diagnostics);
 try
 {
     RunApplication();
@@ -169,7 +238,12 @@ using Microsoft.Extensions.Logging;
 services.AddLogging(logging => logging.AddDiagnosticExplorer());
 ```
 
-The provider sends matching `Microsoft.Extensions.Logging` events to Diagnostic Explorer.
+The provider sends matching `Microsoft.Extensions.Logging` events to Diagnostic
+Explorer, including structured properties:
+
+```csharp
+logger.LogInformation("Processed {WidgetCount} widgets", widgetCount);
+```
 
 ## NLog
 
@@ -191,6 +265,12 @@ logging.AddDiagnosticExplorer();
 LogManager.Configuration = logging;
 ```
 
+NLog templates retain their event properties:
+
+```csharp
+logger.Info("Processed {WidgetCount} widgets", widgetCount);
+```
+
 ## Serilog
 
 This package adds a Diagnostic Explorer sink to Serilog:
@@ -209,4 +289,10 @@ using ILogger logger = new LoggerConfiguration()
     .MinimumLevel.Verbose()
     .WriteTo.DiagnosticExplorer()
     .CreateLogger();
+```
+
+Serilog properties are forwarded with the event:
+
+```csharp
+logger.Information("Processed {WidgetCount} widgets", widgetCount);
 ```
