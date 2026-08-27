@@ -32,6 +32,13 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
     public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value) =>
         Try(() => _inner.Property(name, value), new NoOpCustomPropertyConfigurator(), "Property");
 
+    public ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure) =>
+        Try(
+            () => _inner.Custom(name, projection => configure(new ResilientCustomObjectConfigurator(projection, this))),
+            new NoOpCustomPropertyConfigurator(),
+            "Custom"
+        );
+
     public ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property) =>
         Try(() => _inner.Collection(property), new NoOpCollectionConfigurator<TItem>(), "Collection");
 
@@ -169,6 +176,30 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         public ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, Func<T, string> message, string category) => this;
     }
 
+    private sealed class ResilientCustomObjectConfigurator : ICustomObjectConfigurator<T>
+    {
+        private readonly ICustomObjectConfigurator<T> _inner;
+        private readonly ResilientTypeConfigurator<T> _owner;
+
+        public ResilientCustomObjectConfigurator(ICustomObjectConfigurator<T> inner, ResilientTypeConfigurator<T> owner)
+        {
+            _inner = inner;
+            _owner = owner;
+        }
+
+        public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value) =>
+            _owner.Try(() => _inner.Property(name, value), new NoOpCustomPropertyConfigurator(), "Custom property");
+
+        public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value) =>
+            _owner.Try(() => _inner.Extended(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Custom extended property");
+
+        public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value) =>
+            _owner.Try(() => _inner.Collection(name, value), new NoOpCollectionConfigurator<TItem>(), "Custom collection");
+
+        public IRateConfigurator<T> Rate(string name, Func<T, RateCounter> value) =>
+            _owner.Try(() => _inner.Rate(name, value), new NoOpRateConfigurator(), "Custom rate");
+    }
+
     private sealed class NoOpCollectionConfigurator<TItem> : ICollectionConfigurator<T, TItem>
     {
         IPropertyConfigurator IPropertyConfigurator.Named(string name) => this;
@@ -204,7 +235,7 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public ICollectionConfigurator<T, TItem> Concatenate(string separator = null, string name = null) => this;
 
-        public ICollectionConfigurator<T, TItem> List(Action<ICollectionListConfigurator<TItem>> configure = null) => this;
+        public ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null) => this;
 
         public ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null) => this;
 

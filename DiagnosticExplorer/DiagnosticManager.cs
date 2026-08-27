@@ -378,6 +378,12 @@ public static class DiagnosticManager
             bag.Name = bagName;
             bag.Category = bagCategory;
             bag.SourceObject = obj;
+            if (obj is IInlineCustomObject inlineCustomObject)
+            {
+                inlineCustomObject.AddProperties(bag);
+                return bag;
+            }
+
             bag.CanDrillDown =
                 renderMode == DiagnosticRenderMode.Normal && obj is not Type && _configuration.HasDrillDownConfiguration(obj.GetType());
 
@@ -450,7 +456,7 @@ public static class DiagnosticManager
         }
     }
 
-    private static void AddPropertyGetters(
+    internal static void AddPropertyGetters(
         ICollection<PropertyGetter> getters,
         PropertyInfo info,
         DiagnosticPropertyAttribute metadata,

@@ -427,7 +427,7 @@ internal sealed class PropertyConfiguration
 
     public PropertyInfo Property { get; }
     public Type ValueType { get; }
-    public Func<object, object> Value { get; }
+    public Func<object, object> Value { get; private set; }
     public bool? Included { get; set; }
     public bool UsesPropertyDefaults { get; set; }
     public PropertyStrategy? Strategy { get; set; }
@@ -458,6 +458,25 @@ internal sealed class PropertyConfiguration
             Property == null ? new PropertyConfiguration(Name.Value, ValueType, Value) : new PropertyConfiguration(Property);
         clone.Merge(this);
         return clone;
+    }
+
+    public PropertyConfiguration Bind(object source)
+    {
+        PropertyConfiguration bound = Clone();
+        bound.Value = _ => Value(source);
+        bound.NameFormatter = NameFormatter == null ? null : _ => NameFormatter(source);
+        bound.CategoryFormatter = CategoryFormatter == null ? null : _ => CategoryFormatter(source);
+        bound.DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source);
+        bound.Alerts.Clear();
+        bound.Alerts.AddRange(
+            Alerts.Select(alert => new PropertyAlertConfiguration(
+                alert.Severity,
+                _ => alert.Condition(source),
+                _ => alert.Message(source),
+                alert.Category == null ? null : _ => alert.Category(source)
+            ))
+        );
+        return bound;
     }
 
     public void Merge(PropertyConfiguration source)
@@ -548,6 +567,29 @@ internal sealed class CustomPropertyConfiguration
         };
         clone.Alerts.AddRange(Alerts.Select(alert => alert.Clone()));
         return clone;
+    }
+
+    public CustomPropertyConfiguration Bind(object source)
+    {
+        CustomPropertyConfiguration bound = new(Name, _ => Value(source))
+        {
+            Category = Category,
+            CategoryFormatter = CategoryFormatter == null ? null : _ => CategoryFormatter(source),
+            Description = Description,
+            DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source),
+            DrillDown = DrillDown,
+            DrillDownMaxItems = DrillDownMaxItems,
+            DrillDownIconOnly = DrillDownIconOnly,
+        };
+        bound.Alerts.AddRange(
+            Alerts.Select(alert => new PropertyAlertConfiguration(
+                alert.Severity,
+                _ => alert.Condition(source),
+                _ => alert.Message(source),
+                alert.Category == null ? null : _ => alert.Category(source)
+            ))
+        );
+        return bound;
     }
 }
 
@@ -658,6 +700,16 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         if (scope != null)
             configuration.Category = new ConfiguredValue<string>(scope.Category);
         return new CustomPropertyConfigurator<T>(configuration);
+    }
+
+    public ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        InlineCustomObjectConfigurator<T> projection = new();
+        configure(projection);
+        return Property(name, item => new InlineCustomObject<T>(item, projection.Members));
     }
 
     public ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property)
@@ -1175,7 +1227,7 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> List(Action<ICollectionListConfigurator<TItem>> configure = null)
+    public ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null)
     {
         CollectionOutputConfiguration output = AddOutput(CollectionMode.List, null);
         configure?.Invoke(new CollectionListConfigurator<TItem>(output));

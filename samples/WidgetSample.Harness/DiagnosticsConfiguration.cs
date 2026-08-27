@@ -63,7 +63,7 @@ internal static class DiagnosticsConfiguration
             options.Extended(configuration => configuration.Connection).Category("Connection");
             options
                 .Collection(configuration => configuration.Items)
-                .List(items =>
+                .AsList(items =>
                     items
                         .Name(item => $"Item: {item.Name}")
                         .Category(item => "Items")

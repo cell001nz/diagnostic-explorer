@@ -55,8 +55,8 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
 
     public string FullName => $"{Name}({_id})";
 
-    public WidgetConfig Configuration { get; } = new();
-    public WidgetConfig Configuration2 { get; } = null;
+    public WidgetConfig PrimaryConfig { get; } = new();
+    public WidgetConfig SecondaryConfig { get; } = new();
 
     #region ConfigureDiagnostics
 
@@ -67,7 +67,19 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.IncludeAll();
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.Configuration).Named("Widget Config").AsDrillDownIcon();
+            options.Property(widget => widget.PrimaryConfig).Named("Widget Config").AsDrillDownIcon();
+            options
+                .Custom(
+                    "Config",
+                    projection =>
+                    {
+                        projection.Property("Full name", widget => widget.FullName);
+                        projection.Extended("Primary config", widget => widget.PrimaryConfig);
+                        projection.Extended("Secondary config", widget => widget.SecondaryConfig);
+                        projection.Collection("Names", widget => _names).AsList();
+                    }
+                )
+                .AsDrillDownIcon();
         });
 
         config.ConfigureDrillDown<Widget>(options =>
@@ -77,7 +89,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.Property("Private String", widget => widget._privateString);
             options.Property("My Decimal", widget => widget._myDecimal);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property("BlahConfig", widget => widget.Configuration).AsDrillDownIcon();
+            options.Property("BlahConfig", widget => widget.PrimaryConfig).AsDrillDownIcon();
             options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
             options.Property(widget => widget.Size).Category("Info").AllowSet();
             // options.Route(
@@ -100,8 +112,8 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
 
     public void RefreshValues()
     {
-        Configuration.RefreshValues(0.2m);
-        _log.Info($"{FullName} Refreshed values " + JsonSerializer.Serialize(Configuration, new JsonSerializerOptions { WriteIndented = true }));
+        PrimaryConfig.RefreshValues(0.2m);
+        _log.Info($"{FullName} Refreshed values " + JsonSerializer.Serialize(PrimaryConfig, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     [DiagnosticMethod]

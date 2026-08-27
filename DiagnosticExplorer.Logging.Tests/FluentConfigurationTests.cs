@@ -371,6 +371,42 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void InlineCustomProjectionCanRenderSimpleExtendedCollectionAndRateProperties()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+            type.Custom(
+                    "Summary",
+                    projection =>
+                    {
+                        projection.Property("Name", root => "Projection");
+                        projection.Extended("Child", root => root.Child);
+                        projection
+                            .Collection("Items", root => root.Items)
+                            .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+                        projection.Rate("Requests", root => root.Requests).ShowRate(false).ShowTotal();
+                    }
+                )
+                .AsDrillDownIcon()
+        );
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        root.Requests.Register(5);
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Summary" } }
+        );
+
+        PropertyBag bag = Assert.Single(response.Diagnostics.PropertyBags);
+        Assert.Equal("Projection", bag.GetProperty("Name", "General").Value);
+        Assert.Null(bag.GetProperty("Child", "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ChildSample.Name), "Child"));
+        Assert.Equal("1", bag.GetProperty("One", "General").Value);
+        Assert.Equal("5", bag.GetProperty("Total Requests", "General").Value);
+    }
+
+    [Fact]
     public void FluentMetadataOverridesOnlyExplicitAttributeValues()
     {
         DiagnosticConfiguration configuration = new();
@@ -586,7 +622,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithMaxItems(2);
+            type.Collection(sample => sample.Items).AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithMaxItems(2);
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -605,7 +641,7 @@ public sealed class FluentConfigurationTests : IDisposable
         {
             type.ExcludeAll();
             type.Collection(sample => sample.Items)
-                .List(list =>
+                .AsList(list =>
                     list.Name(item => $"Item: {item.Name}")
                         .Value(item => item.Value.ToString())
                         .Description(item => $"Description: {item.Name}")
@@ -808,7 +844,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithDrillDown();
+            type.Collection(sample => sample.Items).AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithDrillDown();
         });
         configuration.Configure<CollectionItem>(type =>
         {
@@ -1293,12 +1329,12 @@ public sealed class FluentConfigurationTests : IDisposable
         public static void ConfigurePrivateItems(ITypeConfigurator<CollectionSample> type)
         {
             type.Collection("Private items", sample => sample._privateItems)
-                .List(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+                .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
         }
 
         public static void ConfigurePrivateItemsFromField(ITypeConfigurator<CollectionSample> type)
         {
-            type.Collection(sample => sample._privateItems).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+            type.Collection(sample => sample._privateItems).AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
         }
     }
 
@@ -1367,6 +1403,8 @@ public sealed class FluentConfigurationTests : IDisposable
     private sealed class DrillDownRoot
     {
         public ChildSample Child { get; } = new();
+        public IReadOnlyList<CollectionItem> Items { get; } = new[] { new CollectionItem("One", 1) };
+        public RateCounter Requests { get; } = new(5);
     }
 
     private sealed class GrandChildSample

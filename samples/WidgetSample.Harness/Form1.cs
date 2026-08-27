@@ -181,7 +181,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
                 options.Collection("Widgety Things", form => form._widgets).WithDrillDown();
                 options
                     .Collection("Widgets from method", form => form.GetWidgets())
-                    .List(config => config.Name(obj => obj.FullName).Value(obj => "Show Detail"))
+                    .AsList(config => config.Name(obj => obj.FullName).Value(obj => "Show Detail"))
                     .WithDrillDown();
             }
 
@@ -195,7 +195,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
             {
                 options
                     .Collection("Gadgety Things", form => form.Gadgets)
-                    .List(options =>
+                    .AsList(options =>
                         options
                             .Name(gadget => $"{gadget.Id} - {gadget.Name}")
                             .Category(gadget => gadget.Purpose)

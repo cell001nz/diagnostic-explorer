@@ -168,6 +168,20 @@ configuration.Configure<MyService>(type =>
 
 `WithDrillDown()` renders the property name and value as links. `AsDrillDownIcon()` renders the property name as ordinary text, suppresses its display value, and places a drilldown icon beside the name. Both methods accept an optional `maxItems` argument for enumerable targets.
 
+Use `Custom(...)` to define an inline projection without declaring an intermediary class. Each projected member supports the same drilldown options:
+
+```csharp
+type.Custom("Connection summary", projection =>
+{
+    projection.Property("Endpoint", service => service.Connection.Endpoint);
+    projection.Extended("Primary", service => service.PrimaryConnection);
+    projection.Extended("Secondary", service => service.SecondaryConnection);
+    projection.Collection("Recent requests", service => service.RecentRequests)
+        .List(list => list.Name(request => request.Id).Value(request => request.Status));
+    projection.Rate("Requests", service => service.RequestRate).ShowTotal();
+}).AsDrillDownIcon();
+```
+
 Collection list links target the collection item, even when `Value(...)` displays another value. Category-mode collections show a drilldown link beside each generated subbag name. Complex property and named delegate-property values target their returned object. Null and scalar values do not produce drilldown links.
 
 Enumerable targets render as element bags named `[0]`, `[1]`, and so on. `DrillDownMaxItems` is the global enumerable limit and defaults to 100; the optional `maxItems` argument overrides it for one configured property or collection. This is independent of `WithMaxItems`, which limits the normal collection rendering.

@@ -34,6 +34,7 @@ public interface ITypeConfigurator<T>
     ITypeConfigurator<T> Exclude<TProperty>(Expression<Func<T, TProperty>> property);
     IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property);
     ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value);
+    ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure);
     ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property);
     ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value);
     IRateConfigurator<T> Rate(Expression<Func<T, RateCounter>> property);
@@ -101,11 +102,19 @@ public interface ICustomPropertyConfigurator<T>
     ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, Func<T, string> message, string category);
 }
 
+public interface ICustomObjectConfigurator<T>
+{
+    ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value);
+    IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value);
+    ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value);
+    IRateConfigurator<T> Rate(string name, Func<T, RateCounter> value);
+}
+
 public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>
 {
     ICollectionConfigurator<T, TItem> ShowCount(string name = null);
     ICollectionConfigurator<T, TItem> Concatenate(string separator = null, string name = null);
-    ICollectionConfigurator<T, TItem> List(Action<ICollectionListConfigurator<TItem>> configure = null);
+    ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null);
     ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null);
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
     ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
