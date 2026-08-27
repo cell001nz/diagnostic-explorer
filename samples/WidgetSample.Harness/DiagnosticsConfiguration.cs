@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -20,10 +19,11 @@ internal static class DiagnosticsConfiguration
         if (config == null)
             throw new ArgumentNullException(nameof(config));
 
+        config.ApplyAttributes = false;
+
         config.ConfigureHosting(configuration);
         config.ConfigureEventRouting(ConfigureEventRouting);
-        config.ApplyAttributes = false;
-        config.RegisterObjects(FindRegisteredObjects);
+        config.RegisterObjects(RegisterObjects);
 
         config.DefaultFormat<DateTime>("{0:d MMM yyyy HH:mm:ss.fff}");
         config.DefaultFormat<Point>("Located at {0}");
@@ -35,13 +35,13 @@ internal static class DiagnosticsConfiguration
         ConfigureGadgetConfig(config);
     }
 
-    private static IEnumerable<RegisteredObject> FindRegisteredObjects(IServiceProvider serviceProvider)
+    private static void RegisterObjects(IDiagRegistrar registrar)
     {
-        var form1 = serviceProvider.GetRequiredService<Form1>();
+        var form1 = registrar.GetRequiredService<Form1>();
 
-        yield return new RegisteredObject(form1, "Form 1", "Main Form");
+        registrar.RegisterService<Form1>("Form 1", "Main Form");
         foreach (var widget in form1.Widgets)
-            yield return new RegisteredObject(widget, widget.FullName, widget.FullName);
+            registrar.Register(widget, widget.FullName, widget.FullName);
     }
 
     private static void ConfigureEventRouting(EventSinkRouteOptions routes)
@@ -72,8 +72,8 @@ internal static class DiagnosticsConfiguration
                 .AsDrillDown();
         });
 
-        config.Configure<WidgetConfigItem>(options => options.IncludeAll());
-        config.Configure<WidgetConnectionConfig>(options => options.IncludeAll());
+        // config.Configure<WidgetConfigItem>(options => options.IncludeAll());
+        // config.Configure<WidgetConnectionConfig>(options => options.IncludeAll());
     }
 
     private static void ConfigureGadget(IDiagConfigurator config)
@@ -122,7 +122,7 @@ internal static class DiagnosticsConfiguration
         {
             options.IncludeAll();
         });
-        config.Configure<GadgetNetworkConfig>(options => options.IncludeAll());
-        config.Configure<GadgetMaintenanceConfig>(options => options.IncludeAll());
+        // config.Configure<GadgetNetworkConfig>(options => options.IncludeAll());
+        // config.Configure<GadgetMaintenanceConfig>(options => options.IncludeAll());
     }
 }

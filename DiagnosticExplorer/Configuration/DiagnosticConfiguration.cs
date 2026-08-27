@@ -14,7 +14,7 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
     private readonly Dictionary<Type, TypeConfiguration> _types = new();
     private readonly Dictionary<Type, TypeConfiguration> _drillDownTypes = new();
     private readonly Dictionary<Type, string> _defaultFormats = new();
-    private readonly List<Func<IServiceProvider, IEnumerable<RegisteredObject>>> _registeredObjectProviders = new();
+    private readonly List<Action<IDiagRegistrar>> _registeredObjectProviders = new();
     private int _drillDownMaxItems = 100;
 
     public bool ApplyAttributes { get; set; } = true;
@@ -30,12 +30,12 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
     }
     public DiagnosticRuntimeOptions RuntimeOptions { get; } = new();
 
-    public void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects)
+    public void RegisterObjects(Action<IDiagRegistrar> configure)
     {
-        if (findObjects == null)
-            throw new ArgumentNullException(nameof(findObjects));
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
 
-        _registeredObjectProviders.Add(findObjects);
+        _registeredObjectProviders.Add(configure);
     }
 
     public void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure)
@@ -160,13 +160,13 @@ internal sealed class DiagnosticConfigurationSnapshot
         Array.Empty<TypeConfiguration>(),
         Array.Empty<TypeConfiguration>(),
         new Dictionary<Type, string>(),
-        Array.Empty<Func<IServiceProvider, IEnumerable<RegisteredObject>>>()
+        Array.Empty<Action<IDiagRegistrar>>()
     );
 
     private readonly IReadOnlyDictionary<Type, TypeConfiguration> _types;
     private readonly IReadOnlyDictionary<Type, TypeConfiguration> _drillDownTypes;
     private readonly IReadOnlyDictionary<Type, string> _defaultFormats;
-    private readonly IReadOnlyList<Func<IServiceProvider, IEnumerable<RegisteredObject>>> _registeredObjectProviders;
+    private readonly IReadOnlyList<Action<IDiagRegistrar>> _registeredObjectProviders;
 
     public DiagnosticConfigurationSnapshot(
         bool applyAttributes,
@@ -174,7 +174,7 @@ internal sealed class DiagnosticConfigurationSnapshot
         IEnumerable<TypeConfiguration> types,
         IEnumerable<TypeConfiguration> drillDownTypes,
         IReadOnlyDictionary<Type, string> defaultFormats,
-        IEnumerable<Func<IServiceProvider, IEnumerable<RegisteredObject>>> registeredObjectProviders
+        IEnumerable<Action<IDiagRegistrar>> registeredObjectProviders
     )
     {
         ApplyAttributes = applyAttributes;
@@ -197,6 +197,11 @@ internal sealed class DiagnosticConfigurationSnapshot
     public bool HasDrillDownConfiguration(Type runtimeType)
     {
         return HasConfiguration(runtimeType, _drillDownTypes);
+    }
+
+    public bool HasTypeConfiguration(Type runtimeType)
+    {
+        return HasConfiguration(runtimeType, _types);
     }
 
     private static TypeConfiguration MergeTypeConfiguration(Type runtimeType, IReadOnlyDictionary<Type, TypeConfiguration> configurations)
@@ -227,7 +232,12 @@ internal sealed class DiagnosticConfigurationSnapshot
 
     public IEnumerable<RegisteredObject> FindRegisteredObjects(IServiceProvider serviceProvider)
     {
-        return _registeredObjectProviders.SelectMany(provider => provider(serviceProvider) ?? Array.Empty<RegisteredObject>());
+        List<RegisteredObject> registeredObjects = new();
+        IDiagRegistrar registrations = new RegisteredObjectProviderConfigurator(serviceProvider, registeredObjects);
+        foreach (Action<IDiagRegistrar> provider in _registeredObjectProviders)
+            provider(registrations);
+
+        return registeredObjects;
     }
 
     private static IEnumerable<Type> GetTypeHierarchy(Type type)

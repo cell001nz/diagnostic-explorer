@@ -39,9 +39,9 @@ internal sealed class DeferredDiagnosticConfigurator : IDiagConfigurator
         }
     }
 
-    public void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects)
+    public void RegisterObjects(Action<IDiagRegistrar> configure)
     {
-        _deferred.Add(configure => configure.RegisterObjects(findObjects));
+        _deferred.Add(configurator => configurator.RegisterObjects(configure));
     }
 
     public void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure)

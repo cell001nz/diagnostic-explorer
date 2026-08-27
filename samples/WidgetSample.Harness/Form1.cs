@@ -182,7 +182,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
                 options
                     .Collection("Widgets from method", form => form.GetWidgets())
                     .AsList(config => config.Name(obj => obj.FullName))
-                    .AsDrillDownIcon();
+                    .AsDrillDownIcon("Click for more info");
             }
 
             using (options.CreateCategoryScope("Gadgets"))

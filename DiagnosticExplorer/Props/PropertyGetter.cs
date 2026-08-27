@@ -63,7 +63,8 @@ internal class PropertyGetter
         PropertyConfiguration configuration,
         bool isStatic,
         bool applyAttributes = true,
-        string defaultFormat = null
+        string defaultFormat = null,
+        bool defaultDrillDown = false
     )
     {
         PropInfo = propInfo;
@@ -133,6 +134,12 @@ internal class PropertyGetter
             FormatString = defaultFormat.Contains("{0") ? defaultFormat : "{0:" + defaultFormat + "}";
         else if (FormatString == null && propAttr != null)
             FormatString = GetDefaultFormatString(propInfo.PropertyType);
+
+        if (defaultDrillDown)
+        {
+            DrillDownEnabled = true;
+            DrillDownIconOnly = true;
+        }
     }
 
     protected Func<object, object> PropertyToFunction(PropertyInfo propInfo, bool isStatic)

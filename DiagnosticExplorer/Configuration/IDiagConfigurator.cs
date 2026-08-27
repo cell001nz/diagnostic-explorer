@@ -9,13 +9,19 @@ public interface IDiagConfigurator
 {
     bool ApplyAttributes { get; set; }
     int DrillDownMaxItems { get; set; }
-    void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects);
+    void RegisterObjects(Action<IDiagRegistrar> configure);
     void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure);
     void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
     void ConfigureLogEventRetention(Action<LogEventRetentionOptions> configure);
     void DefaultFormat<T>(string formatString);
     void Configure<T>(Action<ITypeConfigurator<T>> configure);
     void ConfigureDrillDown<T>(Action<ITypeConfigurator<T>> configure);
+}
+
+public interface IDiagRegistrar : IServiceProvider
+{
+    void Register(object value, string category, string name);
+    void RegisterService<TService>(string category, string name);
 }
 
 public interface IDiagnosticHostingConfigurator

@@ -57,7 +57,7 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void EmptyConfigurationIncludesScalarPropertiesOnly()
+    public void EmptyConfigurationUsesUsefulPropertyDefaults()
     {
         PropertyBag bag = Render(new DefaultScalarSample());
 
@@ -68,8 +68,12 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Amount), "General"));
         Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Created), "General"));
         Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Duration), "General"));
-        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Child), "General"));
-        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Items), "General"));
+        Property child = bag.GetProperty(nameof(DefaultScalarSample.Child), "General");
+        Assert.True(child.CanDrillDown);
+        Assert.True(child.DrillDownIconOnly);
+        Assert.Null(child.Value);
+        Assert.Equal("2", bag.GetProperty(nameof(DefaultScalarSample.Items), "General").Value);
+        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Pending), "General"));
     }
 
     [Fact]
@@ -1286,9 +1290,7 @@ public sealed class FluentConfigurationTests : IDisposable
             hostConfiguration,
             diagnostics =>
             {
-                diagnostics.RegisterObjects(provider =>
-                    new[] { new RegisteredObject(provider.GetRequiredService<ReplacementSample>(), "Application", "Sample") }
-                );
+                diagnostics.RegisterObjects(registrations => registrations.RegisterService<ReplacementSample>("Application", "Sample"));
                 diagnostics.Configure<ReplacementSample>(type => type.IncludeAll());
             }
         );
@@ -1386,19 +1388,19 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         ReplacementSample first = new();
         ReplacementSample second = new();
-        List<RegisteredObject> discovered = new() { new RegisteredObject(first, "Configured", "First") };
+        ReplacementSample discovered = first;
         DiagnosticConfiguration configuration = new();
         IServiceProvider serviceProvider = new ServiceCollection().BuildServiceProvider();
-        configuration.RegisterObjects(provider =>
+        configuration.RegisterObjects(registrations =>
         {
-            Assert.Same(serviceProvider, provider);
-            return discovered;
+            Assert.Same(serviceProvider.GetService(typeof(IServiceProvider)), registrations.GetService(typeof(IServiceProvider)));
+            registrations.Register(discovered, "Configured", discovered == first ? "First" : "Second");
         });
         DiagnosticManager.UseConfiguration(configuration);
 
         Assert.Contains(DiagnosticManager.GetRegisteredObjects(serviceProvider), item => ReferenceEquals(item.Object, first));
 
-        discovered = new List<RegisteredObject> { new RegisteredObject(second, "Configured", "Second") };
+        discovered = second;
 
         RegisteredObject registered = Assert.Single(
             DiagnosticManager.GetRegisteredObjects(serviceProvider).Where(item => ReferenceEquals(item.Object, second))
@@ -1413,7 +1415,7 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         ReplacementSample sample = new();
         DiagnosticConfiguration configuration = new();
-        configuration.RegisterObjects(_ => new[] { new RegisteredObject(sample, "Discovered", "Discovered") });
+        configuration.RegisterObjects(registrations => registrations.Register(sample, "Discovered", "Discovered"));
         DiagnosticManager.UseConfiguration(configuration);
         DiagnosticManager.Register(sample, "Explicit", "Registered");
 
@@ -1475,7 +1477,8 @@ public sealed class FluentConfigurationTests : IDisposable
         public DateTime Created { get; } = new(2025, 1, 2);
         public TimeSpan Duration { get; } = TimeSpan.FromMinutes(1);
         public ChildSample Child { get; } = new();
-        public IReadOnlyList<string> Items { get; } = new[] { "One" };
+        public IReadOnlyList<string> Items { get; } = new[] { "One", "Two" };
+        public System.Threading.Tasks.Task Pending { get; } = System.Threading.Tasks.Task.CompletedTask;
     }
 
     private enum DefaultScalarStatus

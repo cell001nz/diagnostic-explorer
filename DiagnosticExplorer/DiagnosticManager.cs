@@ -431,15 +431,26 @@ public static class DiagnosticManager
                 obj is Type ? null : _configuration.GetEffectiveTypeConfiguration(type, renderMode == DiagnosticRenderMode.DrillDown);
 
             bool isStatic = obj is Type;
+            bool useUnconfiguredDefaults = !isStatic && !_configuration.HasTypeConfiguration(type);
             IEnumerable<PropertyInfo> properties = isStatic
                 ? GetStaticProperties(type, applyAttributes)
-                : GetInstanceProperties(type, null, typeConfiguration, applyAttributes);
+                : GetInstanceProperties(type, null, typeConfiguration, applyAttributes, useUnconfiguredDefaults);
             foreach (PropertyInfo info in properties)
             {
                 DiagnosticPropertyAttribute propAttr = applyAttributes ? GetAttribute<DiagnosticPropertyAttribute>(info) : null;
                 PropertyConfiguration propertyConfiguration = typeConfiguration?.Find(info);
                 string defaultFormat = _configuration.GetDefaultFormat(info.PropertyType);
-                AddPropertyGetters(propertyList, info, propAttr, propertyConfiguration, isStatic, applyAttributes, defaultFormat);
+                bool useDefaultPropertyPresentation = useUnconfiguredDefaults && propAttr == null && propertyConfiguration == null;
+                AddPropertyGetters(
+                    propertyList,
+                    info,
+                    propAttr,
+                    propertyConfiguration,
+                    isStatic,
+                    applyAttributes,
+                    defaultFormat,
+                    useDefaultPropertyPresentation
+                );
             }
             if (typeConfiguration != null)
             {
@@ -463,10 +474,11 @@ public static class DiagnosticManager
         PropertyConfiguration configuration,
         bool isStatic,
         bool applyAttributes,
-        string defaultFormat
+        string defaultFormat,
+        bool useDefaultPropertyPresentation = false
     )
     {
-        PropertyStrategy strategy = GetPropertyStrategy(info, metadata, configuration);
+        PropertyStrategy strategy = GetPropertyStrategy(info, metadata, configuration, useDefaultPropertyPresentation);
         switch (strategy)
         {
             case PropertyStrategy.Collection:
@@ -512,12 +524,27 @@ public static class DiagnosticManager
                 );
                 break;
             default:
-                getters.Add(new PropertyGetter(info, metadata, configuration, isStatic, applyAttributes, defaultFormat));
+                getters.Add(
+                    new PropertyGetter(
+                        info,
+                        metadata,
+                        configuration,
+                        isStatic,
+                        applyAttributes,
+                        defaultFormat,
+                        useDefaultPropertyPresentation && IsDefaultDrillDownType(info.PropertyType)
+                    )
+                );
                 break;
         }
     }
 
-    private static PropertyStrategy GetPropertyStrategy(PropertyInfo info, DiagnosticPropertyAttribute attribute, PropertyConfiguration configuration)
+    private static PropertyStrategy GetPropertyStrategy(
+        PropertyInfo info,
+        DiagnosticPropertyAttribute attribute,
+        PropertyConfiguration configuration,
+        bool useDefaultPropertyPresentation
+    )
     {
         if (configuration?.Strategy != null)
             return configuration.Strategy.Value;
@@ -531,6 +558,8 @@ public static class DiagnosticManager
         Type underlying = GetUnderlyingType(info.PropertyType);
         if (attribute is DatePropertyAttribute || underlying == typeof(DateTime) || underlying == typeof(DateTimeOffset))
             return PropertyStrategy.Date;
+        if (useDefaultPropertyPresentation && IsDefaultCollectionType(underlying))
+            return PropertyStrategy.Collection;
         return PropertyStrategy.Default;
     }
 
@@ -661,7 +690,8 @@ public static class DiagnosticManager
         Type type,
         DiagnosticClassAttribute inheritedAttr,
         TypeConfiguration configuration,
-        bool applyAttributes
+        bool applyAttributes,
+        bool useUnconfiguredDefaults
     )
     {
         if (type != typeof(object))
@@ -671,11 +701,19 @@ public static class DiagnosticManager
             if (inheritedAttr == null || !inheritedAttr.DeclaringTypeOnly || diagAttr != null)
             {
                 foreach (PropertyInfo propInfo in type.GetProperties(PublicInstancePropertyFlags | BindingFlags.DeclaredOnly))
-                    if (ShouldIncludeProperty(diagAttr ?? inheritedAttr, propInfo, configuration, applyAttributes))
+                    if (ShouldIncludeProperty(diagAttr ?? inheritedAttr, propInfo, configuration, applyAttributes, useUnconfiguredDefaults))
                         yield return propInfo;
             }
 
-            foreach (PropertyInfo propInfo in GetInstanceProperties(type.BaseType, diagAttr ?? inheritedAttr, configuration, applyAttributes))
+            foreach (
+                PropertyInfo propInfo in GetInstanceProperties(
+                    type.BaseType,
+                    diagAttr ?? inheritedAttr,
+                    configuration,
+                    applyAttributes,
+                    useUnconfiguredDefaults
+                )
+            )
                 yield return propInfo;
         }
     }
@@ -692,7 +730,8 @@ public static class DiagnosticManager
         DiagnosticClassAttribute diagAttr,
         PropertyInfo info,
         TypeConfiguration configuration = null,
-        bool applyAttributes = true
+        bool applyAttributes = true,
+        bool useUnconfiguredDefaults = false
     )
     {
         if (info.PropertyType == typeof(EventSink))
@@ -714,6 +753,14 @@ public static class DiagnosticManager
         if (attributedOnly)
             return false;
 
+        if (useUnconfiguredDefaults)
+            return !IsExcludedDefaultDiagnosticPropertyType(info.PropertyType)
+                && (
+                    IsDefaultDiagnosticPropertyType(info.PropertyType)
+                    || IsDefaultCollectionType(info.PropertyType)
+                    || IsDefaultDrillDownType(info.PropertyType)
+                );
+
         return IsDefaultDiagnosticPropertyType(info.PropertyType);
     }
 
@@ -725,7 +772,30 @@ public static class DiagnosticManager
             || underlyingType.IsEnum
             || underlyingType == typeof(decimal)
             || underlyingType == typeof(DateTime)
-            || underlyingType == typeof(TimeSpan);
+            || underlyingType == typeof(DateTimeOffset)
+            || underlyingType == typeof(TimeSpan)
+            || underlyingType == typeof(Guid);
+    }
+
+    private static bool IsDefaultCollectionType(Type type)
+    {
+        Type underlyingType = GetUnderlyingType(type);
+        return underlyingType != typeof(string) && typeof(IEnumerable).IsAssignableFrom(underlyingType);
+    }
+
+    private static bool IsDefaultDrillDownType(Type type)
+    {
+        Type underlyingType = GetUnderlyingType(type);
+        return underlyingType.IsClass
+            && !IsDefaultDiagnosticPropertyType(underlyingType)
+            && !IsDefaultCollectionType(underlyingType)
+            && !IsExcludedDefaultDiagnosticPropertyType(underlyingType);
+    }
+
+    private static bool IsExcludedDefaultDiagnosticPropertyType(Type type)
+    {
+        Type underlyingType = GetUnderlyingType(type);
+        return underlyingType.Namespace?.StartsWith("System.Threading.Tasks", StringComparison.Ordinal) == true;
     }
 
     public static Type GetUnderlyingType(Type t)
