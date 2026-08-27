@@ -136,12 +136,6 @@ export class ProcessModel implements ObservableDisposable {
             );
         }
 
-        if (this.includeGlobalEventViews) {
-            const liveEvents = this.getCat('Live Events');
-            liveEvents.getSink('All Events', () => store.events());
-            liveEvents.getSink('Warnings', () => store.events().filter((event) => event.level === 3));
-            liveEvents.getSink('Errors', () => store.events().filter((event) => event.level >= 4));
-        }
     }
 
     private matchesDrillDownEvent(event: EventModel, matcher: DrillDownEventMatcher): boolean {
