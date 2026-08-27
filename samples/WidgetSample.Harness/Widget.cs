@@ -36,7 +36,7 @@ namespace WidgetSample.Harness;
 public partial class Widget : IDisposable, INotifyPropertyChanged
 {
     private static readonly Random _rand = new Random();
-    private static readonly string[] _names = new[] { "Widget X", "Widget Y", "Widget Z", "Widget W" };
+    private static readonly string[] _names = ["Widget X", "Widget Y", "Widget Z", "Widget W"];
     private readonly int _id;
     private readonly SampleLogger _log;
     private DateTime _dateCreated;
@@ -114,7 +114,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     public void RefreshValues()
     {
         PrimaryConfig.RefreshValues(0.2m);
-        _log.Info($"{FullName} Refreshed values " + JsonSerializer.Serialize(PrimaryConfig, new JsonSerializerOptions { WriteIndented = true }));
+        _log.Info("{FullName} Refreshed values {@PrimaryConfig}", FullName, PrimaryConfig);
     }
 
     [DiagnosticMethod]

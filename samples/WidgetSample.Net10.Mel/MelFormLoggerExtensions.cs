@@ -14,6 +14,9 @@ internal static class LoggerExtensions_Mel
     public static void Info(this ILogger logger, string message, Exception exception = null) =>
         logger.Log(LogLevel.Information, exception, "{Message}", message);
 
+    public static void Info(this ILogger logger, string messageTemplate, params object[] propertyValues) =>
+        logger.LogInformation(messageTemplate, propertyValues);
+
     public static void Notice(this ILogger logger, string message, Exception exception = null) =>
         logger.Log(LogLevel.Information, exception, "{Message}", message);
 

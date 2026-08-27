@@ -11,6 +11,9 @@ internal static class LoggerExtensions_Serilog
     public static void Info(this global::Serilog.ILogger logger, string message, Exception exception = null) =>
         logger.Information(exception, message);
 
+    public static void Info(this global::Serilog.ILogger logger, string messageTemplate, params object[] propertyValues) =>
+        logger.Information(messageTemplate, propertyValues);
+
     public static void Notice(this global::Serilog.ILogger logger, string message, Exception exception = null) =>
         logger.Information(exception, message);
 

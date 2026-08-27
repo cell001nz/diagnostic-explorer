@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
 import { CategoryModel } from '@model/CategoryModel';
 import { take } from 'rxjs';
 import { Panel } from 'primeng/panel';
@@ -13,6 +13,7 @@ import { OperationSet } from '@domain/DiagResponse';
 import { EventSinkViewComponent } from '@app/diagnostics/event-sink-view/event-sink-view.component';
 import { EventModel } from '@model/EventModel';
 import { PropertyHoverComponent } from '@app/diagnostics/property-hover/property-hover.component';
+import { SelfHostNavigationService } from '../../../self-host/self-host-navigation.service';
 
 @Component({
     selector: 'app-category-view',
@@ -33,6 +34,12 @@ export class CategoryViewComponent {
     breadcrumbs = input<readonly string[]>([]);
     dialogService = inject(DialogService);
     eventSelected = output<EventModel>();
+    readonly #selfHostNavigation = inject(SelfHostNavigationService, { optional: true });
+    #activeDrillDown?: { objectPaths: readonly string[]; ref: DynamicDialogRef };
+
+    constructor() {
+        if (this.#selfHostNavigation) effect(() => this.syncSelfHostDrillDown());
+    }
 
     static hasActiveDrillDowns(): boolean {
         return CategoryViewComponent.activeDrillDowns.size > 0;
@@ -95,9 +102,13 @@ export class CategoryViewComponent {
         });
 
         if (ref) {
+            this.#activeDrillDown = { objectPaths, ref };
+            this.#selfHostNavigation?.drillDownOpened(this.category().name(), objectPaths, breadcrumbs);
             CategoryViewComponent.activeDrillDowns.add(ref);
             CategoryViewComponent.watchForOutsideClick();
             ref.onClose.pipe(take(1)).subscribe(() => {
+                if (this.#activeDrillDown?.ref === ref) this.#activeDrillDown = undefined;
+                this.#selfHostNavigation?.drillDownClosed(objectPaths);
                 CategoryViewComponent.activeDrillDownLevels.delete(cascadeLevel);
                 CategoryViewComponent.activeDrillDowns.delete(ref);
                 CategoryViewComponent.stopWatchingForOutsideClick();
@@ -105,6 +116,26 @@ export class CategoryViewComponent {
         } else {
             CategoryViewComponent.activeDrillDownLevels.delete(cascadeLevel);
         }
+    }
+
+    private syncSelfHostDrillDown(): void {
+        const navigation = this.#selfHostNavigation;
+        if (!navigation) return;
+
+        const activeDrillDown = this.#activeDrillDown;
+        if (activeDrillDown && !navigation.includesDrillDown(activeDrillDown.objectPaths)) {
+            activeDrillDown.ref.close();
+            return;
+        }
+
+        if (activeDrillDown) return;
+
+        const requested = navigation.nextDrillDown(this.category().name(), this.category().realtimeModel.objectPaths, this.breadcrumbs());
+        if (!requested) return;
+
+        const path = requested.objectPaths.at(-1);
+        const name = requested.breadcrumbs.at(-1);
+        if (path && name) void this.showDrillDown(path, name);
     }
 
     private static reserveDrillDownLevel(): number {

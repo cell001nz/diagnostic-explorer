@@ -13,6 +13,7 @@ export class ProcessEventStore {
     private static readonly stores = new Map<string, ProcessEventStore>();
     private readonly records = new Map<string, EventModel>();
     private readonly destinationKeys = new Map<string, readonly string[]>();
+    private readonly destinationLabels = new Map<string, EventDestination>();
     readonly events = signal<EventModel[]>([]);
     readonly routing = signal<LogStreamRoutingConfiguration>({ matchMode: 0, routes: [] });
     streamId = '';
@@ -47,6 +48,7 @@ export class ProcessEventStore {
             this.streamId = initialization.streamId;
             this.records.clear();
             this.destinationKeys.clear();
+            this.destinationLabels.clear();
         }
 
         this.routing.set(initialization.routing ?? { matchMode: 0, routes: [] });
@@ -84,8 +86,8 @@ export class ProcessEventStore {
         const destinations = new Map<string, EventDestination>();
         for (const event of this.records.values()) {
             for (const destinationKey of this.destinationKeys.get(this.eventKey(event)) ?? []) {
-                const [category, name] = destinationKey.split('\u001f');
-                this.addDestination(destinations, category, name);
+                const destination = this.destinationLabels.get(destinationKey);
+                if (destination) this.addDestination(destinations, destination.category, destination.name);
             }
         }
         return [...destinations.values()];
@@ -155,7 +157,11 @@ export class ProcessEventStore {
             for (const destination of route.destinations ?? []) {
                 const category = this.resolveValue(destination.category, route, event.loggerCategory);
                 const name = this.resolveValue(destination.name, route, event.loggerCategory);
-                if (category && name) keys.add(ProcessEventStore.destinationKey(category, name));
+                if (category && name) {
+                    const key = ProcessEventStore.destinationKey(category, name);
+                    keys.add(key);
+                    this.destinationLabels.set(key, { category, name });
+                }
             }
         }
         return [...keys];

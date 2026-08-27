@@ -1,5 +1,4 @@
 ﻿import { DiagnosticResponse, DrillDownEventMatcher, DrillDownEventViewDefinition, LogStreamEvent, LogStreamInitialization, OperationSet, PropertyBag } from '@domain/DiagResponse';
-import * as _ from 'lodash-es';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { CategoryModel } from './CategoryModel';
 import { EventModel } from './EventModel';
@@ -69,17 +68,30 @@ export class ProcessModel implements ObservableDisposable {
         this.titleMessage.set('Received ' + new Date().toLocaleTimeString());
         this.serverDate.set(new Date(response.serverDate));
 
-        const bagCats: { [key: string]: PropertyBag[] } = _.groupBy(response.propertyBags, (p) => p.category);
+        const catDataByName = new Map<string, { name: string; props: PropertyBag[] }>();
+        for (const propertyBag of response.propertyBags) {
+            const key = propertyBag.category.toLocaleLowerCase();
+            const existing = catDataByName.get(key);
+            if (existing) {
+                existing.props.push(propertyBag);
+            } else {
+                catDataByName.set(key, { name: propertyBag.category, props: [propertyBag] });
+            }
+        }
 
-        const catData: { name: string; props: PropertyBag[] }[] = _.uniq(_.keys(bagCats).concat(this.categories().map((c) => c.name()))).map((name) => ({ name, props: bagCats[name] ?? [] }));
+        let cats = this.coalesceCategories(this.categories());
+        for (const category of cats) {
+            const key = category.name().toLocaleLowerCase();
+            if (!catDataByName.has(key)) catDataByName.set(key, { name: category.name(), props: [] });
+        }
 
-        let cats = this.categories().slice();
+        const catData = [...catDataByName.values()];
 
         customMerge(
             catData,
             cats,
-            (d) => d.name,
-            (c) => c.name(),
+            (d) => d.name.toLocaleLowerCase(),
+            (c) => c.name().toLocaleLowerCase(),
             (d) => new CategoryModel(this, d.name, d.props),
             (d, c) => c.update(d.props),
             false
@@ -110,6 +122,24 @@ export class ProcessModel implements ObservableDisposable {
         }
 
         return cat;
+    }
+
+    private coalesceCategories(categories: CategoryModel[]): CategoryModel[] {
+        const categoriesByName = new Map<string, CategoryModel>();
+        for (const category of categories) {
+            const key = category.name().toLocaleLowerCase();
+            const existing = categoriesByName.get(key);
+            if (!existing) {
+                categoriesByName.set(key, category);
+                continue;
+            }
+
+            const existingSinks = existing.eventSinks();
+            const additionalSinks = category.eventSinks().filter((sink) => !existingSinks.some((existingSink) => strEqCI(existingSink.name, sink.name)));
+            if (additionalSinks.length) existing.eventSinks.set([...existingSinks, ...additionalSinks]);
+        }
+
+        return [...categoriesByName.values()];
     }
 
     private reconcileEventViews(): void {

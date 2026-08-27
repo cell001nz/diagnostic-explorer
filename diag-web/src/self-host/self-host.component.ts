@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CategoryViewComponent } from '@app/diagnostics/category-view/category-view.component';
@@ -8,6 +8,7 @@ import { ProcessModel } from '@model/ProcessModel';
 import { Slider } from 'primeng/slider';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { SelfHostDiagHubService } from './self-host-hub.service';
+import { SelfHostNavigationService } from './self-host-navigation.service';
 
 const LOCAL_PROCESS_ID = 'self';
 
@@ -20,6 +21,7 @@ const LOCAL_PROCESS_ID = 'self';
 })
 export class SelfHostComponent implements OnInit, OnDestroy {
     readonly hub = inject(SelfHostDiagHubService);
+    readonly #navigation = inject(SelfHostNavigationService);
     readonly connectionState = this.hub.connectionState;
     readonly error = this.hub.error;
     readonly process = this.hub.process;
@@ -36,6 +38,8 @@ export class SelfHostComponent implements OnInit, OnDestroy {
         this.hub.logStreamEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().appendLogStreamEvents(data.events));
         this.hub.diagsArrived$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().update(data.response));
 
+        this.#navigation.initialize();
+        effect(() => this.syncNavigation());
         window.addEventListener('keydown', this.onWindowKeyDown, true);
     }
 
@@ -48,6 +52,7 @@ export class SelfHostComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         window.removeEventListener('keydown', this.onWindowKeyDown, true);
+        this.#navigation.destroy();
         void this.hub.stop();
     }
 
@@ -62,7 +67,13 @@ export class SelfHostComponent implements OnInit, OnDestroy {
     }
 
     onCategoryChange(category: string | number | undefined): void {
-        if (category != null) this.processModel().activeCatName.set(String(category));
+        if (category == null) return;
+
+        const name = String(category);
+        this.processModel().activeCatName.set(name);
+        if (this.#navigation.state().category === name) return;
+
+        this.#navigation.selectCategory(name);
     }
 
     expandCollapse(): void {
@@ -84,6 +95,21 @@ export class SelfHostComponent implements OnInit, OnDestroy {
         const selected = this.selectedEvent();
         if (selected) selected.isSelected = false;
         this.selectedEvent.set(null);
+    }
+
+    private syncNavigation(): void {
+        const model = this.processModel();
+        const categories = model.categories();
+        if (!categories.length) return;
+
+        const requestedCategory = this.#navigation.state().category;
+        if (requestedCategory && categories.some((category) => category.name() === requestedCategory)) {
+            model.activeCatName.set(requestedCategory);
+            return;
+        }
+
+        const activeCategory = model.activeCatName();
+        if (activeCategory) this.#navigation.replaceCategory(activeCategory, !!requestedCategory);
     }
 
     private onWindowKeyDown = (event: KeyboardEvent): void => {
