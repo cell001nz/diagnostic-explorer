@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
 
@@ -10,6 +11,7 @@ public class DiagExplorerOptions
     public bool Enabled { get; set; } = true;
     public List<DiagnosticHostOptions> Hosts { get; set; } = new();
     public EventRetentionOptions EventRetention { get; set; } = new();
+    public LogEventRetentionOptions LogEventRetention { get; set; } = new();
 }
 
 [Obsolete("Use DiagExplorerOptions instead.")]

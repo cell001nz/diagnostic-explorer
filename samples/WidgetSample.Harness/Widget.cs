@@ -56,6 +56,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     public string FullName => $"{Name}({_id})";
 
     public WidgetConfig Configuration { get; } = new();
+    public WidgetConfig Configuration2 { get; } = null;
 
     #region ConfigureDiagnostics
 
@@ -79,11 +80,11 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.Property("BlahConfig", widget => widget.Configuration).AsDrillDownIcon();
             options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
             options.Property(widget => widget.Size).Category("Info").AllowSet();
-            options.Route(
-                widget => $"{typeof(Widget).FullName}.{widget.FullName}",
-                LoggerNameMatchMode.Exact,
-                route => route.To("Widgets", "Widget Events")
-            );
+            // options.Route(
+            // widget => $"{typeof(Widget).FullName}.{widget.FullName}",
+            // LoggerNameMatchMode.Exact,
+            // route => route.To("Widgets", "Widget Events")
+            // );
         });
     }
 

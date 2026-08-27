@@ -40,6 +40,11 @@ public static class DiagnosticHostingConfigurationExtensions
                 retention.MaxEventsPerSink = options.EventRetention.MaxEventsPerSink;
                 retention.MaxAgeMinutes = options.EventRetention.MaxAgeMinutes;
             });
+            config.ConfigureLogEventRetention(retention =>
+            {
+                retention.MaxEvents = options.LogEventRetention.MaxEvents;
+                retention.MaxAgeMinutes = options.LogEventRetention.MaxAgeMinutes;
+            });
         });
     }
 }

@@ -20,7 +20,10 @@ internal static class Program
             .ConfigureServices(
                 (context, services) =>
                 {
-                    services.ConfigureDiagnosticExplorer(diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration));
+                    services.ConfigureDiagnosticExplorer(
+                        context.Configuration,
+                        diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration)
+                    );
                     services.AddLogging(builder =>
                     {
                         builder.SetMinimumLevel(LogLevel.Trace);

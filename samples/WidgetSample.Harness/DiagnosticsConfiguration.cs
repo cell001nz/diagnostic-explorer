@@ -20,9 +20,9 @@ internal static class DiagnosticsConfiguration
         if (config == null)
             throw new ArgumentNullException(nameof(config));
 
-        config.ApplyAttributes = false;
         config.ConfigureHosting(configuration);
         config.ConfigureEventRouting(ConfigureEventRouting);
+        config.ApplyAttributes = false;
         config.RegisterObjects(FindRegisteredObjects);
 
         config.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss.fff}");
@@ -48,7 +48,7 @@ internal static class DiagnosticsConfiguration
     {
         routes
             .UseMatchMode(EventSinkRouteMatchMode.FirstMatch)
-            .Route(typeof(Widget).FullName, route => route.AtLeast(LogLevel.Information).To(RouteValue.LoggerSuffix, "Widget Events"))
+            .Route(typeof(Widget).FullName, route => route.AtLeast(LogLevel.Information).To(RouteValue.LoggerSuffix, "Widget Events2"))
             .Route(typeof(Gadget).FullName, route => route.AtLeast(LogLevel.Information).To("Form 1", "Gadget Events"))
             .Route("WidgetSample.Form1", route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
             .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))

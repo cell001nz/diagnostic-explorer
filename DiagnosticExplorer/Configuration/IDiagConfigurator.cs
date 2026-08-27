@@ -12,6 +12,7 @@ public interface IDiagConfigurator
     void RegisterObjects(Func<IServiceProvider, IEnumerable<RegisteredObject>> findObjects);
     void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure);
     void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
+    void ConfigureLogEventRetention(Action<LogEventRetentionOptions> configure);
     void DefaultFormat<T>(string formatString);
     void Configure<T>(Action<ITypeConfigurator<T>> configure);
     void ConfigureDrillDown<T>(Action<ITypeConfigurator<T>> configure);

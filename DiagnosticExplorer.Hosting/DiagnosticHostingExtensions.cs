@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,41 @@ namespace DiagnosticExplorer
             DiagnosticConfiguration diagnosticConfiguration = new();
             configureDiagnostics(diagnosticConfiguration);
             return services.AddDiagnosticExplorer(diagnosticConfiguration);
+        }
+
+        public static IServiceCollection ConfigureDiagnosticExplorer(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            Action<IDiagConfigurator> configureDiagnostics,
+            Action<HttpConnectionOptions> configureHttp = null
+        )
+        {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+            if (configureDiagnostics == null)
+                throw new ArgumentNullException(nameof(configureDiagnostics));
+
+            services.AddDiagnosticExplorer(configuration, configureHttp);
+            if (!DiagnosticManager.Enabled)
+                return services;
+
+            try
+            {
+                DiagnosticConfiguration diagnosticConfiguration = new();
+                DeferredDiagnosticConfigurator stagedConfiguration = new(diagnosticConfiguration);
+                configureDiagnostics(stagedConfiguration);
+                DiagnosticManager.UseConfiguration(diagnosticConfiguration);
+                DiagnosticManager.ConfigureOnDemand(diagnosticConfiguration, stagedConfiguration.ApplyDeferredConfiguration);
+            }
+            catch (Exception exception)
+            {
+                DiagnosticManager.Enabled = false;
+                Trace.TraceError($"Diagnostic Explorer configuration failed and has been disabled: {exception}");
+            }
+
+            return services;
         }
 
         public static IServiceCollection AddDiagnosticExplorer(

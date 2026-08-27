@@ -18,17 +18,27 @@ DiagnosticManager.Configure(configuration =>
 });
 ```
 
-For applications using `DiagnosticExplorer.Hosting`, configure the snapshot through the service collection. This registers the hosted service, which starts and stops diagnostics with the host lifetime:
+For applications using `DiagnosticExplorer.Hosting`, configure diagnostics with one callback. Event routing and raw-stream retention are initialized at startup, while property and object configuration is deferred until the first diagnostics request:
 
 ```csharp
 builder.Services
-    .ConfigureDiagnosticExplorer(diagnostics =>
+    .ConfigureDiagnosticExplorer(builder.Configuration, diagnostics =>
+    {
+        diagnostics.ConfigureEventRouting(routes =>
+            routes.Route("MyApp", route => route.To("Application", "Events")));
+        diagnostics.ConfigureLogEventRetention(retention =>
+            retention.WithMaxAge(TimeSpan.FromMinutes(10)));
         diagnostics.Configure<MyService>(type =>
         {
             type.ExcludeAll();
             type.Include(service => service.Status);
-        }));
+        });
+    });
 ```
+
+`DiagnosticExplorer:LogEventRetention` can set the same raw replay limits from application configuration. The older overloads configure diagnostics immediately or defer all configuration and remain available for compatibility.
+
+When `DiagnosticExplorer:Enabled` is `false`, the deferred callback is not registered or executed. If deferred configuration fails, Diagnostic Explorer writes the error to `Trace`, disables itself, and leaves the application running.
 
 Installing another configuration replaces the complete global snapshot and invalidates cached property getters. It does not merge with the previously installed configuration. The installed snapshot is immutable, so changing the original builder afterward has no effect until it is installed again.
 

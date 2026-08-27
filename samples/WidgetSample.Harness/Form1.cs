@@ -150,6 +150,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
         get { return _widgets; }
     }
 
+    private IEnumerable<Widget> GetWidgets() => _widgets.ToArray();
+
     internal static void ConfigureDiagnostics(IDiagConfigurator config)
     {
         config.Configure<Form1>(options =>
@@ -160,7 +162,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
             options.Property(form => form.SetMePlease).AllowSet();
             options.Property(form => form.Counter2);
             options.Property(form => form._infoText);
-            options.Property("Widget Count", form => form.Widgets.Count);
+            options.Property("Widget", form => form._widgets.Count);
 
             options
                 .Property("WidgetCount", form => form.Widgets.Count)
@@ -177,7 +179,10 @@ public partial class Form1 : Form, INotifyPropertyChanged
                 options.Property(form => form.WidgetIdCount);
                 options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
                 options.Collection("Widgety Things", form => form._widgets).WithDrillDown();
-                options.Collection(form => form._widgets).WithDrillDown();
+                options
+                    .Collection("Widgets from method", form => form.GetWidgets())
+                    .List(config => config.Name(obj => obj.FullName).Value(obj => "Show Detail"))
+                    .WithDrillDown();
             }
 
             using (options.CreateCategoryScope("Gadgets"))

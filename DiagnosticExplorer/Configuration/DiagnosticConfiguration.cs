@@ -210,7 +210,7 @@ internal sealed class DiagnosticConfigurationSnapshot
                 effective = new TypeConfiguration(runtimeType);
             effective.Merge(configured);
         }
-        return effective;
+        return effective ?? new TypeConfiguration(runtimeType);
     }
 
     private static bool HasConfiguration(Type runtimeType, IReadOnlyDictionary<Type, TypeConfiguration> configurations)

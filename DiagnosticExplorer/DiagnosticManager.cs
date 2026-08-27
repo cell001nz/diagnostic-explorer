@@ -24,7 +24,10 @@ public static class DiagnosticManager
 
     private static Dictionary<string, List<PropertyGetter>> _typeHash = new();
     private static readonly object _propertyGetterLock = new();
+    private static readonly object _deferredConfigurationLock = new();
     private static DiagnosticConfigurationSnapshot _configuration = DiagnosticConfigurationSnapshot.Empty;
+    private static Lazy<DiagnosticConfiguration> _deferredConfiguration;
+    private static Exception _deferredConfigurationException;
     private static readonly AsyncLocal<DiagnosticRenderMode?> _renderMode = new();
 
     private static readonly Dictionary<Type, OperationSet> _operationLookup = new();
@@ -63,6 +66,12 @@ public static class DiagnosticManager
         if (configuration == null)
             throw new ArgumentNullException(nameof(configuration));
 
+        lock (_deferredConfigurationLock)
+        {
+            _deferredConfiguration = null;
+            _deferredConfigurationException = null;
+        }
+
         Enabled = configuration.RuntimeOptions.Enabled;
         EventSinkRepo.Default.ConfigureEventRetention(configuration.RuntimeOptions.EventRetention);
         LogEventStore.Configure(configuration.RuntimeOptions.LogEventRetention, configuration.RuntimeOptions.Routing.CreateSnapshot());
@@ -72,6 +81,71 @@ public static class DiagnosticManager
             CurrentConfiguration = configuration;
             _configuration = snapshot;
             _typeHash.Clear();
+        }
+    }
+
+    public static void ConfigureOnDemand(Action<IDiagConfigurator> configure)
+    {
+        ConfigureOnDemand(new DiagnosticConfiguration(), configure);
+    }
+
+    public static void ConfigureOnDemand(DiagnosticConfiguration configuration, Action<IDiagConfigurator> configure)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        lock (_deferredConfigurationLock)
+        {
+            if (_deferredConfiguration != null)
+                throw new InvalidOperationException("Diagnostic configuration has already been deferred.");
+
+            _deferredConfigurationException = null;
+            _deferredConfiguration = new Lazy<DiagnosticConfiguration>(
+                () =>
+                {
+                    configure(configuration);
+                    UseConfiguration(configuration);
+                    return configuration;
+                },
+                LazyThreadSafetyMode.ExecutionAndPublication
+            );
+        }
+    }
+
+    private static void EnsureConfiguration()
+    {
+        Lazy<DiagnosticConfiguration> deferredConfiguration;
+        lock (_deferredConfigurationLock)
+            deferredConfiguration = _deferredConfiguration;
+
+        if (deferredConfiguration == null)
+            return;
+
+        try
+        {
+            _ = deferredConfiguration.Value;
+        }
+        catch (Exception exception)
+        {
+            bool reportFailure;
+            lock (_deferredConfigurationLock)
+            {
+                reportFailure = _deferredConfigurationException == null;
+                _deferredConfigurationException ??= exception;
+            }
+
+            Enabled = false;
+            lock (_propertyGetterLock)
+            {
+                CurrentConfiguration = new DiagnosticConfiguration();
+                _configuration = DiagnosticConfigurationSnapshot.Empty;
+                _typeHash.Clear();
+            }
+
+            if (reportFailure)
+                Trace.TraceError($"Diagnostic Explorer configuration failed and has been disabled: {exception}");
         }
     }
 
@@ -263,6 +337,7 @@ public static class DiagnosticManager
 
     public static RegisteredObject[] GetRegisteredObjects(IServiceProvider serviceProvider = null)
     {
+        EnsureConfiguration();
         List<RegisteredObject> list = new();
 
         lock (RegisteredObjects)
@@ -289,6 +364,7 @@ public static class DiagnosticManager
 
     public static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory)
     {
+        EnsureConfiguration();
         return ObjectToPropertyBag(obj, bagName, bagCategory, DiagnosticRenderMode.Normal);
     }
 
@@ -632,7 +708,18 @@ public static class DiagnosticManager
         if (attributedOnly)
             return false;
 
-        return true;
+        return IsDefaultDiagnosticPropertyType(info.PropertyType);
+    }
+
+    private static bool IsDefaultDiagnosticPropertyType(Type type)
+    {
+        Type underlyingType = GetUnderlyingType(type);
+        return underlyingType == typeof(string)
+            || underlyingType.IsPrimitive
+            || underlyingType.IsEnum
+            || underlyingType == typeof(decimal)
+            || underlyingType == typeof(DateTime)
+            || underlyingType == typeof(TimeSpan);
     }
 
     public static Type GetUnderlyingType(Type t)

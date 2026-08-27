@@ -57,6 +57,22 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void EmptyConfigurationIncludesScalarPropertiesOnly()
+    {
+        PropertyBag bag = Render(new DefaultScalarSample());
+
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Text), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Status), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Count), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.OptionalCount), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Amount), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Created), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Duration), "General"));
+        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Child), "General"));
+        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Items), "General"));
+    }
+
+    [Fact]
     public void RuntimeSettingsCanBeConfiguredFluently()
     {
         DiagnosticConfiguration configuration = new();
@@ -681,6 +697,22 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void DrillDownWithoutTypeConfigurationReturnsNoEventViews()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type => type.Property(sample => sample.Child).WithDrillDown());
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(new DrillDownRoot(), "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+        );
+
+        Assert.Null(response.ErrorMessage);
+        Assert.Empty(response.EventViews);
+    }
+
+    [Fact]
     public void DrillDownFallsBackToNormalTypeConfiguration()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
@@ -1017,6 +1049,141 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void HostingExtensionDefersFluentConfigurationUntilDiagnosticsAreRequested()
+    {
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder().Build();
+        bool configured = false;
+
+        services.ConfigureDiagnosticExplorer(
+            hostConfiguration,
+            diagnostics =>
+            {
+                diagnostics.Configure<ReplacementSample>(type =>
+                {
+                    configured = true;
+                    type.ExcludeAll();
+                    type.Include(sample => sample.Second);
+                });
+            }
+        );
+
+        Assert.False(configured);
+
+        PropertyBag bag = Render(new ReplacementSample());
+
+        Assert.True(configured);
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+    }
+
+    [Fact]
+    public void HostingExtensionDiscoversConfiguredObjectsOnFirstDiagnosticsRequest()
+    {
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder().Build();
+        ReplacementSample sample = new();
+        services.AddSingleton(sample);
+        services.ConfigureDiagnosticExplorer(
+            hostConfiguration,
+            diagnostics =>
+            {
+                diagnostics.RegisterObjects(provider =>
+                    new[] { new RegisteredObject(provider.GetRequiredService<ReplacementSample>(), "Application", "Sample") }
+                );
+                diagnostics.Configure<ReplacementSample>(type => type.IncludeAll());
+            }
+        );
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        DiagnosticResponse response = DiagnosticManager.GetDiagnostics(provider);
+
+        PropertyBag bag = Assert.Single(response.PropertyBags.Where(item => item.Name == "Sample"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+    }
+
+    [Fact]
+    public void HostingExtensionAppliesRuntimeRoutesBeforeDiagnosticsAreRequested()
+    {
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder().Build();
+        bool configured = false;
+
+        services.ConfigureDiagnosticExplorer(
+            hostConfiguration,
+            diagnostics =>
+            {
+                diagnostics.ConfigureEventRouting(routes => routes.Route("Widgets", route => route.To("Application", "Widget Events")));
+                diagnostics.Configure<ReplacementSample>(_ => configured = true);
+            }
+        );
+
+        LogStreamRoutingConfiguration routing = GetReplayRouting(DiagnosticManager.LogEventStore);
+
+        Assert.False(configured);
+        Assert.Equal("Widgets", Assert.Single(routing.Routes).LoggerName);
+        Assert.Equal("Application", Assert.Single(routing.Routes[0].Destinations).Category.Value);
+    }
+
+    [Fact]
+    public void HostingExtensionDoesNotConfigureDiagnosticsWhenDisabled()
+    {
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string> { ["DiagnosticExplorer:Enabled"] = "false" })
+            .Build();
+        bool configured = false;
+
+        services.ConfigureDiagnosticExplorer(hostConfiguration, _ => configured = true);
+
+        Assert.False(DiagnosticManager.Enabled);
+        Assert.False(configured);
+        _ = Render(new ReplacementSample());
+        Assert.False(configured);
+    }
+
+    [Fact]
+    public void DeferredConfigurationFailureDoesNotEscapeOrDisableDiagnostics()
+    {
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder().Build();
+
+        services.ConfigureDiagnosticExplorer(
+            hostConfiguration,
+            diagnostics => diagnostics.Configure<ReplacementSample>(_ => throw new InvalidOperationException("Configuration failed"))
+        );
+
+        Exception exception = Record.Exception(() => Render(new ReplacementSample()));
+
+        Assert.Null(exception);
+        Assert.True(DiagnosticManager.Enabled);
+    }
+
+    [Fact]
+    public void DeferredConfigurationIgnoresInvalidSelectorsAndAppliesRemainingSelectors()
+    {
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder().Build();
+
+        services.ConfigureDiagnosticExplorer(
+            hostConfiguration,
+            diagnostics =>
+                diagnostics.Configure<ReplacementSample>(type =>
+                {
+                    type.ExcludeAll();
+                    type.Property(sample => sample.First.Length).Named("Invalid nested selector");
+                    type.Property(sample => sample.Second);
+                })
+        );
+
+        PropertyBag bag = Render(new ReplacementSample());
+
+        Assert.True(DiagnosticManager.Enabled);
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+    }
+
+    [Fact]
     public void ConfiguredObjectProvidersAreEvaluatedForEachRequest()
     {
         ReplacementSample first = new();
@@ -1080,6 +1247,12 @@ public sealed class FluentConfigurationTests : IDisposable
         return DiagnosticManager.ObjectToPropertyBag(value, "Test", "Tests");
     }
 
+    private static LogStreamRoutingConfiguration GetReplayRouting(LogEventStore store)
+    {
+        using LogEventStore.LogEventStoreSubscription subscription = store.CreateSubscription();
+        return subscription.Initialization.Routing;
+    }
+
     [DiagnosticClass(AttributedPropertiesOnly = true)]
     private sealed class AttributeSample
     {
@@ -1092,6 +1265,24 @@ public sealed class FluentConfigurationTests : IDisposable
         public string Hidden { get; set; } = "Hidden";
 
         public string Plain { get; set; } = "Plain";
+    }
+
+    private sealed class DefaultScalarSample
+    {
+        public string Text { get; } = "Text";
+        public DefaultScalarStatus Status { get; } = DefaultScalarStatus.Ready;
+        public int Count { get; } = 1;
+        public int? OptionalCount { get; } = 2;
+        public decimal Amount { get; } = 3.5m;
+        public DateTime Created { get; } = new(2025, 1, 2);
+        public TimeSpan Duration { get; } = TimeSpan.FromMinutes(1);
+        public ChildSample Child { get; } = new();
+        public IReadOnlyList<string> Items { get; } = new[] { "One" };
+    }
+
+    private enum DefaultScalarStatus
+    {
+        Ready,
     }
 
     private sealed class CollectionSample

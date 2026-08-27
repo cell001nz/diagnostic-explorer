@@ -21,7 +21,10 @@ internal static class Program
             .ConfigureServices(
                 (context, services) =>
                 {
-                    services.ConfigureDiagnosticExplorer(diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration));
+                    services.ConfigureDiagnosticExplorer(
+                        context.Configuration,
+                        diagnostics => DiagnosticsConfiguration.Configure(diagnostics, context.Configuration)
+                    );
                     logger = new LoggerConfiguration().MinimumLevel.Verbose().WriteTo.DiagnosticExplorer().CreateLogger();
                     services.AddSingleton<Form1>();
                 }
