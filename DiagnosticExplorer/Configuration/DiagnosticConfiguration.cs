@@ -243,6 +243,7 @@ internal sealed class DiagnosticConfigurationSnapshot
 internal sealed class TypeConfiguration
 {
     private readonly Dictionary<string, PropertyConfiguration> _properties = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PropertyConfiguration> _delegateProperties = new(StringComparer.Ordinal);
     private readonly Dictionary<string, CustomPropertyConfiguration> _customProperties = new(StringComparer.Ordinal);
     private readonly List<DrillDownEventRouteTemplate> _eventRoutes = new();
 
@@ -252,8 +253,9 @@ internal sealed class TypeConfiguration
     }
 
     public Type Type { get; }
-    public bool? OptIn { get; set; }
+    public bool? IncludeAll { get; set; }
     public IEnumerable<PropertyConfiguration> Properties => _properties.Values;
+    public IEnumerable<PropertyConfiguration> DelegateProperties => _delegateProperties.Values;
     public IEnumerable<CustomPropertyConfiguration> CustomProperties => _customProperties.Values;
     public IEnumerable<DrillDownEventRouteTemplate> EventRoutes => _eventRoutes;
 
@@ -286,11 +288,20 @@ internal sealed class TypeConfiguration
         return configuration;
     }
 
+    public PropertyConfiguration AddDelegateProperty(string name, Type valueType, Func<object, object> value)
+    {
+        PropertyConfiguration configuration = new(name, valueType, value);
+        _delegateProperties.Add(name, configuration);
+        return configuration;
+    }
+
     public TypeConfiguration Clone()
     {
-        TypeConfiguration clone = new(Type) { OptIn = OptIn };
+        TypeConfiguration clone = new(Type) { IncludeAll = IncludeAll };
         foreach (PropertyConfiguration property in _properties.Values)
             clone._properties.Add(GetPropertyKey(property.Property), property.Clone());
+        foreach (PropertyConfiguration property in _delegateProperties.Values)
+            clone._delegateProperties.Add(property.Name.Value, property.Clone());
         foreach (CustomPropertyConfiguration property in _customProperties.Values)
             clone._customProperties.Add(property.Name, property.Clone());
         clone._eventRoutes.AddRange(_eventRoutes.Select(route => route.Clone()));
@@ -299,14 +310,17 @@ internal sealed class TypeConfiguration
 
     public void Merge(TypeConfiguration source)
     {
-        if (source.OptIn.HasValue)
-            OptIn = source.OptIn;
+        if (source.IncludeAll.HasValue)
+            IncludeAll = source.IncludeAll;
 
         foreach (PropertyConfiguration sourceProperty in source.Properties)
         {
             PropertyConfiguration target = GetOrAdd(sourceProperty.Property);
             target.Merge(sourceProperty);
         }
+
+        foreach (PropertyConfiguration sourceProperty in source.DelegateProperties)
+            _delegateProperties[sourceProperty.Name.Value] = sourceProperty.Clone();
 
         foreach (CustomPropertyConfiguration sourceProperty in source.CustomProperties)
             _customProperties[sourceProperty.Name] = sourceProperty.Clone();
@@ -403,7 +417,17 @@ internal sealed class PropertyConfiguration
         Property = property;
     }
 
+    public PropertyConfiguration(string name, Type valueType, Func<object, object> value)
+    {
+        Name = new ConfiguredValue<string>(name);
+        ValueType = valueType;
+        Value = value;
+        UsesPropertyDefaults = true;
+    }
+
     public PropertyInfo Property { get; }
+    public Type ValueType { get; }
+    public Func<object, object> Value { get; }
     public bool? Included { get; set; }
     public bool UsesPropertyDefaults { get; set; }
     public PropertyStrategy? Strategy { get; set; }
@@ -430,7 +454,8 @@ internal sealed class PropertyConfiguration
 
     public PropertyConfiguration Clone()
     {
-        PropertyConfiguration clone = new(Property);
+        PropertyConfiguration clone =
+            Property == null ? new PropertyConfiguration(Name.Value, ValueType, Value) : new PropertyConfiguration(Property);
         clone.Merge(this);
         return clone;
     }
@@ -507,6 +532,7 @@ internal sealed class CustomPropertyConfiguration
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
+    public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
 
     public CustomPropertyConfiguration Clone()
     {
@@ -518,6 +544,7 @@ internal sealed class CustomPropertyConfiguration
             DescriptionFormatter = DescriptionFormatter,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
+            DrillDownIconOnly = DrillDownIconOnly,
         };
         clone.Alerts.AddRange(Alerts.Select(alert => alert.Clone()));
         return clone;
@@ -565,15 +592,15 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         _configuration = configuration;
     }
 
-    public ITypeConfigurator<T> OptIn()
+    public ITypeConfigurator<T> ExcludeAll()
     {
-        _configuration.OptIn = true;
+        _configuration.IncludeAll = false;
         return this;
     }
 
-    public ITypeConfigurator<T> OptOut()
+    public ITypeConfigurator<T> IncludeAll()
     {
-        _configuration.OptIn = false;
+        _configuration.IncludeAll = true;
         return this;
     }
 
@@ -601,6 +628,17 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
 
     public IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property)
     {
+        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
+        {
+            PropertyConfiguration fieldConfiguration = AddDelegateProperty(
+                field.Name,
+                typeof(TProperty),
+                property.Compile(),
+                PropertyStrategy.Default
+            );
+            return new PropertyConfigurator<T, TProperty>(fieldConfiguration);
+        }
+
         PropertyConfiguration configuration = GetProperty(property);
         configuration.Included = true;
         configuration.UsesPropertyDefaults = true;
@@ -608,10 +646,10 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return new PropertyConfigurator<T, TProperty>(configuration);
     }
 
-    public ICustomPropertyConfigurator<T> CustomProperty(string name, Func<T, object> value)
+    public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("A custom property name is required.", nameof(name));
+            throw new ArgumentException("A property name is required.", nameof(name));
         if (value == null)
             throw new ArgumentNullException(nameof(value));
 
@@ -624,6 +662,9 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
 
     public ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property)
     {
+        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
+            return Collection(field.Name, property.Compile());
+
         PropertyConfiguration configuration = GetProperty(property);
         configuration.Included = true;
         configuration.UsesPropertyDefaults = true;
@@ -632,8 +673,25 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return new CollectionConfigurator<T, TItem>(configuration);
     }
 
+    public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value)
+    {
+        PropertyConfiguration configuration = AddDelegateProperty(name, typeof(IEnumerable<TItem>), value, PropertyStrategy.Collection);
+        return new CollectionConfigurator<T, TItem>(configuration);
+    }
+
     public IRateConfigurator<T> Rate(Expression<Func<T, RateCounter>> property)
     {
+        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
+        {
+            PropertyConfiguration fieldConfiguration = AddDelegateProperty(
+                field.Name,
+                typeof(RateCounter),
+                property.Compile(),
+                PropertyStrategy.Rate
+            );
+            return new RateConfigurator<T>(fieldConfiguration);
+        }
+
         PropertyConfiguration configuration = GetProperty(property);
         configuration.Included = true;
         configuration.UsesPropertyDefaults = true;
@@ -652,11 +710,20 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
 
     public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(Expression<Func<T, TProperty>> property)
     {
+        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
+            return Extended(field.Name, property.Compile());
+
         PropertyConfiguration configuration = GetProperty(property);
         configuration.Included = true;
         configuration.UsesPropertyDefaults = true;
         configuration.Strategy = PropertyStrategy.Extended;
         ApplyCategoryScope(configuration);
+        return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
+    }
+
+    public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value)
+    {
+        PropertyConfiguration configuration = AddDelegateProperty(name, typeof(TProperty), value, PropertyStrategy.Extended);
         return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
     }
 
@@ -689,6 +756,19 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
     private PropertyConfiguration GetProperty(LambdaExpression expression)
     {
         return _configuration.GetOrAdd(ExpressionProperty.Get(expression, typeof(T)));
+    }
+
+    private PropertyConfiguration AddDelegateProperty<TProperty>(string name, Type valueType, Func<T, TProperty> value, PropertyStrategy strategy)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("A property name is required.", nameof(name));
+        if (value == null)
+            throw new ArgumentNullException(nameof(value));
+
+        PropertyConfiguration configuration = _configuration.AddDelegateProperty(name, valueType, item => value((T)item));
+        configuration.Strategy = strategy;
+        ApplyCategoryScope(configuration);
+        return configuration;
     }
 
     private void ApplyCategoryScope(PropertyConfiguration configuration)
@@ -974,6 +1054,18 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
+    public ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        _configuration.DrillDown = new ConfiguredValue<bool>(true);
+        _configuration.DrillDownIconOnly = new ConfiguredValue<bool>(true);
+        if (maxItems.HasValue)
+            _configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
+    }
+
     public ICustomPropertyConfigurator<T> Category(string category)
     {
         _configuration.Category = new ConfiguredValue<string>(category);
@@ -1247,5 +1339,27 @@ internal static class ExpressionProperty
     public static string GetOptionalName(LambdaExpression expression, Type expectedDeclaringType)
     {
         return expression == null ? null : Get(expression, expectedDeclaringType).Name;
+    }
+
+    public static bool TryGetDirectField(LambdaExpression expression, Type expectedDeclaringType, out FieldInfo field)
+    {
+        if (expression == null)
+            throw new ArgumentNullException(nameof(expression));
+
+        Expression body = expression.Body;
+        while (body is UnaryExpression unary && (unary.NodeType == ExpressionType.Convert || unary.NodeType == ExpressionType.ConvertChecked))
+            body = unary.Operand;
+
+        if (body is not MemberExpression { Member: FieldInfo candidate } member || member.Expression != expression.Parameters[0])
+        {
+            field = null;
+            return false;
+        }
+
+        if (!candidate.DeclaringType.IsAssignableFrom(expectedDeclaringType))
+            throw new ArgumentException($"Field '{candidate.Name}' is not declared on '{expectedDeclaringType.Name}'.", nameof(expression));
+
+        field = candidate;
+        return true;
     }
 }

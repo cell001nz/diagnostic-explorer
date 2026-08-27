@@ -361,6 +361,11 @@ public static class DiagnosticManager
             }
             if (typeConfiguration != null)
             {
+                foreach (PropertyConfiguration delegateProperty in typeConfiguration.DelegateProperties)
+                {
+                    string defaultFormat = _configuration.GetDefaultFormat(delegateProperty.ValueType);
+                    AddPropertyGetters(propertyList, null, null, delegateProperty, false, false, defaultFormat);
+                }
                 foreach (CustomPropertyConfiguration customProperty in typeConfiguration.CustomProperties)
                     propertyList.Add(new CustomPropertyGetter(customProperty));
             }
@@ -486,7 +491,7 @@ public static class DiagnosticManager
             string outputName = output.Name;
             if (outputName == null && outputs.Count > 1 && output.Mode == CollectionMode.Count)
             {
-                string baseName = configuration.Name.IsSet ? configuration.Name.Value : metadata?.Name ?? info.Name;
+                string baseName = configuration.Name.IsSet ? configuration.Name.Value : metadata?.Name ?? info?.Name;
                 outputName = baseName + " count";
             }
             if (outputName != null)
@@ -621,11 +626,8 @@ public static class DiagnosticManager
         if (propAttr != null)
             return !propAttr.Ignore;
 
-        if (configuration?.OptIn == true)
-            return false;
-
-        if (configuration?.OptIn == false)
-            return true;
+        if (configuration != null && configuration.IncludeAll.HasValue)
+            return configuration.IncludeAll.Value;
 
         if (attributedOnly)
             return false;

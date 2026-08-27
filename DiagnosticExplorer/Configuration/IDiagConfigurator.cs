@@ -26,20 +26,22 @@ public interface IDiagnosticHostingConfigurator
 
 public interface ITypeConfigurator<T>
 {
-    ITypeConfigurator<T> OptIn();
-    ITypeConfigurator<T> OptOut();
+    ITypeConfigurator<T> ExcludeAll();
+    ITypeConfigurator<T> IncludeAll();
     IDisposable CreateCategoryScope(string category);
     ITypeConfigurator<T> Include<TProperty>(Expression<Func<T, TProperty>> property);
     ITypeConfigurator<T> Exclude<TProperty>(Expression<Func<T, TProperty>> property);
     IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property);
-    ICustomPropertyConfigurator<T> CustomProperty(string name, Func<T, object> value);
+    ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value);
     ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property);
+    ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value);
     IRateConfigurator<T> Rate(Expression<Func<T, RateCounter>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTime>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTime?>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property);
     IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(Expression<Func<T, TProperty>> property);
+    IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value);
     ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
     ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
 }
@@ -83,6 +85,7 @@ public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurat
 public interface ICustomPropertyConfigurator<T>
 {
     ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null);
+    ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null);
     ICustomPropertyConfigurator<T> Category(string category);
     ICustomPropertyConfigurator<T> Category(Func<T, string> category);
     ICustomPropertyConfigurator<T> Description(string description);

@@ -150,6 +150,58 @@ public partial class Form1 : Form, INotifyPropertyChanged
         get { return _widgets; }
     }
 
+    internal static void ConfigureDiagnostics(IDiagConfigurator config)
+    {
+        config.Configure<Form1>(options =>
+        {
+            options.ExcludeAll();
+            options.Extended(form => form.NullWidget).Category("NullWidget category");
+            options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
+            options.Property(form => form.SetMePlease).AllowSet();
+            options.Property(form => form.Counter2);
+            options.Property(form => form._infoText);
+            options.Property("Widget Count", form => form.Widgets.Count);
+
+            options
+                .Property("WidgetCount", form => form.Widgets.Count)
+                .Warn(form => form.Widgets.Count > 2, "Not too many widgets", "Widget count")
+                .Error(form => form.Widgets.Count > 4, "Too many widgets", "Widget count");
+
+            options
+                .Property("Computed", form => $"This form has {form.Controls.Count} controls")
+                .Description(form => $"Control Info for {form.GetHashCode()}");
+            options.Property("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
+
+            using (options.CreateCategoryScope("Widgets"))
+            {
+                options.Property(form => form.WidgetIdCount);
+                options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
+                options.Collection("Widgety Things", form => form._widgets).WithDrillDown();
+                options.Collection(form => form._widgets).WithDrillDown();
+            }
+
+            using (options.CreateCategoryScope("Gadgets"))
+            {
+                options.Property(form => form.GadgetIdCount).Description("Max Gadget Id");
+                options.Rate(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
+            }
+
+            using (options.CreateCategoryScope("All Gadgets"))
+            {
+                options
+                    .Collection("Gadgety Things", form => form.Gadgets)
+                    .List(options =>
+                        options
+                            .Name(gadget => $"{gadget.Id} - {gadget.Name}")
+                            .Category(gadget => gadget.Purpose)
+                            .Description(gadget => $"Description for {gadget.Name}")
+                    )
+                    .WithMaxItems(int.MaxValue)
+                    .WithDrillDown();
+            }
+        });
+    }
+
     public event PropertyChangedEventHandler PropertyChanged;
 
     private void MungeNumbersList(object o)

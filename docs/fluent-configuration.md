@@ -12,7 +12,7 @@ DiagnosticManager.Configure(configuration =>
     configuration.ApplyAttributes = true;
     configuration.Configure<MyService>(type =>
     {
-        type.OptIn();
+        type.ExcludeAll();
         type.Include(service => service.Status);
     });
 });
@@ -25,7 +25,7 @@ builder.Services
     .ConfigureDiagnosticExplorer(diagnostics =>
         diagnostics.Configure<MyService>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(service => service.Status);
         }));
 ```
@@ -47,16 +47,16 @@ When disabled, property rendering ignores `DiagnosticClassAttribute`, all diagno
 
 ## Inclusion
 
-`OptIn()` excludes ordinary properties unless selected with `Include`, `Property`, `Collection`, `Rate`, `Date`, or `Extended`. Properties with a non-ignored diagnostic property attribute remain included.
+`ExcludeAll()` excludes ordinary properties unless selected with `Include`, `Property`, `Collection`, `Rate`, `Date`, or `Extended`. Properties with a non-ignored diagnostic property attribute remain included.
 
-`OptOut()` includes public properties by default. Existing `Browsable(false)` and ignored diagnostic properties remain excluded unless explicitly included.
+`IncludeAll()` includes public properties by default. Existing `Browsable(false)` and ignored diagnostic properties remain excluded unless explicitly included.
 
 The inclusion order is:
 
 1. Explicit fluent `Include` or `Exclude`.
 2. A diagnostic property attribute, including its `Ignore` value.
 3. `BrowsableAttribute`.
-4. Fluent `OptIn` or `OptOut`.
+4. Fluent `ExcludeAll` or `IncludeAll`.
 5. Existing `DiagnosticClassAttribute.AttributedPropertiesOnly` behavior.
 
 `EventSink` properties remain hidden regardless of configuration.
@@ -115,11 +115,24 @@ type.Collection(service => service.WorkItems)
     .WithMaxItems(25);
 ```
 
+Use a name and value delegate when the collection is computed or backed by a non-public member:
+
+```csharp
+type.Collection("Queued work", service => service.GetQueuedWork())
+    .List(items => items.Name(item => item.Name).Value(item => item.Status));
+```
+
 `WithMaxItems` limits concatenated, list, and category output. Count always reports the full collection size.
+
+`Extended` also accepts a name and value delegate for computed or non-public nested objects:
+
+```csharp
+type.Extended("Connection", service => service.GetConnectionDetails());
+```
 
 ## Drilldown
 
-`WithDrillDown()` makes a rendered property name and value open the underlying object in a diagnostic dialog. It applies to configured properties, custom properties, collection list items, and collection categories:
+`WithDrillDown()` makes a rendered property name and value open the underlying object in a diagnostic dialog. It applies to configured properties, named delegate properties, collection list items, and collection categories:
 
 ```csharp
 configuration.DrillDownMaxItems = 100;
@@ -133,7 +146,7 @@ configuration.Configure<MyService>(type =>
         .Named("View configuration")
         .AsDrillDownIcon();
 
-    type.CustomProperty("Pending items", service => service.PendingItems)
+    type.Property("Pending items", service => service.PendingItems)
         .WithDrillDown(maxItems: 25);
 
     type.Collection(service => service.WorkItems)
@@ -145,7 +158,7 @@ configuration.Configure<MyService>(type =>
 
 `WithDrillDown()` renders the property name and value as links. `AsDrillDownIcon()` renders the property name as ordinary text, suppresses its display value, and places a drilldown icon beside the name. Both methods accept an optional `maxItems` argument for enumerable targets.
 
-Collection list links target the collection item, even when `Value(...)` displays another value. Category-mode collections show a drilldown link beside each generated subbag name. Complex property and custom-property values target their returned object. Null and scalar values do not produce drilldown links.
+Collection list links target the collection item, even when `Value(...)` displays another value. Category-mode collections show a drilldown link beside each generated subbag name. Complex property and named delegate-property values target their returned object. Null and scalar values do not produce drilldown links.
 
 Enumerable targets render as element bags named `[0]`, `[1]`, and so on. `DrillDownMaxItems` is the global enumerable limit and defaults to 100; the optional `maxItems` argument overrides it for one configured property or collection. This is independent of `WithMaxItems`, which limits the normal collection rendering.
 
@@ -154,7 +167,7 @@ A separate type profile can control the contents of an overlay:
 ```csharp
 configuration.ConfigureDrillDown<WorkItem>(type =>
 {
-    type.OptIn();
+    type.ExcludeAll();
     type.Property(item => item.Name).AllowSet();
     type.Property(item => item.Owner).WithDrillDown();
 });
@@ -186,7 +199,7 @@ configuration.Configure<MyService>(type =>
 
 configuration.Configure<ConnectionInfo>(type =>
 {
-    type.OptIn();
+    type.ExcludeAll();
     type.Include(connection => connection.Endpoint);
 });
 ```

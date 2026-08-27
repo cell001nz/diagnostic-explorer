@@ -42,8 +42,9 @@ internal class CollectionGetter : PropertyGetter
         _descriptionFormatter = options.DescriptionFormatter;
         _categoryFormatter = options.CategoryFormatter;
 
-        Type genericType = GenericObjectCache.FindGenericInterface(info.PropertyType, typeof(IDictionary<,>));
-        bool isDictionary = info.PropertyType.GetInterfaces().Contains(typeof(IDictionary));
+        Type collectionType = info?.PropertyType ?? configuration.ValueType;
+        Type genericType = GenericObjectCache.FindGenericInterface(collectionType, typeof(IDictionary<,>));
+        bool isDictionary = collectionType.GetInterfaces().Contains(typeof(IDictionary));
 
         if (genericType != null)
         {
@@ -61,10 +62,10 @@ internal class CollectionGetter : PropertyGetter
         }
         else
         {
-            _nameFunc = PropertyToFunction(GetListProperty(info, options.NameProperty), isStatic);
-            _valueFunc = PropertyToFunction(GetListProperty(info, options.ValueProperty), isStatic);
-            _descrFunc = PropertyToFunction(GetListProperty(info, options.DescriptionProperty), isStatic);
-            _catFunc = PropertyToFunction(GetListProperty(info, options.CategoryProperty), isStatic);
+            _nameFunc = PropertyToFunction(GetListProperty(collectionType, options.NameProperty), isStatic);
+            _valueFunc = PropertyToFunction(GetListProperty(collectionType, options.ValueProperty), isStatic);
+            _descrFunc = PropertyToFunction(GetListProperty(collectionType, options.DescriptionProperty), isStatic);
+            _catFunc = PropertyToFunction(GetListProperty(collectionType, options.CategoryProperty), isStatic);
         }
         _maxItems = options.MaxItems;
     }
@@ -88,16 +89,16 @@ internal class CollectionGetter : PropertyGetter
         }
     }
 
-    private PropertyInfo GetListProperty(PropertyInfo info, string name)
+    private PropertyInfo GetListProperty(Type collectionType, string name)
     {
         if (string.IsNullOrEmpty(name))
             return null;
-        if (!info.PropertyType.IsGenericType)
+        if (!collectionType.IsGenericType)
             return null;
-        if (info.PropertyType.GetGenericArguments().Length != 1)
+        if (collectionType.GetGenericArguments().Length != 1)
             return null;
 
-        Type colType = info.PropertyType.GetGenericArguments()[0];
+        Type colType = collectionType.GetGenericArguments()[0];
         PropertyInfo propInfo = colType.GetProperty(name, DiagnosticManager.PublicInstancePropertyFlags);
 
         if (propInfo == null)

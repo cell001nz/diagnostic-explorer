@@ -63,7 +63,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     {
         config.Configure<Widget>(options =>
         {
-            options.OptOut();
+            options.IncludeAll();
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
             options.Property(widget => widget.Configuration).Named("Widget Config").AsDrillDownIcon();
@@ -71,12 +71,12 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
 
         config.ConfigureDrillDown<Widget>(options =>
         {
-            options.OptIn();
-            options.CustomProperty("Some Prop", widget => widget._someProp);
-            options.CustomProperty("Private String", widget => widget._privateString);
-            options.CustomProperty("My Decimal", widget => widget._myDecimal);
+            options.ExcludeAll();
+            options.Property("Some Prop", widget => widget._someProp);
+            options.Property("Private String", widget => widget._privateString);
+            options.Property("My Decimal", widget => widget._myDecimal);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.Configuration).Named("Widget Config").AsDrillDownIcon();
+            options.Property("BlahConfig", widget => widget.Configuration).AsDrillDownIcon();
             options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
             options.Property(widget => widget.Size).Category("Info").AllowSet();
             options.Route(

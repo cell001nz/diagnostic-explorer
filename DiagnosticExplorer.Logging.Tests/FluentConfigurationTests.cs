@@ -215,7 +215,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<AttributeSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Attributed).Format(value => $"Value: {value:D3}");
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -231,7 +231,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<AttributeSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Attributed)
                 .Named(sample => $"Value {sample.Attributed}")
                 .Category(sample => $"Source {sample.Attributed}")
@@ -250,7 +250,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<WarningSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Current)
                 .Warn(sample => sample.Current < sample.Minimum, sample => $"Current value {sample.Current} is below {sample.Minimum}", "Current")
                 .Error(sample => sample.Current < 0, sample => $"Current value {sample.Current} is invalid", "Current");
@@ -288,11 +288,11 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<ReplacementSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             using (type.CreateCategoryScope("Scoped"))
             {
                 type.Property(sample => sample.First);
-                type.CustomProperty("Computed", sample => sample.First + sample.Second);
+                type.Property("Computed", sample => sample.First + sample.Second);
                 type.Property(sample => sample.Second).Category("Specific");
             }
         });
@@ -306,13 +306,13 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void CustomPropertyUsesDelegateAndFluentMetadata()
+    public void NamedPropertyUsesDelegateAndFluentMetadata()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<ReplacementSample>(type =>
         {
-            type.OptIn();
-            type.CustomProperty("Computed", sample => sample.First + sample.Second)
+            type.ExcludeAll();
+            type.Property("Computed", sample => sample.First + sample.Second)
                 .Category(sample => $"Calculated {sample.First}")
                 .Description(sample => $"Combined {sample.First} and {sample.Second}")
                 .Warn(sample => sample.First == "First", "First value needs attention")
@@ -337,12 +337,30 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void NamedPropertyCanRenderAsDrillDownIcon()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property("Details", sample => sample.Details).AsDrillDownIcon();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new StrategySample()).GetProperty("Details", "General");
+
+        Assert.True(property.CanDrillDown);
+        Assert.True(property.DrillDownIconOnly);
+        Assert.Null(property.Value);
+    }
+
+    [Fact]
     public void FluentMetadataOverridesOnlyExplicitAttributeValues()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<AttributeSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Attributed).Named("Configured name").Category("Configured");
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -361,7 +379,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<AttributeSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Exclude(sample => sample.Attributed);
             type.Include(sample => sample.Ignored);
             type.Include(sample => sample.Hidden);
@@ -377,12 +395,12 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void OptOutIncludesPublicPropertiesUnlessExplicitlyExcluded()
+    public void IncludeAllIncludesPublicPropertiesUnlessExplicitlyExcluded()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<ReplacementSample>(type =>
         {
-            type.OptOut();
+            type.IncludeAll();
             type.Exclude(sample => sample.Second);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -399,7 +417,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<ReplacementSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.First);
             type.Include(sample => sample.Second);
         });
@@ -417,7 +435,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Collection(sample => sample.Items).ShowCount().Concatenate(", ").WithMaxItems(2);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -429,17 +447,111 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void NamedDelegateCollectionAndExtendedUseExistingStrategyRenderers()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            CollectionSample.ConfigurePrivateItems(type);
+        });
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            StrategySample.ConfigurePrivateDetails(type);
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Include(child => child.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag collectionBag = Render(new CollectionSample());
+        PropertyBag extendedBag = Render(new StrategySample());
+
+        Assert.Equal("1", collectionBag.GetProperty("One", "General").Value);
+        Assert.Equal("2", collectionBag.GetProperty("Two", "General").Value);
+        Assert.Equal("Nested", extendedBag.GetProperty(nameof(ChildSample.Name), "Private details").Value);
+    }
+
+    [Fact]
+    public void DirectFieldCollectionAndExtendedUseExistingStrategyRenderers()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            CollectionSample.ConfigurePrivateItemsFromField(type);
+        });
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            StrategySample.ConfigurePrivateDetailsFromField(type);
+        });
+        configuration.Configure<ChildSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Include(child => child.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag collectionBag = Render(new CollectionSample());
+        PropertyBag extendedBag = Render(new StrategySample());
+
+        Assert.Equal("1", collectionBag.GetProperty("One", "General").Value);
+        Assert.Equal("2", collectionBag.GetProperty("Two", "General").Value);
+        Assert.Equal("Nested", extendedBag.GetProperty(nameof(ChildSample.Name), "_privateDetails").Value);
+    }
+
+    [Fact]
+    public void DirectFieldPropertyUsesDelegateConfiguration()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<PrivatePropertySample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample._value).Description("Private value");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new PrivatePropertySample());
+
+        Assert.Equal("Value", bag.GetProperty("_value", "General").Value);
+        Assert.Equal("Private value", bag.GetProperty("_value", "General").Description);
+    }
+
+    [Fact]
+    public void DirectFieldRateUsesRateRenderer()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            type.Rate(sample => sample._privateRequests).ShowRate(false).ShowTotal();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        StrategySample sample = new();
+        sample._privateRequests.Register(4);
+        PropertyBag bag = Render(sample);
+
+        Assert.Equal("4", bag.GetProperty("Total _privateRequests", "General").Value);
+        Assert.Null(bag.GetProperty("_privateRequests/sec", "General"));
+    }
+
+    [Fact]
     public void CollectionCategoriesUseTypedSelectorAndMaxItems()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Collection(sample => sample.Items).Categories(item => item.Name).WithMaxItems(2);
         });
         configuration.Configure<CollectionItem>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(item => item.Value);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -457,7 +569,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Collection(sample => sample.Items).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithMaxItems(2);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -475,7 +587,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Collection(sample => sample.Items)
                 .List(list =>
                     list.Name(item => $"Item: {item.Name}")
@@ -499,17 +611,17 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Child).WithDrillDown();
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Name);
         });
         configuration.ConfigureDrillDown<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Excluded);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -535,12 +647,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Child).WithDrillDown();
         });
         configuration.ConfigureDrillDown<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Route("Widgets", LoggerNameMatchMode.Prefix, route => route.To("Events", "All Widgets"));
             type.Route(child => child.LoggerName, LoggerNameMatchMode.Exact, route => route.To("Events", "Selected Widget"));
         });
@@ -574,12 +686,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Child).WithDrillDown();
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Name);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -599,12 +711,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Child).AsDrillDownIcon();
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Name);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -631,12 +743,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Name);
         });
         configuration.ConfigureDrillDown<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Excluded);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -663,12 +775,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<CollectionSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Collection(sample => sample.Items).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithDrillDown();
         });
         configuration.Configure<CollectionItem>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(item => item.Value);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -691,12 +803,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false, DrillDownMaxItems = 10 };
         configuration.Configure<CollectionSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Items).WithDrillDown(maxItems: 2);
         });
         configuration.Configure<CollectionItem>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(item => item.Name);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -719,17 +831,17 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Child).WithDrillDown();
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(child => child.Details).WithDrillDown();
         });
         configuration.Configure<GrandChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Value);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -752,12 +864,12 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.Child).WithDrillDown();
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(child => child.Editable).AllowSet();
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -783,14 +895,14 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<StrategySample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Rate(sample => sample.Requests).Named("Requests").ShowRate(false).ShowTotal();
             type.Date(sample => sample.Started).ShowDate(false).ShowElapsed();
             type.Extended(sample => sample.Details).Named("Details");
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Name);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -812,7 +924,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<AttributedStrategySample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Collection(sample => sample.Items).Concatenate(", ").WithMaxItems(2);
             type.Rate(sample => sample.Requests).ShowRate(false).ShowTotal();
             type.Date(sample => sample.Started).ShowDate(false).ShowElapsed();
@@ -820,7 +932,7 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         configuration.Configure<ChildSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(child => child.Name);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -843,7 +955,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
         configuration.Configure<BaseSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Property(sample => sample.BaseValue).Named("Base configured");
         });
         configuration.Configure<DerivedSample>(type =>
@@ -866,7 +978,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration first = new();
         first.Configure<ReplacementSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(sample => sample.First);
         });
         DiagnosticManager.UseConfiguration(first);
@@ -875,7 +987,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration second = new();
         second.Configure<ReplacementSample>(type =>
         {
-            type.OptIn();
+            type.ExcludeAll();
             type.Include(sample => sample.Second);
         });
         DiagnosticManager.UseConfiguration(second);
@@ -894,7 +1006,7 @@ public sealed class FluentConfigurationTests : IDisposable
         services.ConfigureDiagnosticExplorer(diagnostics =>
             diagnostics.Configure<ReplacementSample>(type =>
             {
-                type.OptIn();
+                type.ExcludeAll();
                 type.Include(sample => sample.Second);
             })
         );
@@ -985,6 +1097,18 @@ public sealed class FluentConfigurationTests : IDisposable
     private sealed class CollectionSample
     {
         public IList<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1), new("Two", 2), new("Three", 3) };
+        private readonly IList<CollectionItem> _privateItems = new List<CollectionItem> { new("One", 1), new("Two", 2) };
+
+        public static void ConfigurePrivateItems(ITypeConfigurator<CollectionSample> type)
+        {
+            type.Collection("Private items", sample => sample._privateItems)
+                .List(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+        }
+
+        public static void ConfigurePrivateItemsFromField(ITypeConfigurator<CollectionSample> type)
+        {
+            type.Collection(sample => sample._privateItems).List(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+        }
     }
 
     private sealed class CollectionItem
@@ -1001,11 +1125,28 @@ public sealed class FluentConfigurationTests : IDisposable
         public override string ToString() => Name;
     }
 
+    private sealed class PrivatePropertySample
+    {
+        internal readonly string _value = "Value";
+    }
+
     private sealed class StrategySample
     {
         public RateCounter Requests { get; } = new(5);
+        internal readonly RateCounter _privateRequests = new(5);
         public DateTime Started { get; } = DateTime.UtcNow.AddMinutes(-1);
         public ChildSample Details { get; } = new();
+        private readonly ChildSample _privateDetails = new();
+
+        public static void ConfigurePrivateDetails(ITypeConfigurator<StrategySample> type)
+        {
+            type.Extended("Private details", sample => sample._privateDetails);
+        }
+
+        public static void ConfigurePrivateDetailsFromField(ITypeConfigurator<StrategySample> type)
+        {
+            type.Extended(sample => sample._privateDetails);
+        }
     }
 
     private sealed class AttributedStrategySample

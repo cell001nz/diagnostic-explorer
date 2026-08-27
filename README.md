@@ -63,7 +63,7 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
 {
     diagnostics.Configure<Widget>(options =>
     {
-        options.OptIn();
+        options.ExcludeAll();
         options.Property(widget => widget.Name)
             .Named("Widget name")
             .Category("Details");
@@ -71,7 +71,7 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
 
     diagnostics.Configure<Gadget>(options =>
     {
-        options.OptOut();
+        options.IncludeAll();
         options.Exclude(gadget => gadget.Id);
         options.Property(gadget => gadget.Purpose)
             .Category("Details");
@@ -92,7 +92,7 @@ diagnostics.Configure<Widget>(options =>
 
 diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
 {
-    options.OptIn();
+    options.ExcludeAll();
     options.Property(configuration => configuration.Status);
     options.Property(configuration => configuration.Owner).WithDrillDown();
 });

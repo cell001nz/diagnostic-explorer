@@ -65,28 +65,36 @@ internal class PropertyGetter
     {
         PropInfo = propInfo;
 
-        GetFunc = PropertyToFunction(propInfo, isStatic);
-        Name = propInfo.Name;
-
-        if (applyAttributes)
+        if (propInfo != null)
         {
-            DiagnosticClassAttribute classAttr = propInfo
-                .DeclaringType.GetCustomAttributes(typeof(DiagnosticClassAttribute), true)
-                .Cast<DiagnosticClassAttribute>()
-                .FirstOrDefault();
+            GetFunc = PropertyToFunction(propInfo, isStatic);
+            Name = propInfo.Name;
 
-            if (classAttr != null && classAttr.AllPropertiesSettable)
-                CanSet = propInfo.CanWrite && classAttr.AllPropertiesSettable;
+            if (applyAttributes)
+            {
+                DiagnosticClassAttribute classAttr = propInfo
+                    .DeclaringType.GetCustomAttributes(typeof(DiagnosticClassAttribute), true)
+                    .Cast<DiagnosticClassAttribute>()
+                    .FirstOrDefault();
+
+                if (classAttr != null && classAttr.AllPropertiesSettable)
+                    CanSet = propInfo.CanWrite && classAttr.AllPropertiesSettable;
+            }
+
+            if (propAttr != null)
+            {
+                Name = propAttr.Name ?? Name;
+                Category = propAttr.Category ?? Category;
+                Description = propAttr.Description ?? Description;
+                FormatString = propAttr.FormatString;
+                if (propInfo.CanWrite && propAttr.AllowSetSpecified)
+                    CanSet = propAttr.AllowSet;
+            }
         }
-
-        if (propAttr != null)
+        else if (configuration != null)
         {
-            Name = propAttr.Name ?? Name;
-            Category = propAttr.Category ?? Category;
-            Description = propAttr.Description ?? Description;
-            FormatString = propAttr.FormatString;
-            if (propInfo.CanWrite && propAttr.AllowSetSpecified)
-                CanSet = propAttr.AllowSet;
+            GetFunc = configuration.Value;
+            Name = configuration.Name.Value;
         }
 
         if (configuration != null)
@@ -105,7 +113,7 @@ internal class PropertyGetter
             _valueFormatter = configuration.ValueFormatter;
             _alerts = configuration.Alerts;
             if (configuration.AllowSet.IsSet)
-                CanSet = propInfo.CanWrite && configuration.AllowSet.Value;
+                CanSet = propInfo?.CanWrite == true && configuration.AllowSet.Value;
             ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly);
 
             if (configuration.UsesPropertyDefaults && string.IsNullOrWhiteSpace(Category))
@@ -340,7 +348,7 @@ internal class PropertyGetter
         Category = configuration.Category.IsSet ? configuration.Category.Value : "General";
         Description = configuration.Description.IsSet ? configuration.Description.Value : null;
         _alerts = configuration.Alerts;
-        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, default);
+        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly);
     }
 
     protected void ApplyDrillDown(Property property, object value)

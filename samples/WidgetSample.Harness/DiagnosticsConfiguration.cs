@@ -28,7 +28,7 @@ internal static class DiagnosticsConfiguration
         config.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss.fff}");
         config.DefaultFormat<Point>("Located at {0}");
 
-        ConfigureForm(config);
+        Form1.ConfigureDiagnostics(config);
         Widget.ConfigureDiagnostics(config);
         ConfigureWidgetConfig(config);
         ConfigureGadget(config);
@@ -55,56 +55,11 @@ internal static class DiagnosticsConfiguration
             .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors"));
     }
 
-    private static void ConfigureForm(IDiagConfigurator config)
-    {
-        config.Configure<Form1>(options =>
-        {
-            options.OptIn();
-            options.Extended(form => form.NullWidget).Category("NullWidget category");
-            options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
-            options.Property(form => form.SetMePlease).AllowSet();
-            options.Property(form => form.Counter2);
-
-            options
-                .CustomProperty("WidgetCount", form => form.Widgets.Count)
-                .Warn(form => form.Widgets.Count > 2, "Not too many widgets", "Widget count")
-                .Error(form => form.Widgets.Count > 4, "Too many widgets", "Widget count");
-
-            options
-                .CustomProperty("Computed", f => $"This form has {f.Controls.Count} controls")
-                .Description(f => $"Control Info for {f.GetHashCode()}");
-
-            options.CustomProperty("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
-
-            using (options.CreateCategoryScope("Widgets"))
-            {
-                options.Property(form => form.WidgetIdCount);
-                options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
-                options.Collection(form => form.Widgets).WithDrillDown();
-            }
-
-            using (options.CreateCategoryScope("Gadgets"))
-            {
-                options.Property(form => form.GadgetIdCount).Description("Max Gadget Id");
-                options.Rate(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
-            }
-
-            using (options.CreateCategoryScope("All Gadgets"))
-            {
-                options
-                    .Collection(form => form.Gadgets)
-                    .List(opt => opt.Name(g => $"{g.Id} - {g.Name}").Category(g => g.Purpose).Description(g => $"Description for {g.Name}"))
-                    .WithMaxItems(int.MaxValue)
-                    .WithDrillDown();
-            }
-        });
-    }
-
     private static void ConfigureWidgetConfig(IDiagConfigurator config)
     {
         config.Configure<WidgetConfig>(options =>
         {
-            options.OptOut();
+            options.IncludeAll();
             options.Extended(configuration => configuration.Connection).Category("Connection");
             options
                 .Collection(configuration => configuration.Items)
@@ -118,15 +73,15 @@ internal static class DiagnosticsConfiguration
                 .WithDrillDown();
         });
 
-        config.Configure<WidgetConfigItem>(options => options.OptOut());
-        config.Configure<WidgetConnectionConfig>(options => options.OptOut());
+        config.Configure<WidgetConfigItem>(options => options.IncludeAll());
+        config.Configure<WidgetConnectionConfig>(options => options.IncludeAll());
     }
 
     private static void ConfigureGadget(IDiagConfigurator config)
     {
         config.Configure<Gadget>(options =>
         {
-            options.OptOut();
+            options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Purpose).AllowSet();
             options.Extended(gadget => gadget.Configuration).Category("Configuration");
@@ -134,7 +89,7 @@ internal static class DiagnosticsConfiguration
 
         config.ConfigureDrillDown<Gadget>(options =>
         {
-            options.OptOut();
+            options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
             options.Extended(gadget => gadget.Configuration);
@@ -150,14 +105,14 @@ internal static class DiagnosticsConfiguration
     {
         config.Configure<GadgetConfig>(options =>
         {
-            options.OptOut();
+            options.IncludeAll();
             options.Extended(configuration => configuration.Power).Category("Power");
             options.Extended(configuration => configuration.Network).Category("Network");
             options.Extended(configuration => configuration.Maintenance).Category("Maintenance");
         });
 
-        config.Configure<GadgetPowerConfig>(options => options.OptOut());
-        config.Configure<GadgetNetworkConfig>(options => options.OptOut());
-        config.Configure<GadgetMaintenanceConfig>(options => options.OptOut());
+        config.Configure<GadgetPowerConfig>(options => options.IncludeAll());
+        config.Configure<GadgetNetworkConfig>(options => options.IncludeAll());
+        config.Configure<GadgetMaintenanceConfig>(options => options.IncludeAll());
     }
 }

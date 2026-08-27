@@ -21,7 +21,7 @@ Drilldown routes support both static logger-name patterns and patterns derived f
 ```csharp
 config.ConfigureDrillDown<Widget>(options =>
 {
-	options.OptIn();
+	options.ExcludeAll();
 	options.Property(widget => widget.Name);
 
 	options.Route(
