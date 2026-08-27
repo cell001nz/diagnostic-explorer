@@ -26,7 +26,7 @@ internal sealed class InlineCustomObjectConfigurator<T> : ICustomObjectConfigura
         return new CustomPropertyConfigurator<T>(configuration);
     }
 
-    public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value)
+    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value)
     {
         PropertyConfiguration configuration = AddConfiguredProperty(name, typeof(TProperty), item => value((T)item), PropertyStrategy.Extended);
         return new ExtendedPropertyConfigurator<T, TProperty>(configuration);

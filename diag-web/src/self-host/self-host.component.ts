@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { CategoryViewComponent } from '@app/diagnostics/category-view/category-view.component';
 import { EventDetailPanelComponent } from '@app/diagnostics/event-detail-panel/event-detail-panel.component';
 import { EventModel } from '@model/EventModel';
 import { ProcessModel } from '@model/ProcessModel';
+import { Slider } from 'primeng/slider';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { SelfHostDiagHubService } from './self-host-hub.service';
 
@@ -11,7 +13,7 @@ const LOCAL_PROCESS_ID = 'self';
 
 @Component({
     selector: 'app-self-host',
-    imports: [Tabs, TabPanel, TabList, Tab, TabPanels, CategoryViewComponent, EventDetailPanelComponent],
+    imports: [Tabs, TabPanel, TabList, Tab, TabPanels, CategoryViewComponent, EventDetailPanelComponent, FormsModule, Slider],
     templateUrl: './self-host.component.html',
     styleUrl: './self-host.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -21,6 +23,7 @@ export class SelfHostComponent implements OnInit, OnDestroy {
     readonly connectionState = this.hub.connectionState;
     readonly error = this.hub.error;
     readonly process = this.hub.process;
+    readonly diagnosticsRefreshIntervalSeconds = this.hub.diagnosticsRefreshIntervalSeconds;
     readonly processModel = signal(new ProcessModel());
     readonly selectedEvent = signal<EventModel | null>(null);
     readonly detailHeight = signal(200);
@@ -50,6 +53,12 @@ export class SelfHostComponent implements OnInit, OnDestroy {
 
     async refresh(): Promise<void> {
         await this.hub.subscribeProcess(LOCAL_PROCESS_ID);
+    }
+
+    async setDiagnosticsRefreshInterval(seconds: number): Promise<void> {
+        try {
+            await this.hub.setDiagnosticsRefreshInterval(seconds);
+        } catch {}
     }
 
     onCategoryChange(category: string | number | undefined): void {

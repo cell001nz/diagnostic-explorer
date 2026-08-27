@@ -1,4 +1,5 @@
 <!--<div class="h-full">-->
+<div class="category-view" [class.max-property-columns-2]="maxPropertyColumns() === 2">
 @for (bag of category().bags(); track bag.name()) {
     <p-panel [toggleable]="!flatRoot()" [collapsed]="bag.isCollapsed()" [unstyled]="flatRoot()" class="mb-4 no-toggle-panel" [class.flat-root-bag]="flatRoot()">
         @if (!flatRoot()) {
@@ -6,9 +7,9 @@
              <div class="flex-1 cursor-pointer select-none" (click)="bag.toggleCollapsed()">
                  {{bag.name()}}
                  @if (bag.canDrillDown()) {
-                     <button type="button" class="diag-icon-link ml-1"
+                     <button type="button" class="diag-icon-link diag-drilldown-icon ml-1"
                              title="Open drilldown" aria-label="Open drilldown"
-                             (click)="showDrillDown(bag.getOperationPath()); $event.stopPropagation()">
+                             (click)="showDrillDown(bag.getOperationPath(), bag.name()); $event.stopPropagation()">
                          <i class="pi pi-external-link"></i>
                      </button>
                  }
@@ -30,9 +31,9 @@
                         <div>
                             {{subBag.name()}}
                             @if (subBag.canDrillDown()) {
-                                <button type="button" class="diag-icon-link ml-1"
+                                <button type="button" class="diag-icon-link diag-drilldown-icon ml-1"
                                         title="Open drilldown" aria-label="Open drilldown"
-                                        (click)="showDrillDown(subBag.getOperationPath()); $event.stopPropagation()">
+                                        (click)="showDrillDown(subBag.getOperationPath(), subBag.name()); $event.stopPropagation()">
                                     <i class="pi pi-external-link"></i>
                                 </button>
                             }
@@ -49,7 +50,7 @@
                         </div>
                     </ng-template>
 
-                    <div class="ml-4 grid grid-cols-[200px_1fr] lg:grid-cols-[200px_1fr_200px_1fr] gap-x-2 gap-y-2 ">
+                    <div class="property-grid">
                     @for (prop of subBag.properties(); track prop.name()) {
 
                          <span class="text-s my-1 flex items-center gap-1 min-w-0"
@@ -57,12 +58,7 @@
                              [class.text-amber-400]="prop.alertSeverity() === 1"
                              [class.text-red-400]="prop.alertSeverity() === 2"
                              [attr.title]="prop.alertTooltip() || prop.description() || null">
-                        @if (prop.canDrillDown() && !prop.drillDownIconOnly()) {
-                            <button type="button" class="diag-drilldown-link truncate"
-                                    (click)="showDrillDown(prop.getOperationPath())">{{ prop.name() }}</button>
-                        } @else {
-                            <span class="truncate">{{ prop.name() }}</span>
-                        }
+                        <span class="truncate">{{ prop.name() }}</span>
                         @if (prop.canSet()) {
                             <button type="button" class="diag-icon-link" title="Edit value" aria-label="Edit value"
                                     (click)="showSetPropertyDialog(prop)">
@@ -84,24 +80,33 @@
 <!--                    <span class="prop-value" (dblclick)="handleDoubleClick(prop, $event)"-->
 <!--                          [matTooltip]="prop.value" [matTooltipShowDelay]="0" matTooltipPosition="below"-->
 <!--                          matTooltipClass="tooltips">{{ prop.value }}</span>-->
-                        <span class="text-s my-1 min-w-0"
-                            [class.text-lime-500]="!prop.alertSeverity()"
-                            [class.text-amber-400]="prop.alertSeverity() === 1"
-                            [class.text-red-400]="prop.alertSeverity() === 2"
+                        <span class="text-s my-1 flex items-center gap-1 min-w-0 value-kind"
+                            [attr.data-value-kind]="prop.valueKind()"
                               [attr.title]="prop.alertTooltip() || null">
-                            @if (prop.drillDownIconOnly()) {
-                                <button type="button" class="diag-icon-link" title="Open drilldown" aria-label="Open drilldown"
-                                        (click)="showDrillDown(prop.getOperationPath())">
-                                    <i class="pi pi-external-link"></i>
-                                </button>
-                            } @else {
+                            <app-property-hover [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
                                 @if (prop.canDrillDown()) {
-                                    <button type="button" class="diag-drilldown-link value-link"
-                                            (click)="showDrillDown(prop.getOperationPath())">{{ prop.value() }}</button>
-                                } @else {
-                                    {{ prop.value() }}
+                                    @if (prop.drillDownText()) {
+                                        <button type="button" class="diag-drilldown-value inline-flex items-center gap-1 text-sky-300" [title]="prop.drillDownText()" [attr.aria-label]="prop.drillDownText()"
+                                                (click)="showDrillDown(prop.getOperationPath(), prop.name())">
+                                            <i class="pi pi-external-link"></i>
+                                            <span>{{ prop.drillDownText() }}</span>
+                                        </button>
+                                    } @else {
+                                        <button type="button" class="diag-icon-link diag-drilldown-icon" title="Open drilldown" aria-label="Open drilldown"
+                                                (click)="showDrillDown(prop.getOperationPath(), prop.name())">
+                                            <i class="pi pi-external-link"></i>
+                                        </button>
+                                    }
                                 }
-                            }
+                                @if (!prop.drillDownIconOnly() && prop.value()) {
+                                    @if (prop.canDrillDown()) {
+                                        <button type="button" class="diag-drilldown-value" [title]="prop.drillDownText() || 'Open drilldown'"
+                                                (click)="showDrillDown(prop.getOperationPath(), prop.name())">{{ prop.value() }}</button>
+                                    } @else {
+                                        <span class="value-text">{{ prop.value() }}</span>
+                                    }
+                                }
+                            </app-property-hover>
                         </span>
                     }
             </div>
@@ -114,8 +119,11 @@
 }
 
 
-@for (sink of category().eventSinks(); track sink.name) {
-    <app-event-sink-view [sink]="sink" (eventSelected)="eventSelected.emit($event)" />
-}
+<div class="event-sinks">
+    @for (sink of category().eventSinks(); track sink.name) {
+        <app-event-sink-view [sink]="sink" (eventSelected)="eventSelected.emit($event)" />
+    }
+</div>
+</div>
 
 <!--</div>-->

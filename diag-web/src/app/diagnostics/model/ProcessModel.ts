@@ -10,6 +10,14 @@ import { DiagnosticModelFactory } from '@model/DiagnosticModelFactory';
 import { strEqCI } from '@util/stringUtil';
 import { ProcessEventStore } from './ProcessEventStore';
 
+function compareCategories(left: CategoryModel, right: CategoryModel): number {
+    const leftIsSystem = strEqCI(left.name(), 'System');
+    const rightIsSystem = strEqCI(right.name(), 'System');
+    if (leftIsSystem !== rightIsSystem) return leftIsSystem ? -1 : 1;
+
+    return left.name().localeCompare(right.name(), undefined, { sensitivity: 'base' });
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProcessModel implements ObservableDisposable {
     objectPaths: readonly string[] = Object.freeze([]);
@@ -58,7 +66,7 @@ export class ProcessModel implements ObservableDisposable {
     }
 
     public update(response: DiagnosticResponse) {
-        this.titleMessage.set('Received ' + new Date().toISOString().substring(11, 19) + ' UTC');
+        this.titleMessage.set('Received ' + new Date().toLocaleTimeString());
         this.serverDate.set(new Date(response.serverDate));
 
         const bagCats: { [key: string]: PropertyBag[] } = _.groupBy(response.propertyBags, (p) => p.category);
@@ -77,7 +85,7 @@ export class ProcessModel implements ObservableDisposable {
             false
         );
 
-        cats = _.sortBy(cats, (c) => c.name());
+        cats.sort(compareCategories);
 
         if (cats.filter((c) => !c.bags().length && !c.eventSinks().length)) cats = cats.filter((c) => c.bags().length || c.eventSinks().length);
 
@@ -98,7 +106,7 @@ export class ProcessModel implements ObservableDisposable {
         let cat = this.categories().find((c) => strEqCI(c.name(), name));
         if (!cat) {
             cat = new CategoryModel(this, name);
-            this.categories.update((categories) => _.sortBy([...categories, cat!], (c) => c.name()));
+            this.categories.update((categories) => [...categories, cat!].sort(compareCategories));
         }
 
         return cat;
@@ -120,22 +128,15 @@ export class ProcessModel implements ObservableDisposable {
 
         const drillDownEventCategory = this.includeGlobalEventViews
             ? undefined
-            : this.categories().find((category) => category.bags().length > 0)?.name() ?? 'DrillDown';
-        const duplicateDrillDownViewNames = new Set(
-            this.drillDownEventViews
-                .filter((view) => this.drillDownEventViews.filter((candidate) => candidate.name === view.name).length > 1)
-                .map((view) => view.name)
-        );
+            : (this.categories()
+                  .find((category) => category.bags().length > 0)
+                  ?.name() ?? 'DrillDown');
+        const duplicateDrillDownViewNames = new Set(this.drillDownEventViews.filter((view) => this.drillDownEventViews.filter((candidate) => candidate.name === view.name).length > 1).map((view) => view.name));
 
         for (const view of this.drillDownEventViews) {
-            const sinkName = !this.includeGlobalEventViews && duplicateDrillDownViewNames.has(view.name)
-                ? `${view.category}: ${view.name}`
-                : view.name;
-            this.getCat(drillDownEventCategory ?? view.category).getSink(sinkName, () =>
-                store.events().filter((event) => view.matchers.some((matcher) => this.matchesDrillDownEvent(event, matcher)))
-            );
+            const sinkName = !this.includeGlobalEventViews && duplicateDrillDownViewNames.has(view.name) ? `${view.category}: ${view.name}` : view.name;
+            this.getCat(drillDownEventCategory ?? view.category).getSink(sinkName, () => store.events().filter((event) => view.matchers.some((matcher) => this.matchesDrillDownEvent(event, matcher))));
         }
-
     }
 
     private matchesDrillDownEvent(event: EventModel, matcher: DrillDownEventMatcher): boolean {

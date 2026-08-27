@@ -1,12 +1,5 @@
 import { signal } from '@angular/core';
-import {
-    LogStreamEvent,
-    LogStreamInitialization,
-    LogStreamRoute,
-    LogStreamRouteDestination,
-    LogStreamRouteValue,
-    LogStreamRoutingConfiguration
-} from '@domain/DiagResponse';
+import { LogStreamEvent, LogStreamInitialization, LogStreamRoute, LogStreamRouteDestination, LogStreamRouteValue, LogStreamRoutingConfiguration } from '@domain/DiagResponse';
 import { EventModel } from './EventModel';
 
 export interface EventDestination {
@@ -79,7 +72,7 @@ export class ProcessEventStore {
         const destinations = new Map<string, EventDestination>();
         for (const route of this.routing().routes ?? []) {
             for (const destination of route.destinations ?? []) {
-                if (destination.category?.source !== 0 || destination.name?.source !== 0) continue;
+                if (!this.isFixed(destination.category) || !this.isFixed(destination.name)) continue;
                 this.addDestination(destinations, destination.category.value, destination.name.value);
             }
         }
@@ -128,16 +121,10 @@ export class ProcessEventStore {
 
     private applyRetention(initialization: LogStreamInitialization): void {
         const maxEvents = initialization.maxEvents;
-        this.maxEvents =
-            typeof maxEvents === 'number' && Number.isFinite(maxEvents) && maxEvents > 0
-                ? Math.floor(maxEvents)
-                : ProcessEventStore.defaultMaxEvents;
+        this.maxEvents = typeof maxEvents === 'number' && Number.isFinite(maxEvents) && maxEvents > 0 ? Math.floor(maxEvents) : ProcessEventStore.defaultMaxEvents;
 
         const maxAgeMinutes = initialization.maxAgeMinutes;
-        this.maxAgeMinutes =
-            typeof maxAgeMinutes === 'number' && Number.isFinite(maxAgeMinutes) && maxAgeMinutes > 0
-                ? maxAgeMinutes
-                : ProcessEventStore.defaultMaxAgeMinutes;
+        this.maxAgeMinutes = typeof maxAgeMinutes === 'number' && Number.isFinite(maxAgeMinutes) && maxAgeMinutes > 0 ? maxAgeMinutes : ProcessEventStore.defaultMaxAgeMinutes;
     }
 
     private prune(now: number): void {
@@ -180,7 +167,7 @@ export class ProcessEventStore {
 
         const loggerName = event.loggerCategory ?? '';
         const matcher = route.loggerName ?? '';
-        switch (route.loggerNameMatchMode) {
+        switch (this.getLoggerNameMatchMode(route)) {
             case 0:
                 return this.equals(loggerName, matcher);
             case 1:
@@ -195,7 +182,7 @@ export class ProcessEventStore {
     }
 
     private selectRoutes(matches: LogStreamRoute[]): LogStreamRoute[] {
-        switch (this.routing().matchMode) {
+        switch (this.getRouteMatchMode()) {
             case 1:
                 return matches.length === 0 ? [] : [matches.slice().sort((left, right) => right.loggerName.length - left.loggerName.length || left.order - right.order)[0]];
             case 2:
@@ -207,10 +194,42 @@ export class ProcessEventStore {
 
     private resolveValue(value: LogStreamRouteValue, route: LogStreamRoute, loggerName: string): string | undefined {
         if (!value) return undefined;
-        if (value.source === 0) return value.value;
-        if (route.loggerNameMatchMode === 3) return loggerName;
-        if (route.loggerNameMatchMode !== 1 || loggerName.length <= route.loggerName.length) return undefined;
+        if (this.isFixed(value)) return value.value;
+        if (this.getLoggerNameMatchMode(route) === 3) return loggerName;
+        if (this.getLoggerNameMatchMode(route) !== 1 || loggerName.length <= route.loggerName.length) return undefined;
         return loggerName.substring(route.loggerName.length + 1);
+    }
+
+    private getRouteMatchMode(): number | undefined {
+        switch (this.routing().matchMode) {
+            case 'AllMatches':
+                return 0;
+            case 'MostSpecific':
+                return 1;
+            case 'FirstMatch':
+                return 2;
+            default:
+                return this.routing().matchMode as number;
+        }
+    }
+
+    private getLoggerNameMatchMode(route: LogStreamRoute): number | undefined {
+        switch (route.loggerNameMatchMode) {
+            case 'Exact':
+                return 0;
+            case 'Prefix':
+                return 1;
+            case 'Contains':
+                return 2;
+            case 'Wildcard':
+                return 3;
+            default:
+                return route.loggerNameMatchMode as number;
+        }
+    }
+
+    private isFixed(value: LogStreamRouteValue | undefined): boolean {
+        return value?.source === 0 || value?.source === 'Fixed';
     }
 
     private eventKey(event: EventModel): string {

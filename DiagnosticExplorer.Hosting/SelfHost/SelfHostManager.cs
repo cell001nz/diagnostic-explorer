@@ -16,6 +16,9 @@ public sealed class SelfHostManager : IDisposable
     public const string LocalProcessId = "self";
 
     private const int OutboundQueueCapacity = 256;
+    private const int MinimumDiagnosticsRefreshIntervalSeconds = 1;
+    private const int MaximumDiagnosticsRefreshIntervalSeconds = 10;
+    private const int DefaultDiagnosticsRefreshIntervalSeconds = 2;
     private readonly ConcurrentDictionary<string, SelfHostClientHandler> _clients = new();
     private readonly CancellationTokenSource _stopToken = new();
     private readonly LogEventStore.LogEventStoreSubscription _eventStream;
@@ -23,7 +26,9 @@ public sealed class SelfHostManager : IDisposable
     private readonly object _eventLock = new();
     private readonly object _diagnosticsLock = new();
     private CancellationTokenSource _diagnosticsStopToken;
+    private CancellationTokenSource _diagnosticsRefreshDelayToken;
     private Task _diagnosticsTask;
+    private int _diagnosticsRefreshIntervalSeconds = DefaultDiagnosticsRefreshIntervalSeconds;
     private int _disposed;
     private readonly IServiceProvider _serviceProvider;
 
@@ -37,6 +42,20 @@ public sealed class SelfHostManager : IDisposable
     public string ProcessId => LocalProcessId;
 
     public string ProcessName => Process.GetCurrentProcess().ProcessName;
+
+    public int GetDiagnosticsRefreshInterval() => Volatile.Read(ref _diagnosticsRefreshIntervalSeconds);
+
+    public int SetDiagnosticsRefreshInterval(int seconds)
+    {
+        int interval = Math.Max(MinimumDiagnosticsRefreshIntervalSeconds, Math.Min(MaximumDiagnosticsRefreshIntervalSeconds, seconds));
+        Volatile.Write(ref _diagnosticsRefreshIntervalSeconds, interval);
+        lock (_diagnosticsLock)
+        {
+            if (_disposed == 0)
+                _diagnosticsRefreshDelayToken?.Cancel();
+        }
+        return interval;
+    }
 
     public SelfHostProcessInfo GetProcessInfo() =>
         new()
@@ -185,10 +204,36 @@ public sealed class SelfHostManager : IDisposable
                     await Task.WhenAll(_clients.Values.Select(client => TrySendDiagnosticsError(client, ex.Message)));
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(2), stopToken);
+                await WaitForNextDiagnosticsAsync(stopToken);
             }
         }
         catch (OperationCanceledException) { }
+    }
+
+    private async Task WaitForNextDiagnosticsAsync(CancellationToken stopToken)
+    {
+        using CancellationTokenSource refreshChangeToken = new();
+        lock (_diagnosticsLock)
+        {
+            if (_disposed != 0 || stopToken.IsCancellationRequested)
+                return;
+            _diagnosticsRefreshDelayToken = refreshChangeToken;
+        }
+
+        try
+        {
+            using CancellationTokenSource delayToken = CancellationTokenSource.CreateLinkedTokenSource(stopToken, refreshChangeToken.Token);
+            await Task.Delay(TimeSpan.FromSeconds(GetDiagnosticsRefreshInterval()), delayToken.Token);
+        }
+        catch (OperationCanceledException) when (!stopToken.IsCancellationRequested) { }
+        finally
+        {
+            lock (_diagnosticsLock)
+            {
+                if (ReferenceEquals(_diagnosticsRefreshDelayToken, refreshChangeToken))
+                    _diagnosticsRefreshDelayToken = null;
+            }
+        }
     }
 
     private void StartDiagnosticsLoop()
@@ -288,6 +333,7 @@ public sealed class SelfHostManager : IDisposable
             diagnosticsTask = _diagnosticsTask;
             _diagnosticsStopToken = null;
             _diagnosticsTask = null;
+            _diagnosticsRefreshDelayToken?.Cancel();
         }
 
         diagnosticsStopToken?.Cancel();

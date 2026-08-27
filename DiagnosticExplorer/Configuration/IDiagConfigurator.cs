@@ -42,8 +42,8 @@ public interface ITypeConfigurator<T>
     IDateConfigurator<T> Date(Expression<Func<T, DateTime?>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset>> property);
     IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property);
-    IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(Expression<Func<T, TProperty>> property);
-    IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value);
+    IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(Expression<Func<T, TProperty>> property);
+    IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value);
     ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
     ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
 }
@@ -72,8 +72,13 @@ public interface IObjectPropertyConfigurator<T, TSelf> : IPropertyConfigurator
 public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>
 {
     IPropertyConfigurator<T, TProperty> Format(Func<TProperty, string> format);
+    IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100);
+    IPropertyConfigurator<T, TProperty> AsDateOnly();
     IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null);
     IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null);
+    IPropertyConfigurator<T, TProperty> AsDrillDownIcon(string text, int? maxItems = null);
+    IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true);
+    IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message, string category);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, Func<T, string> message);
@@ -86,8 +91,12 @@ public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurat
 
 public interface ICustomPropertyConfigurator<T>
 {
+    ICustomPropertyConfigurator<T> AsJson(int maxLength = 100);
     ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null);
     ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null);
+    ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null);
+    ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true);
+    ICustomPropertyConfigurator<T> WithExpandedHover(bool enabled = true);
     ICustomPropertyConfigurator<T> Category(string category);
     ICustomPropertyConfigurator<T> Category(Func<T, string> category);
     ICustomPropertyConfigurator<T> Description(string description);
@@ -105,7 +114,7 @@ public interface ICustomPropertyConfigurator<T>
 public interface ICustomObjectConfigurator<T>
 {
     ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value);
-    IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value);
+    IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value);
     ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value);
     IRateConfigurator<T> Rate(string name, Func<T, RateCounter> value);
 }
@@ -117,7 +126,9 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null);
     ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null);
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
-    ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
+    ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null);
+    ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null);
+    ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null);
 }
 
 public interface ICollectionListConfigurator<TItem>

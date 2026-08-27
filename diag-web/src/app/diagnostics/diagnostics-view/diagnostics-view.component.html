@@ -1,23 +1,22 @@
 @if (process()) {
 <div class="grid grid-rows-[auto_1fr_auto] h-full">
 
-    <div>
-        
-        <p class="float-left" (click)="expandCollapse()">
-            {{process()?.machineName}} 
+    <div class="diagnostics-header">
+        <p class="diagnostics-process-title" (click)="expandCollapse()">
+            {{process()?.machineName}}
             / {{process()?.name}}
             <span class="text-xs">({{process()?.id}})</span>
         </p>
 
-        <span class="text-lime-500 float-right opacity-70 hover:opacity-100">
-            <span class="mr-6">{{processModel().titleMessage()}}</span>
-        </span>
+        <div class="diagnostics-status">
+            <span class="text-lime-500 opacity-70 hover:opacity-100">{{processModel().titleMessage()}}</span>
+        </div>
     </div>
 
     <div class="tabs-right overflow-hidden">
-        
+
         @if (realtime && process()) {
-            
+
             @if (processModel().categories().length) {
            <p-tabs [value]="processModel().activeCatName()" (valueChange)="onCategoryChange($event)" class="h-full max-h-[calc(100vh-120px)]">
                <p-tablist>
@@ -38,7 +37,7 @@
                             <app-category-view [category]="cat" [process]="process()!"
                                                (eventSelected)="onEventSelected($event)" />
                         </div>
-                    </p-tabpanel>   
+                    </p-tabpanel>
                 }
                </p-tabpanels>
             </p-tabs>

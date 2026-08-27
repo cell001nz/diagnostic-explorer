@@ -8,8 +8,32 @@ const namedAlertSeverities: Record<string, number> = {
     Error: 2
 };
 
+type DisplayValueKind = 'null' | 'text' | 'boolean' | 'number' | 'positive-number' | 'zero-number' | 'negative-number' | 'date-time' | 'duration' | 'enumeration' | 'object';
+
+const numericValueKinds: readonly DisplayValueKind[] = ['text', 'null', 'text', 'boolean', 'number', 'positive-number', 'zero-number', 'negative-number', 'date-time', 'duration', 'enumeration', 'object'];
+
+const namedValueKinds: Record<string, DisplayValueKind> = {
+    Null: 'null',
+    Text: 'text',
+    Boolean: 'boolean',
+    Number: 'number',
+    PositiveNumber: 'positive-number',
+    ZeroNumber: 'zero-number',
+    NegativeNumber: 'negative-number',
+    DateTime: 'date-time',
+    Duration: 'duration',
+    Enumeration: 'enumeration',
+    Object: 'object'
+};
+
 function getAlertSeverity(alert: PropertyAlert): number {
     return typeof alert.severity === 'number' ? alert.severity : (namedAlertSeverities[alert.severity] ?? 0);
+}
+
+function getValueKind(valueKind: Property['valueKind']): DisplayValueKind {
+    if (typeof valueKind === 'number') return numericValueKinds[valueKind] ?? 'object';
+
+    return namedValueKinds[valueKind ?? ''] ?? 'text';
 }
 
 export class PropModel {
@@ -21,6 +45,10 @@ export class PropModel {
     canSet = signal(false);
     canDrillDown = signal(false);
     drillDownIconOnly = signal(false);
+    drillDownText = signal('');
+    canJsonHover = signal(false);
+    canExpandedHover = signal(false);
+    valueKind = signal<DisplayValueKind>('text');
     alerts = signal<PropertyAlert[]>([]);
     alertSeverity = computed(() => Math.max(0, ...this.alerts().map(getAlertSeverity)));
     alertTooltip = computed(() =>
@@ -42,6 +70,10 @@ export class PropModel {
         this.canSet.set(source.canSet);
         this.canDrillDown.set(source.canDrillDown);
         this.drillDownIconOnly.set(source.drillDownIconOnly ?? false);
+        this.drillDownText.set(source.drillDownText ?? '');
+        this.canJsonHover.set(source.canJsonHover ?? false);
+        this.canExpandedHover.set(source.canExpandedHover ?? false);
+        this.valueKind.set(getValueKind(source.valueKind));
         this.alerts.set(source.alerts ?? []);
     }
 

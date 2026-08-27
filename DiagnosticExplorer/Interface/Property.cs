@@ -39,6 +39,22 @@ public enum PropertyAlertSeverity
     Error = 2,
 }
 
+public enum PropertyValueKind
+{
+    Unspecified = 0,
+    Null = 1,
+    Text = 2,
+    Boolean = 3,
+    Number = 4,
+    PositiveNumber = 5,
+    ZeroNumber = 6,
+    NegativeNumber = 7,
+    DateTime = 8,
+    Duration = 9,
+    Enumeration = 10,
+    Object = 11,
+}
+
 [ProtoContract(UseProtoMembersOnly = true)]
 public class PropertyAlert
 {
@@ -106,6 +122,18 @@ public class Property
     [ProtoMember(8)]
     public bool DrillDownIconOnly { get; set; }
 
+    [ProtoMember(9)]
+    public PropertyValueKind ValueKind { get; set; }
+
+    [ProtoMember(10)]
+    public bool CanJsonHover { get; set; }
+
+    [ProtoMember(11)]
+    public bool CanExpandedHover { get; set; }
+
+    [ProtoMember(12)]
+    public string DrillDownText { get; set; }
+
     internal object SourceObject { get; set; }
 
     internal object ValueObject { get; set; }
@@ -115,6 +143,95 @@ public class Property
     internal int DrillDownMaxItems { get; set; }
 
     internal PropertyInfo SourceProperty { get; set; }
+
+    internal void InferValueKind()
+    {
+        if (ValueKind != PropertyValueKind.Unspecified)
+            return;
+
+        if (ValueObject == null)
+        {
+            ValueKind = Value == null ? PropertyValueKind.Null : PropertyValueKind.Text;
+            return;
+        }
+
+        if (ValueObject is string || ValueObject is char || ValueObject is Guid || ValueObject is Uri)
+        {
+            ValueKind = PropertyValueKind.Text;
+            return;
+        }
+
+        if (ValueObject is bool)
+        {
+            ValueKind = PropertyValueKind.Boolean;
+            return;
+        }
+
+        if (ValueObject is DateTime || ValueObject is DateTimeOffset)
+        {
+            ValueKind = PropertyValueKind.DateTime;
+            return;
+        }
+
+        if (ValueObject is TimeSpan)
+        {
+            ValueKind = PropertyValueKind.Duration;
+            return;
+        }
+
+        Type valueType = ValueObject.GetType();
+        if (valueType.IsEnum)
+        {
+            ValueKind = PropertyValueKind.Enumeration;
+            return;
+        }
+
+        if (IsNumeric(valueType))
+        {
+            ValueKind = GetNumericValueKind(ValueObject);
+            return;
+        }
+
+        ValueKind = PropertyValueKind.Object;
+    }
+
+    private static bool IsNumeric(Type valueType)
+    {
+        switch (Type.GetTypeCode(valueType))
+        {
+            case TypeCode.Byte:
+            case TypeCode.SByte:
+            case TypeCode.Int16:
+            case TypeCode.UInt16:
+            case TypeCode.Int32:
+            case TypeCode.UInt32:
+            case TypeCode.Int64:
+            case TypeCode.UInt64:
+            case TypeCode.Single:
+            case TypeCode.Double:
+            case TypeCode.Decimal:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static PropertyValueKind GetNumericValueKind(object value)
+    {
+        try
+        {
+            decimal number = Convert.ToDecimal(value);
+            if (number > 0)
+                return PropertyValueKind.PositiveNumber;
+            if (number < 0)
+                return PropertyValueKind.NegativeNumber;
+            return PropertyValueKind.ZeroNumber;
+        }
+        catch (OverflowException)
+        {
+            return PropertyValueKind.Number;
+        }
+    }
 
     public override string ToString()
     {

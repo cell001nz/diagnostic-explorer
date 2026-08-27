@@ -9,6 +9,12 @@ public sealed class DrillDownRequest
 {
     [ProtoMember(1)]
     public List<string> ObjectPaths { get; set; } = new();
+
+    [ProtoMember(2)]
+    public bool JsonHover { get; set; }
+
+    [ProtoMember(3)]
+    public bool ExcludeEventViews { get; set; }
 }
 
 [ProtoContract(UseProtoMembersOnly = true)]
@@ -34,6 +40,9 @@ public sealed class DrillDownResponse
 
     [ProtoMember(7)]
     public List<DrillDownEventViewDefinition> EventViews { get; set; } = new();
+
+    [ProtoMember(8)]
+    public string Json { get; set; }
 }
 
 [ProtoContract(UseProtoMembersOnly = true)]

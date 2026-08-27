@@ -45,6 +45,9 @@ internal class PropertyGetter
     protected bool DrillDownEnabled { get; private set; }
     protected int DrillDownMaxItems { get; private set; }
     protected bool DrillDownIconOnly { get; private set; }
+    protected string DrillDownText { get; private set; }
+    protected bool JsonHoverEnabled { get; private set; }
+    protected bool ExpandedHoverEnabled { get; private set; }
 
     protected PropertyGetter() { }
 
@@ -114,7 +117,13 @@ internal class PropertyGetter
             _alerts = configuration.Alerts;
             if (configuration.AllowSet.IsSet)
                 CanSet = propInfo?.CanWrite == true && configuration.AllowSet.Value;
-            ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly);
+            ConfigureDrillDown(
+                configuration.DrillDown,
+                configuration.DrillDownMaxItems,
+                configuration.DrillDownIconOnly,
+                configuration.DrillDownText
+            );
+            ConfigureHover(configuration.JsonHover, configuration.ExpandedHover);
 
             if (configuration.UsesPropertyDefaults && string.IsNullOrWhiteSpace(Category))
                 Category = "General";
@@ -347,26 +356,44 @@ internal class PropertyGetter
         Name = configuration.Name;
         Category = configuration.Category.IsSet ? configuration.Category.Value : "General";
         Description = configuration.Description.IsSet ? configuration.Description.Value : null;
+        _valueFormatter = configuration.ValueFormatter;
         _alerts = configuration.Alerts;
-        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly);
+        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly, configuration.DrillDownText);
+        ConfigureHover(configuration.JsonHover, configuration.ExpandedHover);
     }
 
     protected void ApplyDrillDown(Property property, object value)
     {
-        if (!DrillDownEnabled || !DiagnosticManager.IsDrillDownValue(value))
+        bool canDrillDown = DiagnosticManager.IsDrillDownValue(value);
+        if (!canDrillDown && (!JsonHoverEnabled || value == null))
             return;
 
-        property.CanDrillDown = true;
-        property.DrillDownIconOnly = DrillDownIconOnly;
+        property.CanDrillDown = DrillDownEnabled && canDrillDown;
+        property.DrillDownIconOnly = property.CanDrillDown && DrillDownIconOnly;
+        property.DrillDownText = property.CanDrillDown ? DrillDownText : null;
+        property.CanJsonHover = JsonHoverEnabled && value != null;
+        property.CanExpandedHover = ExpandedHoverEnabled && canDrillDown;
         property.DrillDownObject = value;
         property.DrillDownMaxItems = DrillDownMaxItems;
     }
 
-    private void ConfigureDrillDown(ConfiguredValue<bool> enabled, ConfiguredValue<int> maxItems, ConfiguredValue<bool> iconOnly)
+    private void ConfigureDrillDown(
+        ConfiguredValue<bool> enabled,
+        ConfiguredValue<int> maxItems,
+        ConfiguredValue<bool> iconOnly,
+        ConfiguredValue<string> text
+    )
     {
         DrillDownEnabled = enabled.IsSet && enabled.Value;
         DrillDownMaxItems = maxItems.IsSet ? maxItems.Value : DiagnosticManager.DrillDownMaxItems;
         DrillDownIconOnly = iconOnly.IsSet && iconOnly.Value;
+        DrillDownText = text.IsSet ? text.Value : null;
+    }
+
+    private void ConfigureHover(ConfiguredValue<bool> jsonHover, ConfiguredValue<bool> expandedHover)
+    {
+        JsonHoverEnabled = jsonHover.IsSet && jsonHover.Value;
+        ExpandedHoverEnabled = expandedHover.IsSet && expandedHover.Value;
     }
 
     protected string FormatValue(object val)
@@ -374,14 +401,14 @@ internal class PropertyGetter
         if (val == null)
             return null;
 
+        if (_valueFormatter != null)
+            return _valueFormatter(val);
+
         if (val is TimeSpan)
             return FormatTimeSpan((TimeSpan)val);
 
         if (val is string)
             return (string)val;
-
-        if (_valueFormatter != null)
-            return _valueFormatter(val);
 
         if (val is IEnumerable)
             return FormatEnumerable((IEnumerable)val, Environment.NewLine, MaxConcatItems);

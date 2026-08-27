@@ -20,6 +20,7 @@ import { EventModel } from '@model/EventModel';
 export class DrillDownDialogComponent implements OnInit {
     process = input.required<DiagProcess>();
     objectPaths = input.required<readonly string[]>();
+    breadcrumbs = input.required<readonly string[]>();
 
     readonly processModel = new ProcessModel();
     readonly loading = signal(true);
@@ -29,7 +30,7 @@ export class DrillDownDialogComponent implements OnInit {
     readonly displayedCount = signal(0);
     readonly totalCount = signal<number | undefined>(undefined);
     readonly selectedEvent = signal<EventModel | null>(null);
-    readonly title = computed(() => this.processModel.activeCat()?.bags()[0]?.name() ?? '');
+    readonly title = computed(() => this.breadcrumbs().join(' / '));
 
     readonly #hubService = inject(DiagHubService);
     readonly #destroyRef = inject(DestroyRef);
@@ -44,11 +45,17 @@ export class DrillDownDialogComponent implements OnInit {
         void this.load();
 
         this.#hubService.logStreamInitialized$
-            .pipe(filter(({ processId }) => processId === this.process().id), takeUntilDestroyed(this.#destroyRef))
+            .pipe(
+                filter(({ processId }) => processId === this.process().id),
+                takeUntilDestroyed(this.#destroyRef)
+            )
             .subscribe(({ initialization }) => this.processModel.initializeLogStream(initialization));
 
         this.#hubService.logStreamEvents$
-            .pipe(filter(({ processId }) => processId === this.process().id), takeUntilDestroyed(this.#destroyRef))
+            .pipe(
+                filter(({ processId }) => processId === this.process().id),
+                takeUntilDestroyed(this.#destroyRef)
+            )
             .subscribe(({ events }) => this.processModel.appendLogStreamEvents(events));
 
         this.#hubService.diagsArrived$

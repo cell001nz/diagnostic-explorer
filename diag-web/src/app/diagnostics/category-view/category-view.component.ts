@@ -12,10 +12,11 @@ import { DiagProcess } from '@domain/DiagProcess';
 import { OperationSet } from '@domain/DiagResponse';
 import { EventSinkViewComponent } from '@app/diagnostics/event-sink-view/event-sink-view.component';
 import { EventModel } from '@model/EventModel';
+import { PropertyHoverComponent } from '@app/diagnostics/property-hover/property-hover.component';
 
 @Component({
     selector: 'app-category-view',
-    imports: [Panel, PanelModule, Fieldset, EventSinkViewComponent],
+    imports: [Panel, PanelModule, Fieldset, EventSinkViewComponent, PropertyHoverComponent],
     templateUrl: './category-view.component.html',
     styleUrl: './category-view.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +29,8 @@ export class CategoryViewComponent {
     category = input.required<CategoryModel>();
     process = input.required<DiagProcess>();
     flatRoot = input(false);
+    maxPropertyColumns = input<number>();
+    breadcrumbs = input<readonly string[]>([]);
     dialogService = inject(DialogService);
     eventSelected = output<EventModel>();
 
@@ -65,9 +68,10 @@ export class CategoryViewComponent {
         });
     }
 
-    async showDrillDown(path: string): Promise<void> {
+    async showDrillDown(path: string, name: string): Promise<void> {
         const { DrillDownDialogComponent } = await import('@app/diagnostics/drill-down-dialog/drill-down-dialog.component');
         const objectPaths = [...this.category().realtimeModel.objectPaths, path];
+        const breadcrumbs = [...this.breadcrumbs(), name];
         const cascadeLevel = CategoryViewComponent.reserveDrillDownLevel();
         const cascadeOffset = Math.min(cascadeLevel, 5);
 
@@ -85,7 +89,8 @@ export class CategoryViewComponent {
             contentStyle: { overflow: 'hidden', height: '100%' },
             inputValues: {
                 process: this.process(),
-                objectPaths
+                objectPaths,
+                breadcrumbs
             }
         });
 
@@ -110,11 +115,12 @@ export class CategoryViewComponent {
         return level;
     }
 
-    private static dismissDrillDowns(): void {
-        const dialogs = Array.from(CategoryViewComponent.activeDrillDowns);
-        CategoryViewComponent.activeDrillDowns.clear();
-        CategoryViewComponent.stopWatchingForOutsideClick();
-        dialogs.forEach((dialog) => dialog.close());
+    private static dismissTopmostDrillDown(): boolean {
+        const topmostDialog = Array.from(CategoryViewComponent.activeDrillDowns).at(-1);
+        if (!topmostDialog) return false;
+
+        topmostDialog.close();
+        return true;
     }
 
     private static watchForOutsideClick(): void {
@@ -136,17 +142,14 @@ export class CategoryViewComponent {
     private static readonly onDocumentPointerDown = (event: PointerEvent): void => {
         if (event.target instanceof Element && event.target.closest('.p-dialog')) return;
 
-        CategoryViewComponent.dismissDrillDowns();
+        CategoryViewComponent.dismissTopmostDrillDown();
     };
 
     private static readonly onDocumentKeyDown = (event: KeyboardEvent): void => {
         if (event.key !== 'Escape') return;
-
-        const topmostDialog = Array.from(CategoryViewComponent.activeDrillDowns).at(-1);
-        if (!topmostDialog) return;
+        if (!CategoryViewComponent.dismissTopmostDrillDown()) return;
 
         event.preventDefault();
         event.stopPropagation();
-        topmostDialog.close();
     };
 }

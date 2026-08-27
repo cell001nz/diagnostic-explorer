@@ -128,6 +128,10 @@ public sealed class SelfHostWebHub : Microsoft.AspNetCore.SignalR.Hub<ISelfHostC
 
     public Task<SelfHostProcessInfo> GetProcessInfo() => Task.FromResult(_manager.GetProcessInfo());
 
+    public Task<int> GetDiagnosticsRefreshInterval() => Task.FromResult(_manager.GetDiagnosticsRefreshInterval());
+
+    public Task<int> SetDiagnosticsRefreshInterval(int seconds) => Task.FromResult(_manager.SetDiagnosticsRefreshInterval(seconds));
+
     public Task Subscribe(string processId) => _manager.SubscribeAsync(Context.ConnectionId, processId);
 
     public Task Unsubscribe(string processId)

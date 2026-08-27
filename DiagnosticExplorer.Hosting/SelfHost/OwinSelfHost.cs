@@ -124,6 +124,10 @@ public sealed class SelfHostWebHub : Hub, ISelfHostHub
 
     public Task<SelfHostProcessInfo> GetProcessInfo() => Task.FromResult(Manager.GetProcessInfo());
 
+    public Task<int> GetDiagnosticsRefreshInterval() => Task.FromResult(Manager.GetDiagnosticsRefreshInterval());
+
+    public Task<int> SetDiagnosticsRefreshInterval(int seconds) => Task.FromResult(Manager.SetDiagnosticsRefreshInterval(seconds));
+
     public Task Subscribe(string processId) => Manager.SubscribeAsync(Context.ConnectionId, processId);
 
     public Task Unsubscribe(string processId)

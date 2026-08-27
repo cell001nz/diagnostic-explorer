@@ -21,9 +21,12 @@
 }
 
 .drilldown-title {
+    flex: 1 1 auto;
+    min-width: 0;
     margin: 0;
     font: inherit;
     font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 .drilldown-content {
@@ -88,20 +91,10 @@
     border-top: 1px solid var(--surface-border);
     transition: background 0.15s;
 
-    &:hover,
-    &:active {
-        background: #84cc16;
-    }
-
     .detail-divider-grip {
         width: 40px;
         height: 3px;
         border-radius: 3px;
         background: var(--text-color-secondary);
-    }
-
-    &:hover .detail-divider-grip,
-    &:active .detail-divider-grip {
-        background: #000;
     }
 }

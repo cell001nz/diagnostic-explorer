@@ -67,15 +67,16 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.IncludeAll();
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.PrimaryConfig).Named("Widget Config").AsDrillDownIcon();
+            options.Property(widget => widget.PrimaryConfig).Named("Widget Config").AsDrillDownIcon("View more details");
+            options.Property(widget => widget.SecondaryConfig).AsDrillDownIcon();
             options
                 .Custom(
                     "Config",
                     projection =>
                     {
                         projection.Property("Full name", widget => widget.FullName);
-                        projection.Extended("Primary config", widget => widget.PrimaryConfig);
-                        projection.Extended("Secondary config", widget => widget.SecondaryConfig);
+                        projection.Expanded("Primary config", widget => widget.PrimaryConfig);
+                        projection.Expanded("Secondary config", widget => widget.SecondaryConfig);
                         projection.Collection("Names", widget => _names).AsList();
                     }
                 )

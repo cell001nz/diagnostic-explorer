@@ -2,6 +2,12 @@
 import { DatePipe, LowerCasePipe } from '@angular/common';
 import { LevelToStringPipe } from '@app/pipes/level-to-string.pipe';
 import { EventModel } from '@model/EventModel';
+import { JsonToken, tokenizeJson } from '@app/diagnostics/json-tokenizer';
+
+interface JsonRange {
+    start: number;
+    end: number;
+}
 
 @Component({
     selector: 'app-event-detail-panel',
@@ -43,7 +49,7 @@ export class EventDetailPanelComponent {
                 segments.push({ text: detail.slice(position, jsonRange.start) });
             }
 
-            segments.push({ jsonTokens: this.tokenizeJson(detail.slice(jsonRange.start, jsonRange.end)) });
+            segments.push({ jsonTokens: tokenizeJson(detail.slice(jsonRange.start, jsonRange.end)) });
             position = jsonRange.end;
         }
 
@@ -111,43 +117,9 @@ export class EventDetailPanelComponent {
 
         return undefined;
     }
-
-    private tokenizeJson(json: string): JsonToken[] {
-        const tokenPattern = /("(?:\\["\\/bfnrt]|\\u[0-9a-fA-F]{4}|[^"\\])*")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}\[\],:])/g;
-        const tokens: JsonToken[] = [];
-        let lastIndex = 0;
-        let match: RegExpExecArray | null;
-
-        while ((match = tokenPattern.exec(json)) !== null) {
-            if (match.index > lastIndex) {
-                tokens.push({ text: json.slice(lastIndex, match.index) });
-            }
-
-            const text = match[0];
-            const type = match[1] ? (/^\s*:/.test(json.slice(tokenPattern.lastIndex)) ? 'json-key' : 'json-string') : match[2] ? 'json-number' : match[3] ? 'json-literal' : 'json-punctuation';
-            tokens.push({ text, type });
-            lastIndex = tokenPattern.lastIndex;
-        }
-
-        if (lastIndex < json.length) {
-            tokens.push({ text: json.slice(lastIndex) });
-        }
-
-        return tokens;
-    }
 }
 
 interface DetailSegment {
     text?: string;
     jsonTokens?: JsonToken[];
-}
-
-interface JsonRange {
-    start: number;
-    end: number;
-}
-
-interface JsonToken {
-    text: string;
-    type?: 'json-key' | 'json-string' | 'json-number' | 'json-literal' | 'json-punctuation';
 }

@@ -126,7 +126,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     [DiagnosticProperty(AllowSet = true)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public int SetMePlease { get; set; }
+    public long SetMePlease { get; set; } = -1234L;
 
     [DiagnosticProperty(AllowSet = false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -157,7 +157,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
         config.Configure<Form1>(options =>
         {
             options.ExcludeAll();
-            options.Extended(form => form.NullWidget).Category("NullWidget category");
+            options.Expanded(form => form.NullWidget).Category("NullWidget category");
             options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
             options.Property(form => form.SetMePlease).AllowSet();
             options.Property(form => form.Counter2);
@@ -178,11 +178,11 @@ public partial class Form1 : Form, INotifyPropertyChanged
             {
                 options.Property(form => form.WidgetIdCount);
                 options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
-                options.Collection("Widgety Things", form => form._widgets).WithDrillDown();
+                options.Collection("Widgety Things", form => form._widgets).AsDrillDown();
                 options
                     .Collection("Widgets from method", form => form.GetWidgets())
-                    .AsList(config => config.Name(obj => obj.FullName).Value(obj => "Show Detail"))
-                    .WithDrillDown();
+                    .AsList(config => config.Name(obj => obj.FullName))
+                    .AsDrillDownIcon();
             }
 
             using (options.CreateCategoryScope("Gadgets"))
@@ -202,7 +202,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
                             .Description(gadget => $"Description for {gadget.Name}")
                     )
                     .WithMaxItems(int.MaxValue)
-                    .WithDrillDown();
+                    .AsDrillDown();
             }
         });
     }

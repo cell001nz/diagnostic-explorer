@@ -28,6 +28,8 @@ interface SelfHostOperationResponse {
 interface SelfHostConnection {
     start(): Promise<void>;
     getProcessInfo(): Promise<SelfHostProcessInfo>;
+    getDiagnosticsRefreshInterval(): Promise<number>;
+    setDiagnosticsRefreshInterval(seconds: number): Promise<number>;
     subscribe(processId: string): Promise<void>;
     unsubscribe(processId: string): Promise<void>;
     setProperty(path: string, value: string): Promise<SelfHostOperationResponse>;
@@ -42,6 +44,7 @@ export class SelfHostDiagHubService {
     readonly connectionState = signal<'connecting' | 'connected' | 'disconnected'>('connecting');
     readonly error = signal('');
     readonly process = signal<DiagProcess | undefined>(undefined);
+    readonly diagnosticsRefreshIntervalSeconds = signal(2);
     readonly diagsArrived$ = new Subject<{ processId: string; response: DiagnosticResponse }>();
     readonly logStreamInitialized$ = new Subject<{ processId: string; initialization: LogStreamInitialization }>();
     readonly logStreamEvents$ = new Subject<{ processId: string; events: LogStreamEvent[] }>();
@@ -62,6 +65,11 @@ export class SelfHostDiagHubService {
 
     async unsubscribeProcess(processId: string): Promise<void> {
         await (await this.getConnection()).unsubscribe(processId);
+    }
+
+    async setDiagnosticsRefreshInterval(seconds: number): Promise<void> {
+        const interval = await (await this.getConnection()).setDiagnosticsRefreshInterval(seconds);
+        this.diagnosticsRefreshIntervalSeconds.set(interval);
     }
 
     async setPropertyValue(processId: string, request: SetPropertyRequest): Promise<OperationResponse> {
@@ -104,6 +112,7 @@ export class SelfHostDiagHubService {
                 const connection = selfHostTransport === 'signalr2' ? await this.createSignalR2Connection() : this.createCoreConnection();
                 await connection.start();
                 this.process.set(this.toDiagProcess(await connection.getProcessInfo()));
+                this.diagnosticsRefreshIntervalSeconds.set(await connection.getDiagnosticsRefreshInterval());
                 this.connectionState.set('connected');
                 return connection;
             })().catch((error) => {
@@ -136,6 +145,8 @@ export class SelfHostDiagHubService {
         return {
             start: () => connection.start(),
             getProcessInfo: () => connection.invoke<SelfHostProcessInfo>('GetProcessInfo'),
+            getDiagnosticsRefreshInterval: () => connection.invoke<number>('GetDiagnosticsRefreshInterval'),
+            setDiagnosticsRefreshInterval: (seconds) => connection.invoke<number>('SetDiagnosticsRefreshInterval', seconds),
             subscribe: (processId) => connection.invoke('Subscribe', processId),
             unsubscribe: (processId) => connection.invoke('Unsubscribe', processId),
             setProperty: (path, value) => connection.invoke<SelfHostOperationResponse>('SetProperty', LOCAL_PROCESS_ID, { path, value }),
@@ -168,6 +179,8 @@ export class SelfHostDiagHubService {
         return {
             start: () => this.toPromise<void>(connection.start()),
             getProcessInfo: () => this.toPromise<SelfHostProcessInfo>(hub.server.getProcessInfo()),
+            getDiagnosticsRefreshInterval: () => this.toPromise<number>(hub.server.getDiagnosticsRefreshInterval()),
+            setDiagnosticsRefreshInterval: (seconds) => this.toPromise<number>(hub.server.setDiagnosticsRefreshInterval(seconds)),
             subscribe: (processId) => this.toPromise<void>(hub.server.subscribe(processId)),
             unsubscribe: (processId) => this.toPromise<void>(hub.server.unsubscribe(processId)),
             setProperty: (path, value) => this.toPromise<SelfHostOperationResponse>(hub.server.setProperty(LOCAL_PROCESS_ID, { path, value })),

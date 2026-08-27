@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
 using DiagnosticExplorer.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -450,6 +451,9 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
+    public ConfiguredValue<string> DrillDownText { get; set; }
+    public ConfiguredValue<bool> JsonHover { get; set; }
+    public ConfiguredValue<bool> ExpandedHover { get; set; }
     public List<CollectionOutputConfiguration> CollectionOutputs { get; } = new();
 
     public PropertyConfiguration Clone()
@@ -502,6 +506,9 @@ internal sealed class PropertyConfiguration
         DrillDown = source.DrillDown.Or(DrillDown);
         DrillDownMaxItems = source.DrillDownMaxItems.Or(DrillDownMaxItems);
         DrillDownIconOnly = source.DrillDownIconOnly.Or(DrillDownIconOnly);
+        DrillDownText = source.DrillDownText.Or(DrillDownText);
+        JsonHover = source.JsonHover.Or(JsonHover);
+        ExpandedHover = source.ExpandedHover.Or(ExpandedHover);
         Alerts.AddRange(source.Alerts.Select(alert => alert.Clone()));
         if (source.CollectionOutputs.Count > 0)
         {
@@ -548,10 +555,14 @@ internal sealed class CustomPropertyConfiguration
     public Func<object, string> CategoryFormatter { get; set; }
     public ConfiguredValue<string> Description { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
+    public Func<object, string> ValueFormatter { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
+    public ConfiguredValue<string> DrillDownText { get; set; }
+    public ConfiguredValue<bool> JsonHover { get; set; }
+    public ConfiguredValue<bool> ExpandedHover { get; set; }
 
     public CustomPropertyConfiguration Clone()
     {
@@ -561,9 +572,13 @@ internal sealed class CustomPropertyConfiguration
             CategoryFormatter = CategoryFormatter,
             Description = Description,
             DescriptionFormatter = DescriptionFormatter,
+            ValueFormatter = ValueFormatter,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
             DrillDownIconOnly = DrillDownIconOnly,
+            DrillDownText = DrillDownText,
+            JsonHover = JsonHover,
+            ExpandedHover = ExpandedHover,
         };
         clone.Alerts.AddRange(Alerts.Select(alert => alert.Clone()));
         return clone;
@@ -577,9 +592,13 @@ internal sealed class CustomPropertyConfiguration
             CategoryFormatter = CategoryFormatter == null ? null : _ => CategoryFormatter(source),
             Description = Description,
             DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source),
+            ValueFormatter = ValueFormatter,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
             DrillDownIconOnly = DrillDownIconOnly,
+            DrillDownText = DrillDownText,
+            JsonHover = JsonHover,
+            ExpandedHover = ExpandedHover,
         };
         bound.Alerts.AddRange(
             Alerts.Select(alert => new PropertyAlertConfiguration(
@@ -760,10 +779,10 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
 
     public IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property) => ConfigureDate(property);
 
-    public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(Expression<Func<T, TProperty>> property)
+    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(Expression<Func<T, TProperty>> property)
     {
         if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
-            return Extended(field.Name, property.Compile());
+            return Expanded(field.Name, property.Compile());
 
         PropertyConfiguration configuration = GetProperty(property);
         configuration.Included = true;
@@ -773,7 +792,7 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
     }
 
-    public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value)
+    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value)
     {
         PropertyConfiguration configuration = AddDelegateProperty(name, typeof(TProperty), value, PropertyStrategy.Extended);
         return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
@@ -998,6 +1017,36 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
+    public IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100)
+    {
+        if (maxLength <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxLength), "JSON max length must be greater than zero.");
+
+        Configuration.ValueFormatter = value =>
+        {
+            string json = JsonSerializer.Serialize((TProperty)value);
+            return json.Substring(0, Math.Min(maxLength, json.Length));
+        };
+        return this;
+    }
+
+    public IPropertyConfigurator<T, TProperty> AsDateOnly()
+    {
+        Type valueType = Nullable.GetUnderlyingType(typeof(TProperty)) ?? typeof(TProperty);
+        if (valueType != typeof(DateTime) && valueType != typeof(DateTimeOffset))
+            throw new InvalidOperationException("Date-only formatting requires a DateTime or DateTimeOffset property.");
+
+        Configuration.ValueFormatter = value =>
+        {
+            if (value is DateTime date)
+                return date.ToString("d");
+            if (value is DateTimeOffset dateTimeOffset)
+                return dateTimeOffset.ToString("d");
+            return null;
+        };
+        return this;
+    }
+
     public IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null)
     {
         ConfigureDrillDown(Configuration, enabled, maxItems, false);
@@ -1010,13 +1059,37 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
-    private static void ConfigureDrillDown(PropertyConfiguration configuration, bool enabled, int? maxItems, bool iconOnly)
+    public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(string text, int? maxItems = null)
+    {
+        ConfigureDrillDown(Configuration, true, maxItems, true, text);
+        return this;
+    }
+
+    public IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true)
+    {
+        Configuration.JsonHover = new ConfiguredValue<bool>(enabled);
+        Configuration.ExpandedHover = new ConfiguredValue<bool>(false);
+        return this;
+    }
+
+    public IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true)
+    {
+        Configuration.JsonHover = new ConfiguredValue<bool>(false);
+        Configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
+        return this;
+    }
+
+    private static void ConfigureDrillDown(PropertyConfiguration configuration, bool enabled, int? maxItems, bool iconOnly, string text = null)
     {
         if (maxItems <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+        if (text != null && string.IsNullOrWhiteSpace(text))
+            throw new ArgumentException("Drilldown text is required.", nameof(text));
 
         configuration.DrillDown = new ConfiguredValue<bool>(enabled);
         configuration.DrillDownIconOnly = new ConfiguredValue<bool>(iconOnly);
+        if (text != null)
+            configuration.DrillDownText = new ConfiguredValue<string>(text);
         if (maxItems.HasValue)
             configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
     }
@@ -1095,6 +1168,19 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         _configuration = configuration;
     }
 
+    public ICustomPropertyConfigurator<T> AsJson(int maxLength = 100)
+    {
+        if (maxLength <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxLength), "JSON max length must be greater than zero.");
+
+        _configuration.ValueFormatter = value =>
+        {
+            string json = JsonSerializer.Serialize(value);
+            return json.Substring(0, Math.Min(maxLength, json.Length));
+        };
+        return this;
+    }
+
     public ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null)
     {
         if (maxItems <= 0)
@@ -1115,6 +1201,30 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         _configuration.DrillDownIconOnly = new ConfiguredValue<bool>(true);
         if (maxItems.HasValue)
             _configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
+    }
+
+    public ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            throw new ArgumentException("Drilldown text is required.", nameof(text));
+
+        AsDrillDownIcon(maxItems);
+        _configuration.DrillDownText = new ConfiguredValue<string>(text);
+        return this;
+    }
+
+    public ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true)
+    {
+        _configuration.JsonHover = new ConfiguredValue<bool>(enabled);
+        _configuration.ExpandedHover = new ConfiguredValue<bool>(false);
+        return this;
+    }
+
+    public ICustomPropertyConfigurator<T> WithExpandedHover(bool enabled = true)
+    {
+        _configuration.JsonHover = new ConfiguredValue<bool>(false);
+        _configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
         return this;
     }
 
@@ -1253,7 +1363,7 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null)
+    public ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null)
     {
         if (maxItems <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
@@ -1261,6 +1371,28 @@ internal sealed class CollectionConfigurator<T, TItem>
         Configuration.DrillDown = new ConfiguredValue<bool>(enabled);
         if (maxItems.HasValue)
             Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        Configuration.DrillDown = new ConfiguredValue<bool>(true);
+        Configuration.DrillDownIconOnly = new ConfiguredValue<bool>(true);
+        if (maxItems.HasValue)
+            Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            throw new ArgumentException("Drilldown text is required.", nameof(text));
+
+        AsDrillDownIcon(maxItems);
+        Configuration.DrillDownText = new ConfiguredValue<string>(text);
         return this;
     }
 

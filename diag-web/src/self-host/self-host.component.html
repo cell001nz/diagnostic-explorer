@@ -16,15 +16,24 @@
 
     @if (process(); as localProcess) {
         <div class="self-host-content grid grid-rows-[auto_minmax(0,1fr)_auto] h-screen">
-            <div>
-                <p class="float-left cursor-pointer" (click)="expandCollapse()">
+            <div class="self-host-header">
+                <p class="self-host-process-title cursor-pointer" (click)="expandCollapse()">
                     {{ localProcess.machineName }}
                     / {{ localProcess.name }}
                     <span class="text-xs">({{ localProcess.id }})</span>
                 </p>
-                <span class="text-lime-500 float-right opacity-70 hover:opacity-100">
-                    <span class="mr-6">{{ processModel().titleMessage() }}</span>
-                </span>
+                <div class="self-host-status">
+                    <div class="refresh-interval" title="Diagnostics refresh interval">
+                        <i class="pi pi-sync"></i>
+                        <p-slider
+                            class="refresh-interval-slider"
+                            [min]="1" [max]="10" [step]="1"
+                            [ngModel]="diagnosticsRefreshIntervalSeconds()"
+                            (onChange)="setDiagnosticsRefreshInterval($any($event).value)"></p-slider>
+                        <span>{{ diagnosticsRefreshIntervalSeconds() }}s</span>
+                    </div>
+                    <span class="text-lime-500 opacity-70 hover:opacity-100">{{ processModel().titleMessage() }}</span>
+                </div>
             </div>
 
             @if (error()) {

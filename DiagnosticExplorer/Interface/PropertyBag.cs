@@ -59,6 +59,7 @@ public class PropertyBag
         if (string.IsNullOrWhiteSpace(category))
             category = "General";
 
+        property.InferValueKind();
         Category cat = FindOrCreateCategory(category);
         cat.Properties.Add(property);
     }

@@ -12,6 +12,8 @@
 
 export interface DrillDownRequest {
     objectPaths: string[];
+    jsonHover?: boolean;
+    excludeEventViews?: boolean;
 }
 
 export interface DrillDownResponse {
@@ -22,6 +24,7 @@ export interface DrillDownResponse {
     errorMessage?: string;
     errorDetail?: string;
     eventViews: DrillDownEventViewDefinition[];
+    json?: string;
 }
 
 export interface DrillDownEventMatcher {
@@ -56,11 +59,15 @@ export interface SubBag {
 export interface Property {
     name: string;
     value: string | null;
+    valueKind?: number | string;
     description: string;
     operationSet: string;
     canSet: boolean;
     canDrillDown: boolean;
     drillDownIconOnly: boolean;
+    drillDownText?: string;
+    canJsonHover?: boolean;
+    canExpandedHover?: boolean;
     alerts: PropertyAlert[];
 }
 
@@ -100,7 +107,7 @@ export interface LogStreamEvent {
 }
 
 export interface LogStreamRouteValue {
-    source: number;
+    source: number | string;
     value?: string;
 }
 
@@ -112,7 +119,7 @@ export interface LogStreamRouteDestination {
 export interface LogStreamRoute {
     order: number;
     loggerName: string;
-    loggerNameMatchMode: number;
+    loggerNameMatchMode: number | string;
     minLevel?: number;
     maxLevel?: number;
     stopProcessing: boolean;
@@ -120,7 +127,7 @@ export interface LogStreamRoute {
 }
 
 export interface LogStreamRoutingConfiguration {
-    matchMode: number;
+    matchMode: number | string;
     routes: LogStreamRoute[];
 }
 

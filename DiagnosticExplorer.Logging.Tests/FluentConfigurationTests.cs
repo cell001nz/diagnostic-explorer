@@ -73,6 +73,26 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void RenderedPropertiesExposeValueKinds()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<ValueKindSample>(type => type.IncludeAll());
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new ValueKindSample());
+
+        Assert.Equal(PropertyValueKind.Text, bag.GetProperty(nameof(ValueKindSample.Text), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.PositiveNumber, bag.GetProperty(nameof(ValueKindSample.Positive), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.ZeroNumber, bag.GetProperty(nameof(ValueKindSample.Zero), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.NegativeNumber, bag.GetProperty(nameof(ValueKindSample.Negative), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.DateTime, bag.GetProperty(nameof(ValueKindSample.Timestamp), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.Duration, bag.GetProperty(nameof(ValueKindSample.Duration), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.Boolean, bag.GetProperty(nameof(ValueKindSample.Enabled), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.Enumeration, bag.GetProperty(nameof(ValueKindSample.Status), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.Object, bag.GetProperty(nameof(ValueKindSample.Details), "General").ValueKind);
+    }
+
+    [Fact]
     public void RuntimeSettingsCanBeConfiguredFluently()
     {
         DiagnosticConfiguration configuration = new();
@@ -242,6 +262,55 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void FluentPropertyCanRenderAsJson()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<JsonFormatSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Details).AsJson();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new JsonFormatSample()).GetProperty(nameof(JsonFormatSample.Details), "General");
+
+        Assert.Equal("{\"Value\":\"JSON\"}", property.Value);
+    }
+
+    [Fact]
+    public void FluentPropertyCanRenderDateOnly()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DefaultFormatSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Value).AsDateOnly();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new DefaultFormatSample()).GetProperty(nameof(DefaultFormatSample.Value), "General");
+
+        Assert.Equal(new DateTime(2025, 1, 2).ToString("d"), property.Value);
+        Assert.Equal(PropertyValueKind.DateTime, property.ValueKind);
+    }
+
+    [Fact]
+    public void FluentPropertyCanLimitJsonOutput()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<JsonFormatSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Details).AsJson(12);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new JsonFormatSample()).GetProperty(nameof(JsonFormatSample.Details), "General");
+
+        Assert.Equal("{\"Value\":\"JS", property.Value);
+    }
+
+    [Fact]
     public void FluentPropertyMetadataCanUseContainingObjectDelegates()
     {
         DiagnosticConfiguration configuration = new();
@@ -353,13 +422,29 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void NamedPropertyCanRenderAsJson()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property("Computed", sample => sample.First + sample.Second).AsJson();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new ReplacementSample()).GetProperty("Computed", "General");
+
+        Assert.Equal("\"FirstSecond\"", property.Value);
+    }
+
+    [Fact]
     public void NamedPropertyCanRenderAsDrillDownIcon()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<StrategySample>(type =>
         {
             type.ExcludeAll();
-            type.Property("Details", sample => sample.Details).AsDrillDownIcon();
+            type.Property("Details", sample => sample.Details).AsDrillDownIcon("View more details");
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -367,7 +452,81 @@ public sealed class FluentConfigurationTests : IDisposable
 
         Assert.True(property.CanDrillDown);
         Assert.True(property.DrillDownIconOnly);
+        Assert.Equal("View more details", property.DrillDownText);
         Assert.Null(property.Value);
+    }
+
+    [Fact]
+    public void PropertyCanFetchJsonHoverOnDemand()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Child).WithJsonHover();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        Property property = Render(root).GetProperty(nameof(DrillDownRoot.Child), "General");
+
+        Assert.True(property.CanJsonHover);
+        Assert.False(property.CanExpandedHover);
+        Assert.False(property.CanDrillDown);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest
+            {
+                ObjectPaths = new List<string> { "Tests|Root|General|Child" },
+                JsonHover = true,
+                ExcludeEventViews = true,
+            }
+        );
+
+        Assert.False(string.IsNullOrWhiteSpace(response.Json));
+        Assert.Contains(Environment.NewLine, response.Json);
+        Assert.Empty(response.EventViews);
+    }
+
+    [Fact]
+    public void PropertyCanRenderExpandedHoverWithoutEventViews()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<DrillDownRoot>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Child).WithExpandedHover();
+        });
+        configuration.ConfigureDrillDown<ChildSample>(type =>
+            type.Route("Tests.Child", LoggerNameMatchMode.Exact, route => route.To("Hover", "Events"))
+        );
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        Property property = Render(root).GetProperty(nameof(DrillDownRoot.Child), "General");
+
+        Assert.False(property.CanJsonHover);
+        Assert.True(property.CanExpandedHover);
+        Assert.False(property.CanDrillDown);
+
+        DrillDownResponse normalResponse = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+        );
+        Assert.NotEmpty(normalResponse.EventViews);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest
+            {
+                ObjectPaths = new List<string> { "Tests|Root|General|Child" },
+                ExcludeEventViews = true,
+            }
+        );
+
+        Assert.NotEmpty(response.Diagnostics.PropertyBags);
+        Assert.Empty(response.EventViews);
     }
 
     [Fact]
@@ -380,7 +539,7 @@ public sealed class FluentConfigurationTests : IDisposable
                     projection =>
                     {
                         projection.Property("Name", root => "Projection");
-                        projection.Extended("Child", root => root.Child);
+                        projection.Expanded("Child", root => root.Child);
                         projection
                             .Collection("Items", root => root.Items)
                             .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
@@ -844,7 +1003,9 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithDrillDown();
+            type.Collection(sample => sample.Items)
+                .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()))
+                .AsDrillDownIcon();
         });
         configuration.Configure<CollectionItem>(type =>
         {
@@ -856,6 +1017,7 @@ public sealed class FluentConfigurationTests : IDisposable
         CollectionSample sample = new();
         PropertyBag bag = DiagnosticManager.ObjectToPropertyBag(sample, "Collection", "Tests");
         Assert.True(bag.GetProperty("One", "General").CanDrillDown);
+        Assert.True(bag.GetProperty("One", "General").DrillDownIconOnly);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Collection") },
@@ -966,7 +1128,7 @@ public sealed class FluentConfigurationTests : IDisposable
             type.ExcludeAll();
             type.Rate(sample => sample.Requests).Named("Requests").ShowRate(false).ShowTotal();
             type.Date(sample => sample.Started).ShowDate(false).ShowElapsed();
-            type.Extended(sample => sample.Details).Named("Details");
+            type.Expanded(sample => sample.Details).Named("Details");
         });
         configuration.Configure<ChildSample>(type =>
         {
@@ -996,7 +1158,7 @@ public sealed class FluentConfigurationTests : IDisposable
             type.Collection(sample => sample.Items).Concatenate(", ").WithMaxItems(2);
             type.Rate(sample => sample.Requests).ShowRate(false).ShowTotal();
             type.Date(sample => sample.Started).ShowDate(false).ShowElapsed();
-            type.Extended(sample => sample.Details).Named("Configured details");
+            type.Expanded(sample => sample.Details).Named("Configured details");
         });
         configuration.Configure<ChildSample>(type =>
         {
@@ -1321,6 +1483,19 @@ public sealed class FluentConfigurationTests : IDisposable
         Ready,
     }
 
+    private sealed class ValueKindSample
+    {
+        public string Text { get; } = "Text";
+        public int Positive { get; } = 1;
+        public int Zero { get; }
+        public int Negative { get; } = -1;
+        public DateTime Timestamp { get; } = new(2025, 1, 2);
+        public TimeSpan Duration { get; } = TimeSpan.FromMinutes(1);
+        public bool Enabled { get; } = true;
+        public DefaultScalarStatus Status { get; } = DefaultScalarStatus.Ready;
+        public object Details { get; } = new();
+    }
+
     private sealed class CollectionSample
     {
         public IList<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1), new("Two", 2), new("Three", 3) };
@@ -1357,6 +1532,16 @@ public sealed class FluentConfigurationTests : IDisposable
         internal readonly string _value = "Value";
     }
 
+    private sealed class JsonFormatSample
+    {
+        public JsonFormatDetails Details { get; } = new();
+    }
+
+    private sealed class JsonFormatDetails
+    {
+        public string Value { get; } = "JSON";
+    }
+
     private sealed class StrategySample
     {
         public RateCounter Requests { get; } = new(5);
@@ -1367,12 +1552,12 @@ public sealed class FluentConfigurationTests : IDisposable
 
         public static void ConfigurePrivateDetails(ITypeConfigurator<StrategySample> type)
         {
-            type.Extended("Private details", sample => sample._privateDetails);
+            type.Expanded("Private details", sample => sample._privateDetails);
         }
 
         public static void ConfigurePrivateDetailsFromField(ITypeConfigurator<StrategySample> type)
         {
-            type.Extended(sample => sample._privateDetails);
+            type.Expanded(sample => sample._privateDetails);
         }
     }
 

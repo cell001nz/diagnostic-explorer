@@ -25,7 +25,7 @@ internal static class DiagnosticsConfiguration
         config.ApplyAttributes = false;
         config.RegisterObjects(FindRegisteredObjects);
 
-        config.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss.fff}");
+        config.DefaultFormat<DateTime>("{0:d MMM yyyy HH:mm:ss.fff}");
         config.DefaultFormat<Point>("Located at {0}");
 
         Form1.ConfigureDiagnostics(config);
@@ -47,12 +47,11 @@ internal static class DiagnosticsConfiguration
     private static void ConfigureEventRouting(EventSinkRouteOptions routes)
     {
         routes
-            .UseMatchMode(EventSinkRouteMatchMode.FirstMatch)
+            .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
             .Route(typeof(Widget).FullName, route => route.AtLeast(LogLevel.Information).To(RouteValue.LoggerSuffix, "Widget Events2"))
             .Route(typeof(Gadget).FullName, route => route.AtLeast(LogLevel.Information).To("Form 1", "Gadget Events"))
             .Route("WidgetSample.Form1", route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
-            .Route("*", route => route.AtLeast(LogLevel.Warning).AtMost(LogLevel.Warning).To("System", "Warnings"))
-            .Route("*", route => route.AtLeast(LogLevel.Error).To("System", "Errors"));
+            .Route("*", route => route.To("System", "Events"));
     }
 
     private static void ConfigureWidgetConfig(IDiagConfigurator config)
@@ -60,7 +59,7 @@ internal static class DiagnosticsConfiguration
         config.Configure<WidgetConfig>(options =>
         {
             options.IncludeAll();
-            options.Extended(configuration => configuration.Connection).Category("Connection");
+            options.Expanded(configuration => configuration.Connection).Category("Connection");
             options
                 .Collection(configuration => configuration.Items)
                 .AsList(items =>
@@ -70,7 +69,7 @@ internal static class DiagnosticsConfiguration
                         .Value(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
                         .Description(item => $"Installed {item.InstalledDate:d MMM yyyy}")
                 )
-                .WithDrillDown();
+                .AsDrillDown();
         });
 
         config.Configure<WidgetConfigItem>(options => options.IncludeAll());
@@ -84,7 +83,7 @@ internal static class DiagnosticsConfiguration
             options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Purpose).AllowSet();
-            options.Extended(gadget => gadget.Configuration).Category("Configuration");
+            options.Expanded(gadget => gadget.Configuration).Category("Configuration");
         });
 
         config.ConfigureDrillDown<Gadget>(options =>
@@ -92,7 +91,7 @@ internal static class DiagnosticsConfiguration
             options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
-            options.Extended(gadget => gadget.Configuration);
+            options.Expanded(gadget => gadget.Configuration);
             options.Route(
                 gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
                 LoggerNameMatchMode.Exact,
@@ -106,12 +105,23 @@ internal static class DiagnosticsConfiguration
         config.Configure<GadgetConfig>(options =>
         {
             options.IncludeAll();
-            options.Extended(configuration => configuration.Power).Category("Power");
-            options.Extended(configuration => configuration.Network).Category("Network");
-            options.Extended(configuration => configuration.Maintenance).Category("Maintenance");
+            // options.Expanded(obj => obj.Power).Category("Power");
+            options.Property(obj => obj.CommissionedOn).AsDateOnly();
+            options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
+            options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
+            options
+                .Property("Network2 This has a very very long name which is very long", obj => obj.Network)
+                .AsJson(100)
+                .WithExpandedHover()
+                .WithDrillDown();
+            options.Expanded(obj => obj.Network).Category("Network");
+            options.Expanded(obj => obj.Maintenance).Category("Maintenance");
         });
 
-        config.Configure<GadgetPowerConfig>(options => options.IncludeAll());
+        config.Configure<GadgetPowerConfig>(options =>
+        {
+            options.IncludeAll();
+        });
         config.Configure<GadgetNetworkConfig>(options => options.IncludeAll());
         config.Configure<GadgetMaintenanceConfig>(options => options.IncludeAll());
     }

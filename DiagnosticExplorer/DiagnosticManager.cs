@@ -1120,6 +1120,17 @@ public static class DiagnosticManager
         try
         {
             DrillDownTarget target = ResolveDrillDownTarget(registeredObjects, request?.ObjectPaths);
+            if (request?.JsonHover == true)
+            {
+                return new DrillDownResponse
+                {
+                    Json = System.Text.Json.JsonSerializer.Serialize(
+                        target.Value,
+                        new System.Text.Json.JsonSerializerOptions { WriteIndented = true }
+                    ),
+                };
+            }
+
             DrillDownMaterialization materialized = MaterializeDrillDown(target);
             return new DrillDownResponse
             {
@@ -1127,7 +1138,10 @@ public static class DiagnosticManager
                 DisplayedCount = materialized.DisplayedCount,
                 TotalCount = materialized.TotalCount,
                 IsTruncated = materialized.IsTruncated,
-                EventViews = ResolveDrillDownEventViews(materialized.RegisteredObjects),
+                EventViews =
+                    request?.ExcludeEventViews == true
+                        ? new List<DrillDownEventViewDefinition>()
+                        : ResolveDrillDownEventViews(materialized.RegisteredObjects),
             };
         }
         catch (Exception ex)

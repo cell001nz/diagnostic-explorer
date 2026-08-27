@@ -17,6 +17,8 @@ public interface ISelfHostClient
 public interface ISelfHostHub
 {
     Task<SelfHostProcessInfo> GetProcessInfo();
+    Task<int> GetDiagnosticsRefreshInterval();
+    Task<int> SetDiagnosticsRefreshInterval(int seconds);
     Task Subscribe(string processId);
     Task Unsubscribe(string processId);
     Task<DrillDownResponse> GetDrillDown(string processId, DrillDownRequest request);

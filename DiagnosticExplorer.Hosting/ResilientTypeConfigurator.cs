@@ -58,11 +58,11 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
     public IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property) =>
         Try(() => _inner.Date(property), new NoOpDateConfigurator(), "Date");
 
-    public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(Expression<Func<T, TProperty>> property) =>
-        Try(() => _inner.Extended(property), new NoOpExtendedPropertyConfigurator<TProperty>(), "Extended");
+    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(Expression<Func<T, TProperty>> property) =>
+        Try(() => _inner.Expanded(property), new NoOpExtendedPropertyConfigurator<TProperty>(), "Extended");
 
-    public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value) =>
-        Try(() => _inner.Extended(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Extended");
+    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value) =>
+        Try(() => _inner.Expanded(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Extended");
 
     public ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure) =>
         Try(() => _inner.Route(loggerName, matchMode, configure), this, "Route");
@@ -124,9 +124,19 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public IPropertyConfigurator<T, TProperty> Format(Func<TProperty, string> format) => this;
 
+        public IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100) => this;
+
+        public IPropertyConfigurator<T, TProperty> AsDateOnly() => this;
+
         public IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
 
         public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null) => this;
+
+        public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(string text, int? maxItems = null) => this;
+
+        public IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true) => this;
+
+        public IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true) => this;
 
         public IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message) => this;
 
@@ -147,9 +157,17 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
     private sealed class NoOpCustomPropertyConfigurator : ICustomPropertyConfigurator<T>
     {
+        public ICustomPropertyConfigurator<T> AsJson(int maxLength = 100) => this;
+
         public ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
 
         public ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null) => this;
+
+        public ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null) => this;
+
+        public ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true) => this;
+
+        public ICustomPropertyConfigurator<T> WithExpandedHover(bool enabled = true) => this;
 
         public ICustomPropertyConfigurator<T> Category(string category) => this;
 
@@ -190,8 +208,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value) =>
             _owner.Try(() => _inner.Property(name, value), new NoOpCustomPropertyConfigurator(), "Custom property");
 
-        public IExtendedPropertyConfigurator<T, TProperty> Extended<TProperty>(string name, Func<T, TProperty> value) =>
-            _owner.Try(() => _inner.Extended(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Custom extended property");
+        public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value) =>
+            _owner.Try(() => _inner.Expanded(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Custom extended property");
 
         public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value) =>
             _owner.Try(() => _inner.Collection(name, value), new NoOpCollectionConfigurator<TItem>(), "Custom collection");
@@ -241,7 +259,11 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems) => this;
 
-        public ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
+        public ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null) => this;
+
+        public ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null) => this;
+
+        public ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null) => this;
     }
 
     private sealed class NoOpRateConfigurator : IRateConfigurator<T>

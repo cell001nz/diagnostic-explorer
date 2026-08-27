@@ -57,7 +57,7 @@ When disabled, property rendering ignores `DiagnosticClassAttribute`, all diagno
 
 ## Inclusion
 
-`ExcludeAll()` excludes ordinary properties unless selected with `Include`, `Property`, `Collection`, `Rate`, `Date`, or `Extended`. Properties with a non-ignored diagnostic property attribute remain included.
+`ExcludeAll()` excludes ordinary properties unless selected with `Include`, `Property`, `Collection`, `Rate`, `Date`, or `Expanded`. Properties with a non-ignored diagnostic property attribute remain included.
 
 `IncludeAll()` includes public properties by default. Existing `Browsable(false)` and ignored diagnostic properties remain excluded unless explicitly included.
 
@@ -134,10 +134,10 @@ type.Collection("Queued work", service => service.GetQueuedWork())
 
 `WithMaxItems` limits concatenated, list, and category output. Count always reports the full collection size.
 
-`Extended` also accepts a name and value delegate for computed or non-public nested objects:
+`Expanded` also accepts a name and value delegate for computed or non-public nested objects:
 
 ```csharp
-type.Extended("Connection", service => service.GetConnectionDetails());
+type.Expanded("Connection", service => service.GetConnectionDetails());
 ```
 
 ## Drilldown
@@ -166,7 +166,21 @@ configuration.Configure<MyService>(type =>
 });
 ```
 
-`WithDrillDown()` renders the property name and value as links. `AsDrillDownIcon()` renders the property name as ordinary text, suppresses its display value, and places a drilldown icon beside the name. Both methods accept an optional `maxItems` argument for enumerable targets.
+`WithDrillDown()` renders the property name and value as links. `AsDrillDownIcon()` renders the property name as ordinary text, suppresses its display value, and places a drilldown icon beside the name. Pass text, such as `AsDrillDownIcon("View more details")`, to show a command label beside the icon. Both methods accept an optional `maxItems` argument for enumerable targets.
+
+`WithJsonHover()` fetches and formats the live property value as JSON only when the property is hovered or focused. It can be combined with drilldown. `WithExpandedHover()` instead fetches the property through the drilldown profile and displays its property bags in a hover tooltip; event views are not included. Visible hover content refreshes every five seconds. The last hover mode configured on a property takes precedence.
+
+```csharp
+type.Property(service => service.Configuration)
+    .AsJson(100)
+    .WithDrillDown()
+    .WithJsonHover();
+
+type.Property(service => service.Connection)
+    .WithExpandedHover();
+```
+
+`AsJson()` is available on both expression-backed and named delegate properties, including properties configured with `Property("Name", item => item.Value)`.
 
 Use `Custom(...)` to define an inline projection without declaring an intermediary class. Each projected member supports the same drilldown options:
 
@@ -174,8 +188,8 @@ Use `Custom(...)` to define an inline projection without declaring an intermedia
 type.Custom("Connection summary", projection =>
 {
     projection.Property("Endpoint", service => service.Connection.Endpoint);
-    projection.Extended("Primary", service => service.PrimaryConnection);
-    projection.Extended("Secondary", service => service.SecondaryConnection);
+    projection.Expanded("Primary", service => service.PrimaryConnection);
+    projection.Expanded("Secondary", service => service.SecondaryConnection);
     projection.Collection("Recent requests", service => service.RecentRequests)
         .List(list => list.Name(request => request.Id).Value(request => request.Status));
     projection.Rate("Requests", service => service.RequestRate).ShowTotal();
@@ -217,7 +231,7 @@ configuration.Configure<MyService>(type =>
         .ShowDate()
         .ShowElapsed();
 
-    type.Extended(service => service.Connection)
+    type.Expanded(service => service.Connection)
         .Named("Connection");
 });
 
@@ -228,7 +242,7 @@ configuration.Configure<ConnectionInfo>(type =>
 });
 ```
 
-Nested objects rendered by `Extended` and collection categories resolve their own type configuration automatically.
+Nested objects rendered by `Expanded` and collection categories resolve their own type configuration automatically.
 
 ## Scope and validation
 

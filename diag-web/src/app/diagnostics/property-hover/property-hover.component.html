@@ -1,0 +1,19 @@
+<span class="property-hover-trigger" (mouseenter)="show()" (mouseleave)="scheduleHide()" (focusin)="show()" (focusout)="scheduleHide()">
+    <ng-content />
+</span>
+
+@if (visible()) {
+    <section class="property-hover-tooltip" role="tooltip" (mouseenter)="cancelHide()" (mouseleave)="scheduleHide()">
+        @if (loading()) {
+            <div class="property-hover-status">Loading...</div>
+        } @else if (errorMessage()) {
+            <div class="property-hover-error">{{ errorMessage() }}</div>
+        } @else if (isJsonHover()) {
+            <pre>@for (token of jsonTokens(); track $index) {<span [class]="token.type">{{ token.text }}</span>}</pre>
+        } @else {
+            @for (category of processModel.categories(); track category.name()) {
+                <app-category-view [category]="category" [process]="process()" [flatRoot]="true" [maxPropertyColumns]="2" [breadcrumbs]="[prop().name()]" />
+            }
+        }
+    </section>
+}
