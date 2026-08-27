@@ -126,6 +126,8 @@ public sealed class LogEventStore
             Routing = _routing.Clone(),
             ReplayEvents = _events.ToArray(),
             HighWatermark = _sequence,
+            MaxEvents = _retention.MaxEvents,
+            MaxAgeMinutes = _retention.MaxAgeMinutes,
         };
     }
 

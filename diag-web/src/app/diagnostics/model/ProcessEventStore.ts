@@ -15,12 +15,16 @@ export interface EventDestination {
 }
 
 export class ProcessEventStore {
+    private static readonly defaultMaxEvents = 5_000;
+    private static readonly defaultMaxAgeMinutes = 5;
     private static readonly stores = new Map<string, ProcessEventStore>();
     private readonly records = new Map<string, EventModel>();
     private readonly destinationKeys = new Map<string, readonly string[]>();
     readonly events = signal<EventModel[]>([]);
     readonly routing = signal<LogStreamRoutingConfiguration>({ matchMode: 0, routes: [] });
     streamId = '';
+    private maxEvents = ProcessEventStore.defaultMaxEvents;
+    private maxAgeMinutes = ProcessEventStore.defaultMaxAgeMinutes;
 
     static forProcess(processId: string): ProcessEventStore {
         let store = this.stores.get(processId);
@@ -29,6 +33,18 @@ export class ProcessEventStore {
             this.stores.set(processId, store);
         }
         return store;
+    }
+
+    static pruneAll(): void {
+        const now = Date.now();
+        for (const store of this.stores.values()) store.prune(now);
+    }
+
+    static removeMissing(processIds: Iterable<string>): void {
+        const activeProcessIds = new Set(processIds);
+        for (const processId of this.stores.keys()) {
+            if (!activeProcessIds.has(processId)) this.stores.delete(processId);
+        }
     }
 
     initialize(initialization: LogStreamInitialization): void {
@@ -41,6 +57,7 @@ export class ProcessEventStore {
         }
 
         this.routing.set(initialization.routing ?? { matchMode: 0, routes: [] });
+        this.applyRetention(initialization);
         for (const event of initialization.replayEvents ?? []) this.insert(event);
         this.refresh();
     }
@@ -91,12 +108,12 @@ export class ProcessEventStore {
         this.records.set(key, new EventModel(source));
     }
 
-    private refresh(): void {
-        const minimumDate = Date.now() - 5 * 60 * 1000;
+    private refresh(now = Date.now()): void {
+        const minimumDate = now - this.maxAgeMinutes * 60 * 1000;
         const ordered = [...this.records.values()]
             .filter((event) => new Date(event.date).valueOf() >= minimumDate)
             .sort((left, right) => right.sequence - left.sequence)
-            .slice(0, 5_000);
+            .slice(0, this.maxEvents);
         const retained = new Set(ordered.map((event) => this.eventKey(event)));
         for (const key of this.records.keys()) {
             if (!retained.has(key)) {
@@ -107,6 +124,34 @@ export class ProcessEventStore {
 
         for (const event of ordered) this.destinationKeys.set(this.eventKey(event), this.resolveDestinations(event));
         this.events.set(ordered);
+    }
+
+    private applyRetention(initialization: LogStreamInitialization): void {
+        const maxEvents = initialization.maxEvents;
+        this.maxEvents =
+            typeof maxEvents === 'number' && Number.isFinite(maxEvents) && maxEvents > 0
+                ? Math.floor(maxEvents)
+                : ProcessEventStore.defaultMaxEvents;
+
+        const maxAgeMinutes = initialization.maxAgeMinutes;
+        this.maxAgeMinutes =
+            typeof maxAgeMinutes === 'number' && Number.isFinite(maxAgeMinutes) && maxAgeMinutes > 0
+                ? maxAgeMinutes
+                : ProcessEventStore.defaultMaxAgeMinutes;
+    }
+
+    private prune(now: number): void {
+        const minimumDate = now - this.maxAgeMinutes * 60 * 1000;
+        let removed = false;
+        for (const [key, event] of this.records) {
+            if (new Date(event.date).valueOf() >= minimumDate) continue;
+
+            this.records.delete(key);
+            this.destinationKeys.delete(key);
+            removed = true;
+        }
+
+        if (removed) this.refresh(now);
     }
 
     private resolveDestinations(event: EventModel): readonly string[] {

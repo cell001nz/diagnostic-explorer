@@ -112,4 +112,10 @@ public sealed class LogStreamInitialization
 
     [DataMember(Order = 4)]
     public long HighWatermark { get; set; }
+
+    [DataMember(Order = 5)]
+    public int MaxEvents { get; set; }
+
+    [DataMember(Order = 6)]
+    public double MaxAgeMinutes { get; set; }
 }

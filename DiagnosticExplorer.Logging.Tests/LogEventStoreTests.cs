@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using DiagnosticExplorer.Logging;
@@ -20,6 +21,17 @@ public class LogEventStoreTests
         using LogEventStore.LogEventStoreSubscription subscription = store.CreateSubscription();
         Assert.Equal(new[] { "Second", "Third" }, subscription.Initialization.ReplayEvents.Select(streamEvent => streamEvent.Message));
         Assert.Equal(3, subscription.Initialization.HighWatermark);
+    }
+
+    [Fact]
+    public void InitializationIncludesConfiguredRetention()
+    {
+        LogEventStore store = new(new LogEventRetentionOptions().WithMaxEvents(2).WithMaxAge(TimeSpan.FromMinutes(10)));
+
+        LogStreamInitialization initialization = store.CreateInitialization();
+
+        Assert.Equal(2, initialization.MaxEvents);
+        Assert.Equal(10, initialization.MaxAgeMinutes);
     }
 
     [Fact]

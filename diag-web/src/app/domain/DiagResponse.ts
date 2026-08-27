@@ -129,6 +129,8 @@ export interface LogStreamInitialization {
     routing: LogStreamRoutingConfiguration;
     replayEvents: LogStreamEvent[];
     highWatermark: number;
+    maxEvents?: number;
+    maxAgeMinutes?: number;
 }
 
 export interface OperationSet {

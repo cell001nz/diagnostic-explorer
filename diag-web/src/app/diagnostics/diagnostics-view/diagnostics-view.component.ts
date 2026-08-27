@@ -7,6 +7,7 @@ import { ErrMsgPipe } from '@pipes/err-msg.pipe';
 import { DiagHubService } from '@services/diag-hub.service';
 import { DiagnosticModelFactory } from '@model/DiagnosticModelFactory';
 import { ProcessModel } from '@model/ProcessModel';
+import { ProcessEventStore } from '@model/ProcessEventStore';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { CategoryViewComponent } from '@app/diagnostics/category-view/category-view.component';
 import { DiagProcess } from '@domain/DiagProcess';
@@ -89,6 +90,10 @@ export class DiagnosticsViewComponent implements OnDestroy {
             .subscribe(() => {
                 for (const cat of this.processModel().categories()) cat.checkEventSeverityLevels();
             });
+
+        timer(0, 60_000)
+            .pipe(takeUntilDestroyed())
+            .subscribe(() => ProcessEventStore.pruneAll());
 
         window.addEventListener('keydown', this.#onWindowKeyDown, true);
 

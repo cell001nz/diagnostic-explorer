@@ -9,7 +9,7 @@ internal sealed class LogEventRelayStore
 {
     private readonly object _sync = new();
     private readonly Dictionary<long, LogStreamEvent> _events = new();
-    private readonly LogEventRetentionOptions _retention = new();
+    private LogEventRetentionOptions _retention = new();
     private string _streamId;
     private LogStreamRoutingConfiguration _routing = new();
     private long _highWatermark;
@@ -32,6 +32,7 @@ internal sealed class LogEventRelayStore
             }
 
             _routing = (initialization.Routing ?? new LogStreamRoutingConfiguration()).Clone();
+            _retention = GetRetention(initialization);
             Merge(initialization.ReplayEvents);
             _highWatermark = Math.Max(_highWatermark, initialization.HighWatermark);
             Prune(DateTime.UtcNow);
@@ -63,8 +64,19 @@ internal sealed class LogEventRelayStore
                 Routing = _routing.Clone(),
                 ReplayEvents = _events.Values.OrderBy(streamEvent => streamEvent.Sequence).ToArray(),
                 HighWatermark = _highWatermark,
+                MaxEvents = _retention.MaxEvents,
+                MaxAgeMinutes = _retention.MaxAgeMinutes,
             };
         }
+    }
+
+    private static LogEventRetentionOptions GetRetention(LogStreamInitialization initialization)
+    {
+        return new LogEventRetentionOptions
+        {
+            MaxEvents = initialization.MaxEvents > 0 ? initialization.MaxEvents : LogEventRetentionOptions.DefaultMaxEvents,
+            MaxAgeMinutes = initialization.MaxAgeMinutes > 0 ? initialization.MaxAgeMinutes : LogEventRetentionOptions.DefaultMaxAgeMinutes,
+        };
     }
 
     private LogStreamEvent[] Merge(IEnumerable<LogStreamEvent> events)
