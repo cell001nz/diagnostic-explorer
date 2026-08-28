@@ -1,5 +1,5 @@
 param(
-    [bool]$BuildAngular = $true
+    [bool]$BuildAngular = $false
 )
 
 $ErrorActionPreference = 'Stop'
