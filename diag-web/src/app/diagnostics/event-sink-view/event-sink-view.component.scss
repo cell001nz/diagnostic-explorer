@@ -68,6 +68,20 @@ tbody tr {
 
 // ── Sink filter flyout ──────────────────────────────────────────────────────
 
+.sink-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sink-event-rate {
+  color: #9ca3af;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .sink-filter-flyout {
   display: flex;
   align-items: center;

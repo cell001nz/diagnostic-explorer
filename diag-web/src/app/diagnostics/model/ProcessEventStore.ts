@@ -57,12 +57,18 @@ export class ProcessEventStore {
         this.refresh();
     }
 
-    append(events: readonly LogStreamEvent[]): void {
-        if (!this.streamId) return;
+    append(events: readonly LogStreamEvent[]): EventModel[] {
+        if (!this.streamId) return [];
+
+        const addedEvents: EventModel[] = [];
         for (const event of events ?? []) {
-            if (event.streamId === this.streamId) this.insert(event);
+            if (event.streamId !== this.streamId) continue;
+
+            const addedEvent = this.insert(event);
+            if (addedEvent) addedEvents.push(addedEvent);
         }
         this.refresh();
+        return addedEvents;
     }
 
     eventsForDestination(category: string, name: string): EventModel[] {
@@ -97,10 +103,13 @@ export class ProcessEventStore {
         return `${category}\u001f${name}`.toLocaleLowerCase();
     }
 
-    private insert(source: LogStreamEvent): void {
+    private insert(source: LogStreamEvent): EventModel | undefined {
         const key = `${source.streamId}\u001f${source.sequence}`;
-        if (this.records.has(key)) return;
-        this.records.set(key, new EventModel(source));
+        if (this.records.has(key)) return undefined;
+
+        const event = new EventModel(source);
+        this.records.set(key, event);
+        return event;
     }
 
     private refresh(now = Date.now()): void {

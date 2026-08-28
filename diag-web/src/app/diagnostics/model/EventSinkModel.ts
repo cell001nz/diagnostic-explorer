@@ -1,17 +1,23 @@
-﻿import {SystemEvent} from '@domain/DiagResponse';
-import {CategoryModel} from './CategoryModel';
-import {EventModel} from './EventModel';
-import {FilterCriteria} from './FilterCriteria';
-import {computed, Signal, signal} from '@angular/core';
-import {Level} from './Level';
+﻿import { SystemEvent } from '@domain/DiagResponse';
+import { CategoryModel } from './CategoryModel';
+import { EventModel } from './EventModel';
+import { FilterCriteria } from './FilterCriteria';
+import { computed, Signal, signal } from '@angular/core';
+import { Level } from './Level';
 
 import pluralize from 'pluralize-esm';
 
+interface EventRateSample {
+    timestamp: number;
+    count: number;
+}
+
 export class EventSinkModel {
+    private static readonly rateWindowMilliseconds = 3_000;
     name = '';
     events: Signal<EventModel[]>;
     filteredEvents: Signal<EventModel[]>;
-    isCollapsed = signal(false)
+    isCollapsed = signal(false);
 
     filterVisible = false;
     watchEnabled = false;
@@ -32,7 +38,7 @@ export class EventSinkModel {
 
     toggleFilters(): void {
         const closing = this.filtersVisible();
-        this.filtersVisible.update(v => !v);
+        this.filtersVisible.update((v) => !v);
         if (closing) {
             this.filterText.set('');
             this.minLevel.set(0);
@@ -47,7 +53,11 @@ export class EventSinkModel {
         this.minLevel.set(level);
     }
 
-    constructor(readonly cat: CategoryModel, name: string, private readonly eventProvider: () => EventModel[] = () => []) {
+    constructor(
+        readonly cat: CategoryModel,
+        name: string,
+        private readonly eventProvider: () => EventModel[] = () => []
+    ) {
         this.watchEnabled = true;
         this.name = name;
         this.events = computed(() => this.eventProvider());
@@ -55,10 +65,7 @@ export class EventSinkModel {
             const events = this.events();
             const text = this.filterText().trim().toLowerCase();
             const minLevel = this.minLevel();
-            return events.filter((event) =>
-                (minLevel === 0 || event.level >= minLevel) &&
-                (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text))
-            );
+            return events.filter((event) => (minLevel === 0 || event.level >= minLevel) && (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text)));
         });
     }
 
@@ -67,11 +74,28 @@ export class EventSinkModel {
     }
 
     toggleCollapsed() {
-        this.isCollapsed.update(v => !v);
+        this.isCollapsed.update((v) => !v);
     }
 
     public addEvents(evts: SystemEvent[]): void {
         void evts;
+    }
+
+    private readonly eventRateSamples: EventRateSample[] = [];
+
+    recordAddedEvents(events: readonly EventModel[], timestamp = Date.now()): void {
+        const displayedEvents = new Set(this.events());
+        const addedCount = events.filter((event) => displayedEvents.has(event)).length;
+        if (addedCount > 0) this.eventRateSamples.push({ timestamp, count: addedCount });
+    }
+
+    getEventsPerSecond(timestamp = Date.now()): number {
+        const cutoff = timestamp - EventSinkModel.rateWindowMilliseconds;
+        while (this.eventRateSamples.length > 0 && this.eventRateSamples[0].timestamp < cutoff) {
+            this.eventRateSamples.shift();
+        }
+
+        return this.eventRateSamples.reduce((total, sample) => total + sample.count, 0) / (EventSinkModel.rateWindowMilliseconds / 1_000);
     }
 
     public clearEvents(): void {
@@ -93,8 +117,8 @@ export class EventSinkModel {
     handleDoubleClick(evt: MouseEvent) {
         if (evt.detail === 2) {
             this.isCollapsed.set(false);
-            this.cat.eventSinks().forEach(c => c.isCollapsed.set(c !== this));
-            this.cat.bags().forEach(c => c.isCollapsed.set(true));
+            this.cat.eventSinks().forEach((c) => c.isCollapsed.set(c !== this));
+            this.cat.bags().forEach((c) => c.isCollapsed.set(true));
         }
     }
 }

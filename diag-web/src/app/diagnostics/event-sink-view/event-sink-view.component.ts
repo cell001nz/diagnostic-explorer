@@ -1,33 +1,30 @@
-﻿import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
-import {DatePipe, LowerCasePipe} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {Panel, PanelModule} from 'primeng/panel';
-import {Slider} from 'primeng/slider';
-import {InputText} from 'primeng/inputtext';
-import {EventSinkModel} from '@model/EventSinkModel';
-import {EventModel} from '@model/EventModel';
-import {Level} from '@model/Level';
-import {LevelToStringPipe} from '@app/pipes/level-to-string.pipe';
+﻿import { ChangeDetectionStrategy, Component, input, OnDestroy, output, signal } from '@angular/core';
+import { DatePipe, LowerCasePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Panel, PanelModule } from 'primeng/panel';
+import { Slider } from 'primeng/slider';
+import { InputText } from 'primeng/inputtext';
+import { EventSinkModel } from '@model/EventSinkModel';
+import { EventModel } from '@model/EventModel';
+import { Level } from '@model/Level';
+import { LevelToStringPipe } from '@app/pipes/level-to-string.pipe';
 
 @Component({
     selector: 'app-event-sink-view',
-    imports: [
-        Panel,
-        PanelModule,
-        DatePipe,
-        LevelToStringPipe,
-        LowerCasePipe,
-        Slider,
-        InputText,
-        FormsModule,
-    ],
+    imports: [Panel, PanelModule, DatePipe, LevelToStringPipe, LowerCasePipe, Slider, InputText, FormsModule],
     templateUrl: './event-sink-view.component.html',
     styleUrl: './event-sink-view.component.scss',
-    changeDetection: ChangeDetectionStrategy.OnPush,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EventSinkViewComponent {
+export class EventSinkViewComponent implements OnDestroy {
     sink = input.required<EventSinkModel>();
     eventSelected = output<EventModel>();
+    protected readonly rateClock = signal(Date.now());
+    private readonly rateClockInterval = setInterval(() => this.rateClock.set(Date.now()), 250);
+
+    ngOnDestroy(): void {
+        clearInterval(this.rateClockInterval);
+    }
 
     getLevelLabel(value: number): string {
         return Level.LevelToString(value);
@@ -62,4 +59,3 @@ export class EventSinkViewComponent {
         this.mouseDown = false;
     }
 }
-

@@ -47,8 +47,11 @@ export class ProcessModel implements ObservableDisposable {
     }
 
     appendLogStreamEvents(events: LogStreamEvent[]): void {
-        this.eventStore?.append(events);
+        const addedEvents = this.eventStore?.append(events) ?? [];
         this.reconcileEventViews();
+        for (const category of this.categories()) {
+            for (const sink of category.eventSinks()) sink.recordAddedEvents(addedEvents);
+        }
     }
 
     setDrillDownEventViews(eventViews: DrillDownEventViewDefinition[] | undefined): void {
