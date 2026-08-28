@@ -182,6 +182,9 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
             _owner = owner;
         }
 
+        public IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property) =>
+            _owner.Try(() => _inner.Property(property), new NoOpPropertyConfigurator<TProperty>(), "Custom property");
+
         public IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value) =>
             _owner.Try(() => _inner.Property(name, value), new NoOpPropertyConfigurator<TProperty>(), "Custom property");
     }

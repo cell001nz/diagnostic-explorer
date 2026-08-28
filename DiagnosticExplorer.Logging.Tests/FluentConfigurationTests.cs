@@ -543,7 +543,7 @@ public sealed class FluentConfigurationTests : IDisposable
                     projection =>
                     {
                         projection.Property("Name", root => "Projection");
-                        projection.Property("Child", root => root.Child).Expand();
+                        projection.Property(root => root.Child).Expand();
                         projection
                             .Property("Items", root => root.Items)
                             .ListItems(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));

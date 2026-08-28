@@ -75,7 +75,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
                     "Config",
                     projection =>
                     {
-                        projection.Property("Full name", widget => widget.FullName);
+                        projection.Property(widget => widget.FullName);
                         projection.Property("Primary config", widget => widget.PrimaryConfig).Expand();
                         projection.Property("Secondary config", widget => widget.SecondaryConfig).Expand();
                         projection.Property("Names", widget => _names).ListItems();

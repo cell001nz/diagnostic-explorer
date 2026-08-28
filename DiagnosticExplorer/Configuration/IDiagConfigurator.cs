@@ -111,6 +111,7 @@ public interface ICustomPropertyConfigurator<T>
 
 public interface ICustomObjectConfigurator<T>
 {
+    IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property);
     IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value);
 }
 

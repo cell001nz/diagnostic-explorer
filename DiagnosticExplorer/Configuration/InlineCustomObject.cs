@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace DiagnosticExplorer;
 
@@ -13,6 +14,12 @@ internal sealed class InlineCustomObjectConfigurator<T> : ICustomObjectConfigura
     private readonly List<InlineCustomObjectMember> _members = new();
 
     public IReadOnlyList<InlineCustomObjectMember> Members => _members;
+
+    public IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property)
+    {
+        string name = ExpressionProperty.Get(property, typeof(T)).Name;
+        return ConfigureProperty(name, property.Compile());
+    }
 
     public IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value) => ConfigureProperty(name, value);
 

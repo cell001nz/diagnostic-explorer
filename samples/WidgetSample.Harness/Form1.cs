@@ -47,7 +47,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private Timer _counterTimer;
     private Timer _evtTimer;
 
-    private string _infoText;
+    private string _infoText = "123";
     private Timer _configTimer;
     private Timer _listTestTimer;
     private Task _autoLogTask;
@@ -163,6 +163,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
             options.Property(form => form.SetMePlease).AllowSet();
             options.Property(form => form.Counter2);
             options.Property(form => form._infoText);
+            options.Property("HELLO123", form => "INFO TEXT LENGTH " + form._infoText);
             options.Property("Widget", form => form._widgets.Count);
 
             options
