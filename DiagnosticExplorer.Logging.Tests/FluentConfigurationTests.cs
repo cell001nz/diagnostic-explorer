@@ -70,6 +70,10 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Amount), "General"));
         Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Created), "General"));
         Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Duration), "General"));
+        Property point = bag.GetProperty(nameof(DefaultScalarSample.Point), "General");
+        Assert.False(point.CanDrillDown);
+        Assert.False(point.DrillDownIconOnly);
+        Assert.Equal("(3, 4)", point.Value);
         Property child = bag.GetProperty(nameof(DefaultScalarSample.Child), "General");
         Assert.True(child.CanDrillDown);
         Assert.True(child.DrillDownIconOnly);
@@ -1798,9 +1802,24 @@ public sealed class FluentConfigurationTests : IDisposable
         public decimal Amount { get; } = 3.5m;
         public DateTime Created { get; } = new(2025, 1, 2);
         public TimeSpan Duration { get; } = TimeSpan.FromMinutes(1);
+        public DefaultPoint Point { get; } = new(3, 4);
         public ChildSample Child { get; } = new();
         public IReadOnlyList<string> Items { get; } = new[] { "One", "Two" };
         public System.Threading.Tasks.Task Pending { get; } = System.Threading.Tasks.Task.CompletedTask;
+    }
+
+    private readonly struct DefaultPoint
+    {
+        public DefaultPoint(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public int X { get; }
+        public int Y { get; }
+
+        public override string ToString() => $"({X}, {Y})";
     }
 
     private enum DefaultScalarStatus

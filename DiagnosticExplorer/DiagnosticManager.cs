@@ -385,7 +385,10 @@ public static class DiagnosticManager
             }
 
             bag.CanDrillDown =
-                renderMode == DiagnosticRenderMode.Normal && obj is not Type && _configuration.HasDrillDownConfiguration(obj.GetType());
+                renderMode == DiagnosticRenderMode.Normal
+                && obj is not Type
+                && !IsUserInterfaceElement(obj.GetType())
+                && _configuration.HasDrillDownConfiguration(obj.GetType());
 
             List<PropertyGetter> valueGetters = GetPropertyGetters(obj);
 
@@ -440,7 +443,7 @@ public static class DiagnosticManager
                 DiagnosticPropertyAttribute propAttr = applyAttributes ? GetAttribute<DiagnosticPropertyAttribute>(info) : null;
                 PropertyConfiguration propertyConfiguration = typeConfiguration?.Find(info);
                 string defaultFormat = _configuration.GetDefaultFormat(info.PropertyType);
-                bool useDefaultPropertyPresentation = useUnconfiguredDefaults && propAttr == null && propertyConfiguration == null;
+                bool useDefaultPropertyPresentation = propAttr == null && propertyConfiguration == null;
                 AddPropertyGetters(
                     propertyList,
                     info,
@@ -532,7 +535,7 @@ public static class DiagnosticManager
                         isStatic,
                         applyAttributes,
                         defaultFormat,
-                        useDefaultPropertyPresentation && IsDefaultDrillDownType(info.PropertyType)
+                        useDefaultPropertyPresentation && IsDefaultObjectType(info.PropertyType) && !HasUsefulToString(info.PropertyType)
                     )
                 );
                 break;
@@ -726,13 +729,26 @@ public static class DiagnosticManager
         if (type != typeof(object))
         {
             DiagnosticClassAttribute diagAttr = applyAttributes ? GetAttribute<DiagnosticClassAttribute>(type, false) : null;
+            bool frameworkUserInterfaceType = IsFrameworkUserInterfaceElement(type);
 
             if (inheritedAttr == null || !inheritedAttr.DeclaringTypeOnly || diagAttr != null)
             {
                 foreach (PropertyInfo propInfo in type.GetProperties(PublicInstancePropertyFlags | BindingFlags.DeclaredOnly))
-                    if (ShouldIncludeProperty(diagAttr ?? inheritedAttr, propInfo, configuration, applyAttributes, useUnconfiguredDefaults))
+                    if (
+                        ShouldIncludeProperty(
+                            diagAttr ?? inheritedAttr,
+                            propInfo,
+                            configuration,
+                            applyAttributes,
+                            useUnconfiguredDefaults,
+                            frameworkUserInterfaceType
+                        )
+                    )
                         yield return propInfo;
             }
+
+            if (frameworkUserInterfaceType && !IsUserInterfaceElement(type.BaseType))
+                yield break;
 
             foreach (
                 PropertyInfo propInfo in GetInstanceProperties(
@@ -760,7 +776,8 @@ public static class DiagnosticManager
         PropertyInfo info,
         TypeConfiguration configuration = null,
         bool applyAttributes = true,
-        bool useUnconfiguredDefaults = false
+        bool useUnconfiguredDefaults = false,
+        bool explicitlyConfiguredOnly = false
     )
     {
         if (info.PropertyType == typeof(EventSink))
@@ -776,6 +793,9 @@ public static class DiagnosticManager
         if (propAttr != null)
             return !propAttr.Ignore;
 
+        if (explicitlyConfiguredOnly)
+            return false;
+
         if (configuration != null && configuration.IncludeAll.HasValue)
             return configuration.IncludeAll.Value;
 
@@ -787,7 +807,7 @@ public static class DiagnosticManager
                 && (
                     IsDefaultDiagnosticPropertyType(info.PropertyType)
                     || IsDefaultCollectionType(info.PropertyType)
-                    || IsDefaultDrillDownType(info.PropertyType)
+                    || IsDefaultObjectType(info.PropertyType)
                 );
 
         return IsDefaultDiagnosticPropertyType(info.PropertyType);
@@ -812,13 +832,41 @@ public static class DiagnosticManager
         return underlyingType != typeof(string) && typeof(IEnumerable).IsAssignableFrom(underlyingType);
     }
 
-    private static bool IsDefaultDrillDownType(Type type)
+    private static bool IsDefaultObjectType(Type type)
     {
         Type underlyingType = GetUnderlyingType(type);
-        return underlyingType.IsClass
-            && !IsDefaultDiagnosticPropertyType(underlyingType)
+        return !IsDefaultDiagnosticPropertyType(underlyingType)
             && !IsDefaultCollectionType(underlyingType)
             && !IsExcludedDefaultDiagnosticPropertyType(underlyingType);
+    }
+
+    private static bool HasUsefulToString(Type type)
+    {
+        Type underlyingType = GetUnderlyingType(type);
+        MethodInfo toString = underlyingType.GetMethod(nameof(ToString), Type.EmptyTypes);
+        return toString != null && toString.DeclaringType != typeof(object) && toString.DeclaringType != typeof(ValueType);
+    }
+
+    private static bool IsUserInterfaceElement(Type type)
+    {
+        for (Type baseType = type; baseType != null; baseType = baseType.BaseType)
+        {
+            if (baseType.FullName == "System.Windows.Forms.Control" || baseType.FullName == "System.Windows.FrameworkElement")
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsFrameworkUserInterfaceElement(Type type)
+    {
+        if (!IsUserInterfaceElement(type))
+            return false;
+
+        string typeNamespace = type.Namespace;
+        return typeNamespace == "System.Windows.Forms"
+            || typeNamespace == "System.Windows"
+            || typeNamespace?.StartsWith("System.Windows.", StringComparison.Ordinal) == true;
     }
 
     private static bool IsExcludedDefaultDiagnosticPropertyType(Type type)
@@ -1219,6 +1267,9 @@ public static class DiagnosticManager
         try
         {
             DrillDownTarget target = ResolveDrillDownTarget(registeredObjects, request?.ObjectPaths);
+            if (IsUserInterfaceElement(target.Value.GetType()))
+                return new DrillDownResponse { ErrorMessage = "Windows Forms and WPF user interface elements cannot be shown in a drilldown." };
+
             if (request?.JsonHover == true)
             {
                 return new DrillDownResponse
@@ -1258,6 +1309,8 @@ public static class DiagnosticManager
         if (type.IsPrimitive || type.IsEnum || type == typeof(decimal) || type == typeof(DateTime) || type == typeof(DateTimeOffset))
             return false;
         if (type == typeof(TimeSpan) || type == typeof(Guid))
+            return false;
+        if (IsUserInterfaceElement(type))
             return false;
 
         return true;

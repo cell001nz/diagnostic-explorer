@@ -58,7 +58,7 @@
                              [class.text-amber-400]="prop.alertSeverity() === 1"
                              [class.text-red-400]="prop.alertSeverity() === 2"
                              [attr.title]="prop.alertTooltip() || prop.description() || null">
-                        <span class="truncate">{{ prop.name() }}</span>
+                            <span class="truncate" [class.cursor-pointer]="prop.canDrillDown()" (click)="prop.canDrillDown() && showDrillDown(prop.getOperationPath(), prop.name())">{{ prop.name() }}</span>
                         @if (prop.canSet()) {
                             <button type="button" class="diag-icon-link" title="Edit value" aria-label="Edit value"
                                     (click)="showSetPropertyDialog(prop)">
