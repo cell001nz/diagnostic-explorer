@@ -668,6 +668,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionInterfaceSample>(type =>
         {
             type.ExcludeAll();
+            type.Property(sample => sample.Array).Category("Array").ListItems(list => list.Name(item => item.Name));
             type.Property(sample => sample.List).Category("List").ListItems(list => list.Name(item => item.Name));
             type.Property(sample => sample.ReadOnlyList).Category("Read-only list").ListItems(list => list.Name(item => item.Name));
             type.Property(sample => sample.Collection).Category("Collection").ListItems(list => list.Name(item => item.Name));
@@ -678,11 +679,38 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionInterfaceSample());
 
+        Assert.NotNull(bag.GetProperty("Array", "Array"));
         Assert.NotNull(bag.GetProperty("List", "List"));
         Assert.NotNull(bag.GetProperty("Read-only list", "Read-only list"));
         Assert.NotNull(bag.GetProperty("Collection", "Collection"));
         Assert.NotNull(bag.GetProperty("Read-only collection", "Read-only collection"));
         Assert.NotNull(bag.GetProperty("Set", "Set"));
+    }
+
+    [Fact]
+    public void CollectionPresentationMethodsSupportAllRecognizedCollectionShapes()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionInterfaceSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Array).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.List).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.ReadOnlyList).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.Collection).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.ReadOnlyCollection).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.Set).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionInterfaceSample());
+
+        Assert.Equal("1 item: Array", bag.GetProperty(nameof(CollectionInterfaceSample.Array), "General").Value);
+        Assert.Equal("1 item: List", bag.GetProperty(nameof(CollectionInterfaceSample.List), "General").Value);
+        Assert.Equal("1 item: Read-only list", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyList), "General").Value);
+        Assert.Equal("1 item: Collection", bag.GetProperty(nameof(CollectionInterfaceSample.Collection), "General").Value);
+        Assert.Equal("1 item: Read-only collection", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyCollection), "General").Value);
+        Assert.Equal("1 item: Set", bag.GetProperty(nameof(CollectionInterfaceSample.Set), "General").Value);
     }
 
     [Fact]
@@ -1643,6 +1671,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
     private sealed class CollectionInterfaceSample
     {
+        public CollectionItem[] Array { get; } = { new("Array", 1) };
         public IList<CollectionItem> List { get; } = new List<CollectionItem> { new("List", 1) };
         public IReadOnlyList<CollectionItem> ReadOnlyList { get; } = new List<CollectionItem> { new("Read-only list", 1) };
         public ICollection<CollectionItem> Collection { get; } = new List<CollectionItem> { new("Collection", 1) };

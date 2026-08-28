@@ -177,6 +177,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
             options.Property("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
             options.Property(form => form.Widgets).SectionByItem(obj => obj.PrimaryConfig.EnvironmentName);
 
+            options.Property("Widges2", form => form.Widgets.ToArray()).ConcatItems(", ");
+
             using (options.CreateCategoryScope("Widgets"))
             {
                 options.Property(form => form.WidgetIdCount);
