@@ -157,6 +157,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
         config.Configure<Form1>(options =>
         {
             options.ExcludeAll();
+
             options.Property(form => form.NullWidget).Category("NullWidget category").Expand();
             options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
             options.Property(form => form.SetMePlease).AllowSet();
@@ -186,13 +187,13 @@ public partial class Form1 : Form, INotifyPropertyChanged
                     .ListItems(config => config.Name(obj => obj.FullName))
                     .AsDrillDownIcon("Click for more info");
             }
-
+            //
             using (options.CreateCategoryScope("Gadgets"))
             {
                 options.Property(form => form.GadgetIdCount).Description("Max Gadget Id");
                 options.Property(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
             }
-
+            //
             using (options.CreateCategoryScope("All Gadgets"))
             {
                 options

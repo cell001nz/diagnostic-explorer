@@ -66,7 +66,7 @@ public static class CollectionPropertyConfiguratorExtensions
 
     public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
         this IPropertyConfigurator<T, ICollection<TItem>> property,
-        System.Linq.Expressions.Expression<Func<TItem, object>> category,
+        Func<TItem, object> category,
         string name = null
     ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
 

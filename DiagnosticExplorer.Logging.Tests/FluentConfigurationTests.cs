@@ -803,6 +803,32 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void SectionByItemDoesNotHideNamedCollectionDrillDown()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).SectionByItem(item => item.Name.Length);
+            type.Property("Item things", sample => sample.Items).Category("Items").AsDrillDown();
+        });
+        configuration.Configure<CollectionItem>(type =>
+        {
+            type.ExcludeAll();
+            type.Include(item => item.Value);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionSample());
+        Property property = bag.GetProperty("Item things", "Items");
+
+        Assert.NotNull(property);
+        Assert.Equal("3", property.Value);
+        Assert.True(property.CanDrillDown);
+        Assert.Equal("1", bag.GetProperty(nameof(CollectionItem.Value), "General.3").Value);
+    }
+
+    [Fact]
     public void CollectionListUsesTypedSelectorsAndMaxItems()
     {
         DiagnosticConfiguration configuration = new();

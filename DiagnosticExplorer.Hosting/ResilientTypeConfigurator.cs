@@ -42,7 +42,7 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
     public ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure) =>
         Try(() => _inner.Route(loggerName, matchMode, configure), this, "Route");
 
-    public ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure) =>
+    public ITypeConfigurator<T> Route(Func<T, string> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure) =>
         Try(() => _inner.Route(loggerName, matchMode, configure), this, "Route");
 
     private TResult Try<TResult>(Func<TResult> configure, TResult fallback, string registration)

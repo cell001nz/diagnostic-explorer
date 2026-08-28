@@ -167,13 +167,13 @@ internal class CollectionGetter : PropertyGetter
         int index = 0;
         foreach (object listObject in GetLimitedItems(col))
         {
-            object catPropVal = GetNextPropVal(listObject, _catFunc, index++, GetName(owner));
-            string valCategory = Convert.ToString(catPropVal);
+            string valCategory =
+                _categoryFormatter?.Invoke(listObject) ?? Convert.ToString(GetNextPropVal(listObject, _catFunc, index++, GetName(owner)));
             string category = GetCategory(owner);
             if (!string.IsNullOrEmpty(category))
             {
                 if (category.IndexOf("{") != -1)
-                    valCategory = string.Format(category, catPropVal);
+                    valCategory = string.Format(category, valCategory);
                 else
                     valCategory = $"{category}.{valCategory}";
             }

@@ -2,6 +2,17 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Stop Widget Samples",
+      "type": "process",
+      "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$names = 'WidgetSampleNuget', 'WidgetSample.Net10.Mel', 'WidgetSample.Net10.NLog', 'WidgetSample.Net10.Serilog', 'WidgetSample.Net48.Log4Net'; $processes = Get-Process -Name $names -ErrorAction SilentlyContinue; $processes | Stop-Process -Force -ErrorAction Stop; exit 0"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "Build WidgetSampleNuget",
       "type": "process",
       "command": "dotnet",
@@ -14,6 +25,8 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "dependsOn": "Stop Widget Samples",
+      "dependsOrder": "sequence",
       "problemMatcher": "$msCompile"
     },
     {
@@ -29,6 +42,8 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "dependsOn": "Stop Widget Samples",
+      "dependsOrder": "sequence",
       "problemMatcher": "$msCompile"
     },
     {
@@ -44,6 +59,8 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "dependsOn": "Stop Widget Samples",
+      "dependsOrder": "sequence",
       "problemMatcher": "$msCompile"
     },
     {
@@ -59,6 +76,8 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "dependsOn": "Stop Widget Samples",
+      "dependsOrder": "sequence",
       "problemMatcher": "$msCompile"
     },
     {
@@ -74,6 +93,8 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "dependsOn": "Stop Widget Samples",
+      "dependsOrder": "sequence",
       "problemMatcher": "$msCompile"
     },
     {

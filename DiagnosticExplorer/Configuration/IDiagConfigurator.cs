@@ -42,7 +42,7 @@ public interface ITypeConfigurator<T>
     IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value);
     ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure);
     ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
-    ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
+    ITypeConfigurator<T> Route(Func<T, string> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
 }
 
 public interface IPropertyConfigurator
@@ -119,7 +119,7 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> ShowCount(string name = null);
     ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, string name = null);
     ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null);
-    ICollectionConfigurator<T, TItem> SectionByItem(Expression<Func<TItem, object>> category, string name = null);
+    ICollectionConfigurator<T, TItem> SectionByItem(Func<TItem, object> category, string name = null);
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
     ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null);

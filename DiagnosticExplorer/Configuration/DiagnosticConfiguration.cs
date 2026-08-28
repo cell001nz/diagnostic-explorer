@@ -736,13 +736,12 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return AddEventRoute(new DrillDownEventRouteTemplate(loggerName, matchMode, ConfigureRoute(configure)));
     }
 
-    public ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure)
+    public ITypeConfigurator<T> Route(Func<T, string> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure)
     {
         if (loggerName == null)
             throw new ArgumentNullException(nameof(loggerName));
 
-        Func<T, string> compiled = loggerName.Compile();
-        return AddEventRoute(new DrillDownEventRouteTemplate(target => compiled((T)target), matchMode, ConfigureRoute(configure)));
+        return AddEventRoute(new DrillDownEventRouteTemplate(target => loggerName((T)target), matchMode, ConfigureRoute(configure)));
     }
 
     private PropertyConfiguration GetProperty(LambdaExpression expression)
@@ -1335,13 +1334,13 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> SectionByItem(Expression<Func<TItem, object>> category, string name = null)
+    public ICollectionConfigurator<T, TItem> SectionByItem(Func<TItem, object> category, string name = null)
     {
         if (category == null)
             throw new ArgumentNullException(nameof(category));
 
         CollectionOutputConfiguration output = AddOutput(CollectionMode.Categories, name);
-        output.CategoryProperty = ExpressionProperty.Get(category, typeof(TItem)).Name;
+        output.CategoryFormatter = item => Convert.ToString(category((TItem)item));
         return this;
     }
 
