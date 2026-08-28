@@ -112,10 +112,14 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
 Use `IncludeAll()` to start from every public property, or `ExcludeAll()` to
 start from none. `Property` adds display metadata and can render nested object
 bags with `Expand()`. For properties declared as an array, `ICollection<T>`,
-`IList<T>`, `IReadOnlyCollection<T>`, `IReadOnlyList<T>`, or `ISet<T>`, use
-`Property(...)` to display a count by default, or `ListItems(...)` and
-`ConcatItems(...)` to select another rendering. Use `Property(name, value)` for
-named or computed properties. `AllowSet()` exposes an editable property.
+`IList<T>`, `IReadOnlyCollection<T>`, `IReadOnlyList<T>`, or `ISet<T>`, or the
+common concrete `List<T>`, `HashSet<T>`, `ObservableCollection<T>`, and
+`BindingList<T>` types, use `Property(...)` to display a count by default, or
+`ListItems(...)` and `ConcatItems(...)` to select another rendering.
+`Dictionary<TKey, TValue>`, `IDictionary<TKey, TValue>`, and
+`IReadOnlyDictionary<TKey, TValue>` are also supported and present their key/value
+pairs. Use `Property(name, value)` for named or computed properties.
+`AllowSet()` exposes an editable property.
 `AsJson()` with `WithJsonHover()` fetches JSON only on hover.
 
 `AsDrillDown()` makes a complex value, collection item, or custom property

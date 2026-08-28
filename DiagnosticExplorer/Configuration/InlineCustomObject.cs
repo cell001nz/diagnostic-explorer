@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace DiagnosticExplorer;
 
@@ -17,6 +18,9 @@ internal sealed class InlineCustomObjectConfigurator<T> : ICustomObjectConfigura
 
     public IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property)
     {
+        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
+            return ConfigureProperty(field.Name, property.Compile());
+
         string name = ExpressionProperty.Get(property, typeof(T)).Name;
         return ConfigureProperty(name, property.Compile());
     }

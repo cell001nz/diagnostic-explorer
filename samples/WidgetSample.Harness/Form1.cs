@@ -144,6 +144,9 @@ public partial class Form1 : Form, INotifyPropertyChanged
         get { return _gadgets; }
     }
 
+    public WidgetConfig Widget1 { get; } = new WidgetConfig();
+    public GadgetConfig Gadget1 { get; } = new GadgetConfig();
+
     [CollectionCategories(CategoryProperty = nameof(Widget.FullName))]
     public ICollection<Widget> Widgets
     {
@@ -158,58 +161,77 @@ public partial class Form1 : Form, INotifyPropertyChanged
         {
             options.ExcludeAll();
 
-            options.Property(form => form.NullWidget).Category("NullWidget category").Expand();
-            options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
-            options.Property(form => form.SetMePlease).AllowSet();
-            options.Property(form => form.Counter2);
-            options.Property(form => form._infoText);
-            options.Property("HELLO123", form => "INFO TEXT LENGTH " + form._infoText);
-            options.Property("Widget", form => form._widgets.Count);
+            // options.Property(form => form.NullWidget).Category("NullWidget category").Expand();
+            // options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
+            // options.Property(form => form.SetMePlease).AllowSet();
+            // options.Property(form => form.Counter2);
+            // options.Property(form => form._infoText);
+            // options.Property("HELLO123", form => "INFO TEXT LENGTH " + form._infoText);
+            // options.Property("Widget", form => form._widgets.Count);
 
             options
-                .Property("WidgetCount", form => form.Widgets.Count)
-                .Warn(form => form.Widgets.Count > 2, "Not too many widgets", "Widget count")
-                .Error(form => form.Widgets.Count > 4, "Too many widgets", "Widget count");
+                .Custom(
+                    "Config1234",
+                    projection =>
+                    {
+                        // projection.Property(form => form.Name);
+                        projection.Property("Widget1", form => form.Widget1).Expand();
+                        projection.Property("Gadget1", form => form.Gadget1).Expand();
+                    }
+                )
+                .AsDrillDownIcon("I am a drill down icon");
 
+            options.Property("Widgets 1", form => form.Widgets).Named("Widgets1").ListItems();
             options
-                .Property("Computed", form => $"This form has {form.Controls.Count} controls")
-                .Description(form => $"Control Info for {form.GetHashCode()}");
+                .Property("Widgets 2", form => form.Widgets)
+                .Named("Widgets2")
+                .ConcatItems(Environment.NewLine, obj => $"********** {obj.Name} **********")
+                .AsDrillDown();
 
-            options.Property("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
-            options.Property(form => form.Widgets).SectionByItem(obj => obj.PrimaryConfig.EnvironmentName);
+            // options
+            //     .Property("WidgetCount", form => form.Widgets.Count)
+            //     .Warn(form => form.Widgets.Count > 2, "Not too many widgets", "Widget count")
+            //     .Error(form => form.Widgets.Count > 4, "Too many widgets", "Widget count");
 
-            options.Property("Widges2", form => form.Widgets.ToArray()).ConcatItems(", ");
+            // options
+            //     .Property("Computed", form => $"This form has {form.Controls.Count} controls")
+            //     .Description(form => $"Control Info for {form.GetHashCode()}");
 
-            using (options.CreateCategoryScope("Widgets"))
-            {
-                options.Property(form => form.WidgetIdCount);
-                options.Property(form => form.WidgetEvents).ShowRate(false).ShowTotal();
-                options.Property("Widgety Things", form => form.Widgets).AsDrillDown();
-                options
-                    .Property("Widgets from method", form => form.GetWidgets())
-                    .ListItems(config => config.Name(obj => obj.FullName))
-                    .AsDrillDownIcon("Click for more info");
-            }
-            //
-            using (options.CreateCategoryScope("Gadgets"))
-            {
-                options.Property(form => form.GadgetIdCount).Description("Max Gadget Id");
-                options.Property(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
-            }
-            //
-            using (options.CreateCategoryScope("All Gadgets"))
-            {
-                options
-                    .Property("Gadgety Things", form => form.Gadgets)
-                    .ListItems(options =>
-                        options
-                            .Name(gadget => $"{gadget.Id} - {gadget.Name}")
-                            .Category(gadget => gadget.Purpose)
-                            .Description(gadget => $"Description for {gadget.Name}")
-                    )
-                    .WithMaxItems(int.MaxValue)
-                    .AsDrillDown();
-            }
+            // options.Property("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
+            // options.Property(form => form.Widgets).SectionByItem(obj => obj.PrimaryConfig.EnvironmentName);
+
+            // options.Property("Widges2", form => form.Widgets.ToArray()).ConcatItems(", ");
+
+            // using (options.CreateCategoryScope("Widgets"))
+            // {
+            //     options.Property(form => form.WidgetIdCount);
+            //     options.Property(form => form.WidgetEvents).ShowRate(false).ShowTotal();
+            //     options.Property("Widgety Things", form => form.Widgets).AsDrillDown();
+            //     options
+            //         .Property("Widgets from method", form => form.GetWidgets())
+            //         .ListItems(config => config.Name(obj => obj.FullName))
+            //         .AsDrillDownIcon("Click for more info");
+            // }
+            // //
+            // using (options.CreateCategoryScope("Gadgets"))
+            // {
+            //     options.Property(form => form.GadgetIdCount).Description("Max Gadget Id");
+            //     options.Property(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
+            // }
+            // //
+            // using (options.CreateCategoryScope("All Gadgets"))
+            // {
+            //     options
+            //         .Property("Gadgety Things", form => form.Gadgets)
+            //         .ListItems(options =>
+            //             options
+            //                 .Name(gadget => $"{gadget.Id} - {gadget.Name}")
+            //                 .Category(gadget => gadget.Purpose)
+            //                 .Description(gadget => $"Description for {gadget.Name}")
+            //         )
+            //         .WithMaxItems(int.MaxValue)
+            //         .AsDrillDown();
+            // }
         });
     }
 

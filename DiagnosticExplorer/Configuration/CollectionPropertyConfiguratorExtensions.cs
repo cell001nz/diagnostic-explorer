@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace DiagnosticExplorer;
 
@@ -19,8 +21,13 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, TItem[]> property,
         string separator = null,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, name);
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, TItem[]> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
 
     public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
         this IPropertyConfigurator<T, TItem[]> property,
@@ -30,6 +37,246 @@ public static class CollectionPropertyConfiguratorExtensions
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, TItem[]> property, int maxItems) =>
         ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
+        this IPropertyConfigurator<T, List<TItem>> property,
+        Action<ICollectionListConfigurator<TItem>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, List<TItem>> property) =>
+        ConfigureCollection<T, TItem>(property);
+
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(this IPropertyConfigurator<T, List<TItem>> property, string name = null) =>
+        ConfigureCollection<T, TItem>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, List<TItem>> property,
+        string separator = null,
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, List<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
+        this IPropertyConfigurator<T, List<TItem>> property,
+        Func<TItem, object> category,
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, List<TItem>> property, int maxItems) =>
+        ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
+        this IPropertyConfigurator<T, HashSet<TItem>> property,
+        Action<ICollectionListConfigurator<TItem>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, HashSet<TItem>> property) =>
+        ConfigureCollection<T, TItem>(property);
+
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(this IPropertyConfigurator<T, HashSet<TItem>> property, string name = null) =>
+        ConfigureCollection<T, TItem>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, HashSet<TItem>> property,
+        string separator = null,
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, HashSet<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
+        this IPropertyConfigurator<T, HashSet<TItem>> property,
+        Func<TItem, object> category,
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, HashSet<TItem>> property, int maxItems) =>
+        ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
+        this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
+        Action<ICollectionListConfigurator<TItem>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, ObservableCollection<TItem>> property) =>
+        ConfigureCollection<T, TItem>(property);
+
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(
+        this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
+        string separator = null,
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
+        this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
+        Func<TItem, object> category,
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
+        this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
+        int maxItems
+    ) => ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
+        this IPropertyConfigurator<T, BindingList<TItem>> property,
+        Action<ICollectionListConfigurator<TItem>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, BindingList<TItem>> property) =>
+        ConfigureCollection<T, TItem>(property);
+
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(
+        this IPropertyConfigurator<T, BindingList<TItem>> property,
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, BindingList<TItem>> property,
+        string separator = null,
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, BindingList<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
+        this IPropertyConfigurator<T, BindingList<TItem>> property,
+        Func<TItem, object> category,
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
+        this IPropertyConfigurator<T, BindingList<TItem>> property,
+        int maxItems
+    ) => ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ListItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
+        Action<ICollectionListConfigurator<KeyValuePair<TKey, TValue>>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> CollectionItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ShowCount<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ConcatItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
+        string separator = null,
+        Func<KeyValuePair<TKey, TValue>, string> format = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ConcatItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
+        Func<KeyValuePair<TKey, TValue>, string> format
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> SectionByItem<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
+        Func<KeyValuePair<TKey, TValue>, object> category,
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> WithMaxItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
+        int maxItems
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ListItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
+        Action<ICollectionListConfigurator<KeyValuePair<TKey, TValue>>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> CollectionItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ShowCount<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ConcatItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
+        string separator = null,
+        Func<KeyValuePair<TKey, TValue>, string> format = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ConcatItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
+        Func<KeyValuePair<TKey, TValue>, string> format
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> SectionByItem<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
+        Func<KeyValuePair<TKey, TValue>, object> category,
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> WithMaxItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
+        int maxItems
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).WithMaxItems(maxItems);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ListItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
+        Action<ICollectionListConfigurator<KeyValuePair<TKey, TValue>>> configure = null
+    ) => property.CollectionItems().ListItems(configure);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> CollectionItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ShowCount<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ShowCount(name);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ConcatItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
+        string separator = null,
+        Func<KeyValuePair<TKey, TValue>, string> format = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ConcatItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
+        Func<KeyValuePair<TKey, TValue>, string> format
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ConcatItems(format);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> SectionByItem<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
+        Func<KeyValuePair<TKey, TValue>, object> category,
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).SectionByItem(category, name);
+
+    public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> WithMaxItems<T, TKey, TValue>(
+        this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
+        int maxItems
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).WithMaxItems(maxItems);
 
     public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
         this IPropertyConfigurator<T, IList<TItem>> property,
@@ -45,8 +292,13 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, IList<TItem>> property,
         string separator = null,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, name);
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, IList<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
 
     public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
         this IPropertyConfigurator<T, IList<TItem>> property,
@@ -73,8 +325,13 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyList<TItem>> property,
         string separator = null,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, name);
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, IReadOnlyList<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
 
     public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyList<TItem>> property,
@@ -103,8 +360,13 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyCollection<TItem>> property,
         string separator = null,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, name);
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, IReadOnlyCollection<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
 
     public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyCollection<TItem>> property,
@@ -131,8 +393,13 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, ISet<TItem>> property,
         string separator = null,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, name);
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, ISet<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
 
     public static ICollectionConfigurator<T, TItem> SectionByItem<T, TItem>(
         this IPropertyConfigurator<T, ISet<TItem>> property,
@@ -154,8 +421,13 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, ICollection<TItem>> property,
         string separator = null,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, name);
+        Func<TItem, string> format = null
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(separator, format);
+
+    public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
+        this IPropertyConfigurator<T, ICollection<TItem>> property,
+        Func<TItem, string> format
+    ) => ConfigureCollection<T, TItem>(property).ConcatItems(format);
 
     public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
         this IPropertyConfigurator<T, ICollection<TItem>> property,

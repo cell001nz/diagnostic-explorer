@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using DiagnosticExplorer.Logging;
 using Microsoft.Extensions.Configuration;
@@ -570,6 +572,49 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void InlineCustomProjectionCanRenderAsDrillDown()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<DrillDownRoot>(type =>
+            type.Custom("Summary", projection => projection.Property("Name", root => "Projection")).AsDrillDown()
+        );
+        DiagnosticManager.UseConfiguration(configuration);
+
+        DrillDownRoot root = new();
+        Property property = Render(root).GetProperty("Summary", "General");
+
+        Assert.True(property.CanDrillDown);
+        Assert.False(property.DrillDownIconOnly);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(root, "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Summary" } }
+        );
+
+        PropertyBag bag = Assert.Single(response.Diagnostics.PropertyBags);
+        Assert.Equal("Projection", bag.GetProperty("Name", "General").Value);
+    }
+
+    [Fact]
+    public void InlineCustomProjectionCanRenderDirectFields()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<PrivatePropertySample>(type =>
+            type.Custom("Projection", projection => projection.Property(sample => sample._value)).AsDrillDown()
+        );
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PrivatePropertySample sample = new();
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(sample, "Tests", "Root") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Projection" } }
+        );
+
+        PropertyBag bag = Assert.Single(response.Diagnostics.PropertyBags);
+        Assert.Equal("Value", bag.GetProperty("_value", "General").Value);
+    }
+
+    [Fact]
     public void FluentMetadataOverridesOnlyExplicitAttributeValues()
     {
         DiagnosticConfiguration configuration = new();
@@ -658,7 +703,53 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new CollectionSample());
 
         Assert.Equal("3", bag.GetProperty("Items count", "General").Value);
-        Assert.Equal("3 items: One, Two, ... (1 more item)", bag.GetProperty("Items", "General").Value);
+        Assert.Equal("One, Two, ... (1 more item)", bag.GetProperty("Items", "General").Value);
+    }
+
+    [Fact]
+    public void CollectionCanFormatConcatenatedItems()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ConcatItems(" / ", item => $"{item.Name}:{item.Value}");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionSample());
+
+        Assert.Equal("One:1 / Two:2 / Three:3", bag.GetProperty("Items", "General").Value);
+    }
+
+    [Fact]
+    public void CollectionPresentationOutputsRetainPropertyMetadata()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items)
+                .Description("Configured items")
+                .Warn(_ => true, "Items need attention")
+                .ShowCount()
+                .ConcatItems(", ");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionSample());
+        Property[] properties = { bag.GetProperty("Items count", "General"), bag.GetProperty("Items", "General") };
+
+        Assert.All(
+            properties,
+            property =>
+            {
+                Assert.Equal("Configured items", property.Description);
+                PropertyAlert alert = Assert.Single(property.Alerts);
+                Assert.Equal(PropertyAlertSeverity.Warning, alert.Severity);
+                Assert.Equal("Items need attention", alert.Message);
+            }
+        );
     }
 
     [Fact]
@@ -694,23 +785,68 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionInterfaceSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.Array).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
-            type.Property(sample => sample.List).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
-            type.Property(sample => sample.ReadOnlyList).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
-            type.Property(sample => sample.Collection).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
-            type.Property(sample => sample.ReadOnlyCollection).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
-            type.Property(sample => sample.Set).ShowCount().ConcatItems(", ").SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.Array).ShowCount().ConcatItems(", ", item => item.Name).SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.List).ShowCount().ConcatItems(", ", item => item.Name).SectionByItem(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.ReadOnlyList)
+                .ShowCount()
+                .ConcatItems(", ", item => item.Name)
+                .SectionByItem(item => item.Name)
+                .WithMaxItems(1);
+            type.Property(sample => sample.Collection)
+                .ShowCount()
+                .ConcatItems(", ", item => item.Name)
+                .SectionByItem(item => item.Name)
+                .WithMaxItems(1);
+            type.Property(sample => sample.ReadOnlyCollection)
+                .ShowCount()
+                .ConcatItems(", ", item => item.Name)
+                .SectionByItem(item => item.Name)
+                .WithMaxItems(1);
+            type.Property(sample => sample.Set).ShowCount().ConcatItems(", ", item => item.Name).SectionByItem(item => item.Name).WithMaxItems(1);
         });
         DiagnosticManager.UseConfiguration(configuration);
 
         PropertyBag bag = Render(new CollectionInterfaceSample());
 
-        Assert.Equal("1 item: Array", bag.GetProperty(nameof(CollectionInterfaceSample.Array), "General").Value);
-        Assert.Equal("1 item: List", bag.GetProperty(nameof(CollectionInterfaceSample.List), "General").Value);
-        Assert.Equal("1 item: Read-only list", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyList), "General").Value);
-        Assert.Equal("1 item: Collection", bag.GetProperty(nameof(CollectionInterfaceSample.Collection), "General").Value);
-        Assert.Equal("1 item: Read-only collection", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyCollection), "General").Value);
-        Assert.Equal("1 item: Set", bag.GetProperty(nameof(CollectionInterfaceSample.Set), "General").Value);
+        Assert.Equal("Array", bag.GetProperty(nameof(CollectionInterfaceSample.Array), "General").Value);
+        Assert.Equal("List", bag.GetProperty(nameof(CollectionInterfaceSample.List), "General").Value);
+        Assert.Equal("Read-only list", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyList), "General").Value);
+        Assert.Equal("Collection", bag.GetProperty(nameof(CollectionInterfaceSample.Collection), "General").Value);
+        Assert.Equal("Read-only collection", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyCollection), "General").Value);
+        Assert.Equal("Set", bag.GetProperty(nameof(CollectionInterfaceSample.Set), "General").Value);
+    }
+
+    [Fact]
+    public void ConcreteCollectionDeclarationsSupportPresentationMethods()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ConcreteCollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.List).Category("List").ListItems(list => list.Name(item => item.Name));
+            type.Property(sample => sample.Set).Category("Set").ShowCount();
+            type.Property(sample => sample.Observable).Category("Observable").ConcatItems(", ", item => item.Name);
+            type.Property(sample => sample.Binding).Category("Binding").SectionByItem(item => item.Name);
+            type.Property(sample => sample.Dictionary).Category("Dictionary").ListItems();
+            type.Property(sample => sample.InterfaceDictionary)
+                .Category("Interface dictionary")
+                .ConcatItems(", ", item => $"{item.Key}:{item.Value.Name}");
+            type.Property(sample => sample.ReadOnlyDictionary).Category("Read-only dictionary").ListItems();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new ConcreteCollectionSample());
+
+        Assert.NotNull(bag.GetProperty("List", "List"));
+        Assert.Equal("1", bag.GetProperty(nameof(ConcreteCollectionSample.Set), "Set").Value);
+        Assert.Equal("Observable", bag.GetProperty(nameof(ConcreteCollectionSample.Observable), "Observable").Value);
+        Assert.NotNull(bag.GetProperty(nameof(CollectionItem.Name), "Binding.Binding"));
+        Assert.Equal("Dictionary", bag.GetProperty("First", "Dictionary").Value);
+        Assert.Equal(
+            "Second:Interface dictionary",
+            bag.GetProperty(nameof(ConcreteCollectionSample.InterfaceDictionary), "Interface dictionary").Value
+        );
+        Assert.Equal("Read-only dictionary", bag.GetProperty("Third", "Read-only dictionary").Value);
     }
 
     [Fact]
@@ -1145,6 +1281,39 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void ConcatenatedEnumerableSupportsDrillDown()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false, DrillDownMaxItems = 10 };
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ConcatItems(", ").WithDrillDown(maxItems: 2);
+        });
+        configuration.Configure<CollectionItem>(type =>
+        {
+            type.ExcludeAll();
+            type.Include(item => item.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        CollectionSample sample = new();
+        PropertyBag bag = Render(sample);
+        Property property = bag.GetProperty("Items", "General");
+        Assert.Equal("One, Two, Three", property.Value);
+        Assert.True(property.CanDrillDown);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(sample, "Tests", "Collection") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Items" } }
+        );
+
+        Assert.Equal(2, response.DisplayedCount);
+        Assert.Equal(3, response.TotalCount);
+        Assert.True(response.IsTruncated);
+        Assert.Equal(new[] { "[0]", "[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
+    }
+
+    [Fact]
     public void NamedDelegateCollectionDefaultsToCountAndSupportsDrillDown()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false, DrillDownMaxItems = 10 };
@@ -1328,7 +1497,7 @@ public sealed class FluentConfigurationTests : IDisposable
         sample.Requests.Register(6);
         PropertyBag bag = Render(sample);
 
-        Assert.Equal("3 items: One, Two, ... (1 more item)", bag.GetProperty("Attributed items", "Collections").Value);
+        Assert.Equal("One, Two, ... (1 more item)", bag.GetProperty("Attributed items", "Collections").Value);
         Assert.Equal("6", bag.GetProperty("Total Attributed requests", "Metrics").Value);
         Assert.Null(bag.GetProperty("Attributed requests/sec", "Metrics"));
         Assert.NotNull(bag.GetProperty("Time since Attributed started", "Timing"));
@@ -1677,6 +1846,19 @@ public sealed class FluentConfigurationTests : IDisposable
         public ICollection<CollectionItem> Collection { get; } = new List<CollectionItem> { new("Collection", 1) };
         public IReadOnlyCollection<CollectionItem> ReadOnlyCollection { get; } = new List<CollectionItem> { new("Read-only collection", 1) };
         public ISet<CollectionItem> Set { get; } = new HashSet<CollectionItem> { new("Set", 1) };
+    }
+
+    private sealed class ConcreteCollectionSample
+    {
+        public List<CollectionItem> List { get; } = new() { new("List", 1) };
+        public HashSet<CollectionItem> Set { get; } = new() { new("Set", 1) };
+        public ObservableCollection<CollectionItem> Observable { get; } = new() { new("Observable", 1) };
+        public BindingList<CollectionItem> Binding { get; } = new() { new("Binding", 1) };
+        public Dictionary<string, CollectionItem> Dictionary { get; } = new() { ["First"] = new("Dictionary", 1) };
+        public IDictionary<string, CollectionItem> InterfaceDictionary { get; } =
+            new Dictionary<string, CollectionItem> { ["Second"] = new("Interface dictionary", 1) };
+        public IReadOnlyDictionary<string, CollectionItem> ReadOnlyDictionary { get; } =
+            new Dictionary<string, CollectionItem> { ["Third"] = new("Read-only dictionary", 1) };
     }
 
     private sealed class CollectionItem

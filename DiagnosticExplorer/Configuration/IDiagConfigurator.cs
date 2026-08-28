@@ -91,6 +91,7 @@ public interface ICustomPropertyConfigurator<T>
 {
     ICustomPropertyConfigurator<T> AsJson(int maxLength = 100);
     ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null);
+    ICustomPropertyConfigurator<T> AsDrillDown(int? maxItems = null);
     ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null);
     ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null);
     ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true);
@@ -118,10 +119,12 @@ public interface ICustomObjectConfigurator<T>
 public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>
 {
     ICollectionConfigurator<T, TItem> ShowCount(string name = null);
-    ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, string name = null);
+    ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, Func<TItem, string> format = null);
+    ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format);
     ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null);
     ICollectionConfigurator<T, TItem> SectionByItem(Func<TItem, object> category, string name = null);
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
+    ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null);

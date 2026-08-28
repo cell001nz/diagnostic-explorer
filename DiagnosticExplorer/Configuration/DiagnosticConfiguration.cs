@@ -1182,6 +1182,8 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
+    public ICustomPropertyConfigurator<T> AsDrillDown(int? maxItems = null) => WithDrillDown(true, maxItems);
+
     public ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null)
     {
         if (maxItems <= 0)
@@ -1321,11 +1323,15 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, string name = null)
+    public ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, Func<TItem, string> format = null)
     {
-        AddOutput(CollectionMode.Concatenate, name).Separator = separator;
+        CollectionOutputConfiguration output = AddOutput(CollectionMode.Concatenate, null);
+        output.Separator = separator;
+        output.ValueFormatter = format == null ? null : item => format((TItem)item);
         return this;
     }
+
+    public ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format) => ConcatItems(null, format);
 
     public ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null)
     {
@@ -1352,6 +1358,8 @@ internal sealed class CollectionConfigurator<T, TItem>
         Configuration.MaxItems = new ConfiguredValue<int>(maxItems);
         return this;
     }
+
+    public ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null) => AsDrillDown(enabled, maxItems);
 
     public ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null)
     {

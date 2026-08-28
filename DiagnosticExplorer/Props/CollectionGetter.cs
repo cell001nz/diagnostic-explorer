@@ -43,7 +43,9 @@ internal class CollectionGetter : PropertyGetter
         _categoryFormatter = options.CategoryFormatter;
 
         Type collectionType = info?.PropertyType ?? configuration.ValueType;
-        Type genericType = GenericObjectCache.FindGenericInterface(collectionType, typeof(IDictionary<,>));
+        Type genericType =
+            GenericObjectCache.FindGenericInterface(collectionType, typeof(IDictionary<,>))
+            ?? GenericObjectCache.FindGenericInterface(collectionType, typeof(IReadOnlyDictionary<,>));
         bool isDictionary = collectionType.GetInterfaces().Contains(typeof(IDictionary));
 
         if (genericType != null)
@@ -116,7 +118,7 @@ internal class CollectionGetter : PropertyGetter
 
             if (col == null)
             {
-                bag.AddProperty(new Property(name, null), PrependToCategory(catPrepend, obj));
+                bag.AddProperty(CreateOutputProperty(name, null, obj, null), PrependToCategory(catPrepend, obj));
                 return;
             }
 
@@ -151,13 +153,13 @@ internal class CollectionGetter : PropertyGetter
         catch (Exception ex) // May get exception if the collection is modified during iteration
         {
             string error = $"<{ex.Message}>";
-            bag.AddProperty(new Property(GetName(obj), error), PrependToCategory(catPrepend, obj));
+            bag.AddProperty(CreateOutputProperty(GetName(obj), error, obj, null), PrependToCategory(catPrepend, obj));
         }
     }
 
     private void AddCountProperty(string name, int count, IEnumerable collection, PropertyBag bag, string catPrepend, object owner)
     {
-        Property property = new(name, FormatValue(count));
+        Property property = CreateOutputProperty(name, FormatValue(count), owner, collection);
         ApplyDrillDown(property, collection);
         bag.AddProperty(property, PrependToCategory(catPrepend, owner));
     }
@@ -217,11 +219,27 @@ internal class CollectionGetter : PropertyGetter
 
     private void AppendConcatenated(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
     {
-        if (_valueFunc != null)
+        IEnumerable collection = col;
+        if (_valueFormatter != null)
+            col = col.Cast<object>().Select(_valueFormatter);
+        else if (_valueFunc != null)
             col = col.Cast<object>().Select(_valueFunc);
 
-        string val = FormatEnumerable(col, _separator, _maxItems);
-        bag.AddProperty(new Property(GetName(owner), val), PrependToCategory(catPrepend, owner));
+        string val = FormatEnumerable(col, _separator, _maxItems, includeCount: false);
+        Property property = CreateOutputProperty(GetName(owner), val, owner, collection);
+        ApplyDrillDown(property, collection);
+        bag.AddProperty(property, PrependToCategory(catPrepend, owner));
+    }
+
+    private Property CreateOutputProperty(string name, string value, object owner, object valueObject)
+    {
+        return new Property(name, value, GetDescription(owner))
+        {
+            ValueObject = valueObject,
+            Alerts = GetAlerts(owner),
+            SourceObject = owner,
+            SourceProperty = PropInfo,
+        };
     }
 
     private object GetNextPropVal(object obj, Func<object, object> propFunc, int index, string name)

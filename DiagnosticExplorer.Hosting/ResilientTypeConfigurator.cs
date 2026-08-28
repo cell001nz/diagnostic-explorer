@@ -138,6 +138,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
 
+        public ICustomPropertyConfigurator<T> AsDrillDown(int? maxItems = null) => this;
+
         public ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null) => this;
 
         public ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null) => this;

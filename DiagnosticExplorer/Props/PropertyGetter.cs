@@ -217,7 +217,7 @@ internal class PropertyGetter
 
     protected virtual string GetCategory(object obj) => GetFormattedMetadata(_categoryFormatter, obj, Category);
 
-    private List<PropertyAlert> GetAlerts(object obj)
+    protected List<PropertyAlert> GetAlerts(object obj)
     {
         if (_alerts == null)
             return new List<PropertyAlert>();
@@ -318,7 +318,7 @@ internal class PropertyGetter
         return GetValue(obj, GetFunc, out objectValue);
     }
 
-    protected string FormatEnumerable(IEnumerable col, string separator, int maxItems)
+    protected string FormatEnumerable(IEnumerable col, string separator, int maxItems, bool includeCount = true)
     {
         IEnumerable<object> asObject = col.Cast<object>();
         int count = asObject.Count();
@@ -337,8 +337,12 @@ internal class PropertyGetter
         if (remaining > 0)
             values.Add(string.Format("... ({0} more item{1})", remaining, remaining == 1 ? "" : "s"));
 
-        string pre = string.Format("{0} item{1}: ", count, count == 1 ? "" : "s");
-        return pre + string.Join(separator, values.ToArray());
+        string formattedValues = string.Join(separator, values.ToArray());
+        if (!includeCount)
+            return formattedValues;
+
+        string countText = string.Format("{0} item{1}", count, count == 1 ? "" : "s");
+        return countText + ": " + formattedValues;
     }
 
     public string GetValue(object obj, Func<object, object> propInfo, out object propertyValue)
