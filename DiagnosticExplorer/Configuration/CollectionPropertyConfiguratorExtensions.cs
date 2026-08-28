@@ -13,10 +13,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, TItem[]> property) =>
         ConfigureCollection<T, TItem>(property);
 
-    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(
-        this IPropertyConfigurator<T, TItem[]> property,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ShowCount(name);
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(this IPropertyConfigurator<T, TItem[]> property, string name = null) =>
+        ConfigureCollection<T, TItem>(property).ShowCount(name);
 
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, TItem[]> property,
@@ -30,10 +28,8 @@ public static class CollectionPropertyConfiguratorExtensions
         string name = null
     ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
 
-    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
-        this IPropertyConfigurator<T, TItem[]> property,
-        int maxItems
-    ) => ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, TItem[]> property, int maxItems) =>
+        ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
 
     public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
         this IPropertyConfigurator<T, IList<TItem>> property,
@@ -43,10 +39,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, IList<TItem>> property) =>
         ConfigureCollection<T, TItem>(property);
 
-    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(
-        this IPropertyConfigurator<T, IList<TItem>> property,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ShowCount(name);
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(this IPropertyConfigurator<T, IList<TItem>> property, string name = null) =>
+        ConfigureCollection<T, TItem>(property).ShowCount(name);
 
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, IList<TItem>> property,
@@ -60,10 +54,8 @@ public static class CollectionPropertyConfiguratorExtensions
         string name = null
     ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
 
-    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
-        this IPropertyConfigurator<T, IList<TItem>> property,
-        int maxItems
-    ) => ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, IList<TItem>> property, int maxItems) =>
+        ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
 
     public static ICollectionConfigurator<T, TItem> ListItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyList<TItem>> property,
@@ -133,10 +125,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, ISet<TItem>> property) =>
         ConfigureCollection<T, TItem>(property);
 
-    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(
-        this IPropertyConfigurator<T, ISet<TItem>> property,
-        string name = null
-    ) => ConfigureCollection<T, TItem>(property).ShowCount(name);
+    public static ICollectionConfigurator<T, TItem> ShowCount<T, TItem>(this IPropertyConfigurator<T, ISet<TItem>> property, string name = null) =>
+        ConfigureCollection<T, TItem>(property).ShowCount(name);
 
     public static ICollectionConfigurator<T, TItem> ConcatItems<T, TItem>(
         this IPropertyConfigurator<T, ISet<TItem>> property,
@@ -150,10 +140,8 @@ public static class CollectionPropertyConfiguratorExtensions
         string name = null
     ) => ConfigureCollection<T, TItem>(property).SectionByItem(category, name);
 
-    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
-        this IPropertyConfigurator<T, ISet<TItem>> property,
-        int maxItems
-    ) => ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
+    public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, ISet<TItem>> property, int maxItems) =>
+        ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
 
     public static ICollectionConfigurator<T, TItem> CollectionItems<T, TItem>(this IPropertyConfigurator<T, ICollection<TItem>> property) =>
         ConfigureCollection<T, TItem>(property);
