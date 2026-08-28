@@ -67,6 +67,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.IncludeAll();
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
+            options.Property(widget => widget._dateCreated).ShowElapsed();
             options.Property(widget => widget.PrimaryConfig).Named("Widget Config").AsDrillDownIcon("View more details");
             options.Property(widget => widget.SecondaryConfig).AsDrillDownIcon();
             options
@@ -75,9 +76,9 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
                     projection =>
                     {
                         projection.Property("Full name", widget => widget.FullName);
-                        projection.Expanded("Primary config", widget => widget.PrimaryConfig);
-                        projection.Expanded("Secondary config", widget => widget.SecondaryConfig);
-                        projection.Collection("Names", widget => _names).AsList();
+                        projection.Property("Primary config", widget => widget.PrimaryConfig).Expand();
+                        projection.Property("Secondary config", widget => widget.SecondaryConfig).Expand();
+                        projection.Property("Names", widget => _names).ListItems();
                     }
                 )
                 .AsDrillDownIcon();
@@ -88,7 +89,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.ExcludeAll();
             options.Property("Some Prop", widget => widget._someProp);
             options.Property("Private String", widget => widget._privateString);
-            options.Property("My Decimal", widget => widget._myDecimal);
+            options.Property(widget => widget._myDecimal);
             options.Property(widget => widget.Name).AllowSet();
             options.Property("BlahConfig", widget => widget.PrimaryConfig).AsDrillDownIcon();
             options.Property(widget => widget.DateCreated).Category("Info").AllowSet();

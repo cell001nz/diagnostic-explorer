@@ -701,12 +701,7 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
     {
         if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
         {
-            PropertyConfiguration fieldConfiguration = AddDelegateProperty(
-                field.Name,
-                typeof(TProperty),
-                property.Compile(),
-                PropertyStrategy.Default
-            );
+            PropertyConfiguration fieldConfiguration = AddDelegateProperty(field.Name, typeof(TProperty), property.Compile(), null);
             return new PropertyConfigurator<T, TProperty>(fieldConfiguration);
         }
 
@@ -717,19 +712,7 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return new PropertyConfigurator<T, TProperty>(configuration);
     }
 
-    public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("A property name is required.", nameof(name));
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
-
-        CustomPropertyConfiguration configuration = _configuration.AddCustomProperty(name, item => value((T)item));
-        CategoryScope scope = _categoryScope.Value;
-        if (scope != null)
-            configuration.Category = new ConfiguredValue<string>(scope.Category);
-        return new CustomPropertyConfigurator<T>(configuration);
-    }
+    public IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value) => ConfigureProperty(name, value);
 
     public ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure)
     {
@@ -738,74 +721,12 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
 
         InlineCustomObjectConfigurator<T> projection = new();
         configure(projection);
-        return Property(name, item => new InlineCustomObject<T>(item, projection.Members));
-    }
-
-    public ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property)
-    {
-        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
-            return Collection(field.Name, property.Compile());
-
-        PropertyConfiguration configuration = GetProperty(property);
-        configuration.Included = true;
-        configuration.UsesPropertyDefaults = true;
-        configuration.Strategy = PropertyStrategy.Collection;
+        CustomPropertyConfiguration configuration = _configuration.AddCustomProperty(
+            name,
+            item => new InlineCustomObject<T>((T)item, projection.Members)
+        );
         ApplyCategoryScope(configuration);
-        return new CollectionConfigurator<T, TItem>(configuration);
-    }
-
-    public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value)
-    {
-        PropertyConfiguration configuration = AddDelegateProperty(name, typeof(IEnumerable<TItem>), value, PropertyStrategy.Collection);
-        return new CollectionConfigurator<T, TItem>(configuration);
-    }
-
-    public IRateConfigurator<T> Rate(Expression<Func<T, RateCounter>> property)
-    {
-        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
-        {
-            PropertyConfiguration fieldConfiguration = AddDelegateProperty(
-                field.Name,
-                typeof(RateCounter),
-                property.Compile(),
-                PropertyStrategy.Rate
-            );
-            return new RateConfigurator<T>(fieldConfiguration);
-        }
-
-        PropertyConfiguration configuration = GetProperty(property);
-        configuration.Included = true;
-        configuration.UsesPropertyDefaults = true;
-        configuration.Strategy = PropertyStrategy.Rate;
-        ApplyCategoryScope(configuration);
-        return new RateConfigurator<T>(configuration);
-    }
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTime>> property) => ConfigureDate(property);
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTime?>> property) => ConfigureDate(property);
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset>> property) => ConfigureDate(property);
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property) => ConfigureDate(property);
-
-    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(Expression<Func<T, TProperty>> property)
-    {
-        if (ExpressionProperty.TryGetDirectField(property, typeof(T), out FieldInfo field))
-            return Expanded(field.Name, property.Compile());
-
-        PropertyConfiguration configuration = GetProperty(property);
-        configuration.Included = true;
-        configuration.UsesPropertyDefaults = true;
-        configuration.Strategy = PropertyStrategy.Extended;
-        ApplyCategoryScope(configuration);
-        return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
-    }
-
-    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value)
-    {
-        PropertyConfiguration configuration = AddDelegateProperty(name, typeof(TProperty), value, PropertyStrategy.Extended);
-        return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
+        return new CustomPropertyConfigurator<T>(configuration);
     }
 
     public ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure)
@@ -824,22 +745,12 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return AddEventRoute(new DrillDownEventRouteTemplate(target => compiled((T)target), matchMode, ConfigureRoute(configure)));
     }
 
-    private IDateConfigurator<T> ConfigureDate(LambdaExpression property)
-    {
-        PropertyConfiguration configuration = GetProperty(property);
-        configuration.Included = true;
-        configuration.UsesPropertyDefaults = true;
-        configuration.Strategy = PropertyStrategy.Date;
-        ApplyCategoryScope(configuration);
-        return new DateConfigurator<T>(configuration);
-    }
-
     private PropertyConfiguration GetProperty(LambdaExpression expression)
     {
         return _configuration.GetOrAdd(ExpressionProperty.Get(expression, typeof(T)));
     }
 
-    private PropertyConfiguration AddDelegateProperty<TProperty>(string name, Type valueType, Func<T, TProperty> value, PropertyStrategy strategy)
+    private PropertyConfiguration AddDelegateProperty<TProperty>(string name, Type valueType, Func<T, TProperty> value, PropertyStrategy? strategy)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("A property name is required.", nameof(name));
@@ -852,7 +763,20 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return configuration;
     }
 
+    private IPropertyConfigurator<T, TProperty> ConfigureProperty<TProperty>(string name, Func<T, TProperty> value)
+    {
+        PropertyConfiguration configuration = AddDelegateProperty(name, typeof(TProperty), value, null);
+        return new PropertyConfigurator<T, TProperty>(configuration);
+    }
+
     private void ApplyCategoryScope(PropertyConfiguration configuration)
+    {
+        CategoryScope scope = _categoryScope.Value;
+        if (scope != null)
+            configuration.Category = new ConfiguredValue<string>(scope.Category);
+    }
+
+    private void ApplyCategoryScope(CustomPropertyConfiguration configuration)
     {
         CategoryScope scope = _categoryScope.Value;
         if (scope != null)
@@ -1011,9 +935,33 @@ internal abstract class ObjectPropertyConfigurator<T, TSelf> : PropertyConfigura
     }
 }
 
+internal interface IDateStrategyConfigurator
+{
+    void ConfigureDate(bool? exposeDate, bool? exposeElapsed, bool? exposeTimeUntil);
+}
+
+internal interface IRateStrategyConfigurator
+{
+    void ConfigureRate(bool? exposeRate, bool? exposeTotal);
+}
+
+internal interface IExtendedStrategyConfigurator
+{
+    void ConfigureExtended();
+}
+
+internal interface ICollectionStrategyConfigurator<T>
+{
+    ICollectionConfigurator<T, TItem> ConfigureCollection<TItem>();
+}
+
 internal sealed class PropertyConfigurator<T, TProperty>
     : ObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>,
-        IPropertyConfigurator<T, TProperty>
+        IPropertyConfigurator<T, TProperty>,
+        IDateStrategyConfigurator,
+        IRateStrategyConfigurator,
+        IExtendedStrategyConfigurator,
+        ICollectionStrategyConfigurator<T>
 {
     public PropertyConfigurator(PropertyConfiguration configuration)
         : base(configuration) { }
@@ -1063,6 +1011,8 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
+    public IPropertyConfigurator<T, TProperty> AsDrillDown(int? maxItems = null) => WithDrillDown(true, maxItems);
+
     public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null)
     {
         ConfigureDrillDown(Configuration, true, maxItems, true);
@@ -1087,6 +1037,37 @@ internal sealed class PropertyConfigurator<T, TProperty>
         Configuration.JsonHover = new ConfiguredValue<bool>(false);
         Configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
         return this;
+    }
+
+    void IDateStrategyConfigurator.ConfigureDate(bool? exposeDate, bool? exposeElapsed, bool? exposeTimeUntil)
+    {
+        Configuration.Strategy = PropertyStrategy.Date;
+        if (exposeDate.HasValue)
+            Configuration.ExposeDate = new ConfiguredValue<bool>(exposeDate.Value);
+        if (exposeElapsed.HasValue)
+            Configuration.ExposeElapsed = new ConfiguredValue<bool>(exposeElapsed.Value);
+        if (exposeTimeUntil.HasValue)
+            Configuration.ExposeTimeUntil = new ConfiguredValue<bool>(exposeTimeUntil.Value);
+    }
+
+    void IRateStrategyConfigurator.ConfigureRate(bool? exposeRate, bool? exposeTotal)
+    {
+        Configuration.Strategy = PropertyStrategy.Rate;
+        if (exposeRate.HasValue)
+            Configuration.ExposeRate = new ConfiguredValue<bool>(exposeRate.Value);
+        if (exposeTotal.HasValue)
+            Configuration.ExposeTotal = new ConfiguredValue<bool>(exposeTotal.Value);
+    }
+
+    void IExtendedStrategyConfigurator.ConfigureExtended()
+    {
+        Configuration.Strategy = PropertyStrategy.Extended;
+    }
+
+    ICollectionConfigurator<T, TItem> ICollectionStrategyConfigurator<T>.ConfigureCollection<TItem>()
+    {
+        Configuration.Strategy = PropertyStrategy.Collection;
+        return new CollectionConfigurator<T, TItem>(Configuration);
     }
 
     private static void ConfigureDrillDown(PropertyConfiguration configuration, bool enabled, int? maxItems, bool iconOnly, string text = null)
@@ -1341,20 +1322,20 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> Concatenate(string separator = null, string name = null)
+    public ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, string name = null)
     {
         AddOutput(CollectionMode.Concatenate, name).Separator = separator;
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null)
+    public ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null)
     {
         CollectionOutputConfiguration output = AddOutput(CollectionMode.List, null);
         configure?.Invoke(new CollectionListConfigurator<TItem>(output));
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null)
+    public ICollectionConfigurator<T, TItem> SectionByItem(Expression<Func<TItem, object>> category, string name = null)
     {
         if (category == null)
             throw new ArgumentNullException(nameof(category));
@@ -1458,56 +1439,6 @@ internal sealed class CollectionListConfigurator<TItem> : ICollectionListConfigu
         _output.CategoryFormatter = item => format((TItem)item);
         return this;
     }
-}
-
-internal sealed class RateConfigurator<T> : ObjectPropertyConfigurator<T, IRateConfigurator<T>>, IRateConfigurator<T>
-{
-    public RateConfigurator(PropertyConfiguration configuration)
-        : base(configuration) { }
-
-    public IRateConfigurator<T> ShowRate(bool expose = true)
-    {
-        Configuration.ExposeRate = new ConfiguredValue<bool>(expose);
-        return this;
-    }
-
-    public IRateConfigurator<T> ShowTotal(bool expose = true)
-    {
-        Configuration.ExposeTotal = new ConfiguredValue<bool>(expose);
-        return this;
-    }
-}
-
-internal sealed class DateConfigurator<T> : ObjectPropertyConfigurator<T, IDateConfigurator<T>>, IDateConfigurator<T>
-{
-    public DateConfigurator(PropertyConfiguration configuration)
-        : base(configuration) { }
-
-    public IDateConfigurator<T> ShowDate(bool expose = true)
-    {
-        Configuration.ExposeDate = new ConfiguredValue<bool>(expose);
-        return this;
-    }
-
-    public IDateConfigurator<T> ShowElapsed(bool expose = true)
-    {
-        Configuration.ExposeElapsed = new ConfiguredValue<bool>(expose);
-        return this;
-    }
-
-    public IDateConfigurator<T> ShowTimeUntil(bool expose = true)
-    {
-        Configuration.ExposeTimeUntil = new ConfiguredValue<bool>(expose);
-        return this;
-    }
-}
-
-internal sealed class ExtendedPropertyConfigurator<T, TProperty>
-    : ObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>,
-        IExtendedPropertyConfigurator<T, TProperty>
-{
-    public ExtendedPropertyConfigurator(PropertyConfiguration configuration)
-        : base(configuration) { }
 }
 
 internal static class ExpressionProperty

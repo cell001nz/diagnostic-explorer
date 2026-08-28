@@ -139,25 +139,25 @@ public partial class Form1 : Form, INotifyPropertyChanged
     public RateCounter GadgetEvents { get; } = new RateCounter(5);
 
     [CollectionList(Category = "All Gadgets")]
-    public IList<Gadget> Gadgets
+    public ICollection<Gadget> Gadgets
     {
         get { return _gadgets; }
     }
 
     [CollectionCategories(CategoryProperty = nameof(Widget.FullName))]
-    public IList<Widget> Widgets
+    public ICollection<Widget> Widgets
     {
         get { return _widgets; }
     }
 
-    private IEnumerable<Widget> GetWidgets() => _widgets.ToArray();
+    private ICollection<Widget> GetWidgets() => _widgets.ToArray();
 
     internal static void ConfigureDiagnostics(IDiagConfigurator config)
     {
         config.Configure<Form1>(options =>
         {
             options.ExcludeAll();
-            options.Expanded(form => form.NullWidget).Category("NullWidget category");
+            options.Property(form => form.NullWidget).Category("NullWidget category").Expand();
             options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
             options.Property(form => form.SetMePlease).AllowSet();
             options.Property(form => form.Counter2);
@@ -172,30 +172,32 @@ public partial class Form1 : Form, INotifyPropertyChanged
             options
                 .Property("Computed", form => $"This form has {form.Controls.Count} controls")
                 .Description(form => $"Control Info for {form.GetHashCode()}");
+
             options.Property("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
+            options.Property(form => form.Widgets).SectionByItem(obj => obj.PrimaryConfig.EnvironmentName);
 
             using (options.CreateCategoryScope("Widgets"))
             {
                 options.Property(form => form.WidgetIdCount);
-                options.Rate(form => form.WidgetEvents).ShowRate(false).ShowTotal();
-                options.Collection("Widgety Things", form => form._widgets).AsDrillDown();
+                options.Property(form => form.WidgetEvents).ShowRate(false).ShowTotal();
+                options.Property("Widgety Things", form => form.Widgets).AsDrillDown();
                 options
-                    .Collection("Widgets from method", form => form.GetWidgets())
-                    .AsList(config => config.Name(obj => obj.FullName))
+                    .Property("Widgets from method", form => form.GetWidgets())
+                    .ListItems(config => config.Name(obj => obj.FullName))
                     .AsDrillDownIcon("Click for more info");
             }
 
             using (options.CreateCategoryScope("Gadgets"))
             {
                 options.Property(form => form.GadgetIdCount).Description("Max Gadget Id");
-                options.Rate(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
+                options.Property(form => form.GadgetEvents).Description("The rate of gadget events received").ShowRate().ShowTotal();
             }
 
             using (options.CreateCategoryScope("All Gadgets"))
             {
                 options
-                    .Collection("Gadgety Things", form => form.Gadgets)
-                    .AsList(options =>
+                    .Property("Gadgety Things", form => form.Gadgets)
+                    .ListItems(options =>
                         options
                             .Name(gadget => $"{gadget.Id} - {gadget.Name}")
                             .Category(gadget => gadget.Purpose)

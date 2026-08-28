@@ -39,17 +39,8 @@ public interface ITypeConfigurator<T>
     ITypeConfigurator<T> Include<TProperty>(Expression<Func<T, TProperty>> property);
     ITypeConfigurator<T> Exclude<TProperty>(Expression<Func<T, TProperty>> property);
     IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property);
-    ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value);
+    IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value);
     ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure);
-    ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property);
-    ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value);
-    IRateConfigurator<T> Rate(Expression<Func<T, RateCounter>> property);
-    IDateConfigurator<T> Date(Expression<Func<T, DateTime>> property);
-    IDateConfigurator<T> Date(Expression<Func<T, DateTime?>> property);
-    IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset>> property);
-    IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property);
-    IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(Expression<Func<T, TProperty>> property);
-    IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value);
     ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
     ITypeConfigurator<T> Route(Expression<Func<T, string>> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
 }
@@ -81,6 +72,7 @@ public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurat
     IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100);
     IPropertyConfigurator<T, TProperty> AsDateOnly();
     IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null);
+    IPropertyConfigurator<T, TProperty> AsDrillDown(int? maxItems = null);
     IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null);
     IPropertyConfigurator<T, TProperty> AsDrillDownIcon(string text, int? maxItems = null);
     IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true);
@@ -119,18 +111,15 @@ public interface ICustomPropertyConfigurator<T>
 
 public interface ICustomObjectConfigurator<T>
 {
-    ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value);
-    IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value);
-    ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value);
-    IRateConfigurator<T> Rate(string name, Func<T, RateCounter> value);
+    IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value);
 }
 
 public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>
 {
     ICollectionConfigurator<T, TItem> ShowCount(string name = null);
-    ICollectionConfigurator<T, TItem> Concatenate(string separator = null, string name = null);
-    ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null);
-    ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null);
+    ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, string name = null);
+    ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null);
+    ICollectionConfigurator<T, TItem> SectionByItem(Expression<Func<TItem, object>> category, string name = null);
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
     ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null);
@@ -144,18 +133,3 @@ public interface ICollectionListConfigurator<TItem>
     ICollectionListConfigurator<TItem> Value(Func<TItem, string> format);
     ICollectionListConfigurator<TItem> Category(Func<TItem, string> format);
 }
-
-public interface IRateConfigurator<T> : IObjectPropertyConfigurator<T, IRateConfigurator<T>>
-{
-    IRateConfigurator<T> ShowRate(bool expose = true);
-    IRateConfigurator<T> ShowTotal(bool expose = true);
-}
-
-public interface IDateConfigurator<T> : IObjectPropertyConfigurator<T, IDateConfigurator<T>>
-{
-    IDateConfigurator<T> ShowDate(bool expose = true);
-    IDateConfigurator<T> ShowElapsed(bool expose = true);
-    IDateConfigurator<T> ShowTimeUntil(bool expose = true);
-}
-
-public interface IExtendedPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>> { }

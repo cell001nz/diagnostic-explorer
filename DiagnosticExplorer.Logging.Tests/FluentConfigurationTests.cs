@@ -543,11 +543,11 @@ public sealed class FluentConfigurationTests : IDisposable
                     projection =>
                     {
                         projection.Property("Name", root => "Projection");
-                        projection.Expanded("Child", root => root.Child);
+                        projection.Property("Child", root => root.Child).Expand();
                         projection
-                            .Collection("Items", root => root.Items)
-                            .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
-                        projection.Rate("Requests", root => root.Requests).ShowRate(false).ShowTotal();
+                            .Property("Items", root => root.Items)
+                            .ListItems(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+                        projection.Property("Requests", root => root.Requests).ShowRate(false).ShowTotal();
                     }
                 )
                 .AsDrillDownIcon()
@@ -651,7 +651,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).ShowCount().Concatenate(", ").WithMaxItems(2);
+            type.Property(sample => sample.Items).ShowCount().ConcatItems(", ").WithMaxItems(2);
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -659,6 +659,30 @@ public sealed class FluentConfigurationTests : IDisposable
 
         Assert.Equal("3", bag.GetProperty("Items count", "General").Value);
         Assert.Equal("3 items: One, Two, ... (1 more item)", bag.GetProperty("Items", "General").Value);
+    }
+
+    [Fact]
+    public void PropertyCollectionsSupportCommonGenericCollectionInterfaces()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionInterfaceSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.List).Category("List").ListItems(list => list.Name(item => item.Name));
+            type.Property(sample => sample.ReadOnlyList).Category("Read-only list").ListItems(list => list.Name(item => item.Name));
+            type.Property(sample => sample.Collection).Category("Collection").ListItems(list => list.Name(item => item.Name));
+            type.Property(sample => sample.ReadOnlyCollection).Category("Read-only collection").ListItems(list => list.Name(item => item.Name));
+            type.Property(sample => sample.Set).Category("Set").ListItems(list => list.Name(item => item.Name));
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionInterfaceSample());
+
+        Assert.NotNull(bag.GetProperty("List", "List"));
+        Assert.NotNull(bag.GetProperty("Read-only list", "Read-only list"));
+        Assert.NotNull(bag.GetProperty("Collection", "Collection"));
+        Assert.NotNull(bag.GetProperty("Read-only collection", "Read-only collection"));
+        Assert.NotNull(bag.GetProperty("Set", "Set"));
     }
 
     [Fact]
@@ -743,7 +767,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<StrategySample>(type =>
         {
             type.ExcludeAll();
-            type.Rate(sample => sample._privateRequests).ShowRate(false).ShowTotal();
+            type.Property(sample => sample._privateRequests).ShowRate(false).ShowTotal();
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -762,7 +786,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).Categories(item => item.Name).WithMaxItems(2);
+            type.Property(sample => sample.Items).SectionByItem(item => item.Name).WithMaxItems(2);
         });
         configuration.Configure<CollectionItem>(type =>
         {
@@ -785,7 +809,9 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString())).WithMaxItems(2);
+            type.Property(sample => sample.Items)
+                .ListItems(list => list.Name(item => item.Name).Value(item => item.Value.ToString()))
+                .WithMaxItems(2);
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -803,8 +829,8 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items)
-                .AsList(list =>
+            type.Property(sample => sample.Items)
+                .ListItems(list =>
                     list.Name(item => $"Item: {item.Name}")
                         .Value(item => item.Value.ToString())
                         .Description(item => $"Description: {item.Name}")
@@ -1007,8 +1033,8 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items)
-                .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()))
+            type.Property(sample => sample.Items)
+                .ListItems(list => list.Name(item => item.Name).Value(item => item.Value.ToString()))
                 .AsDrillDownIcon();
         });
         configuration.Configure<CollectionItem>(type =>
@@ -1048,6 +1074,11 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(configuration);
 
         CollectionSample sample = new();
+        PropertyBag bag = Render(sample);
+        Property property = bag.GetProperty("Items", "General");
+        Assert.Equal("3", property.Value);
+        Assert.True(property.CanDrillDown);
+
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Collection") },
             new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Items" } }
@@ -1057,6 +1088,38 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.Equal(3, response.TotalCount);
         Assert.True(response.IsTruncated);
         Assert.Equal(new[] { "[0]", "[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
+    }
+
+    [Fact]
+    public void NamedDelegateCollectionDefaultsToCountAndSupportsDrillDown()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false, DrillDownMaxItems = 10 };
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property("Item inventory", sample => sample.Items).AsDrillDown(maxItems: 2);
+        });
+        configuration.Configure<CollectionItem>(type =>
+        {
+            type.ExcludeAll();
+            type.Include(item => item.Name);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        CollectionSample sample = new();
+        PropertyBag bag = Render(sample);
+        Property property = bag.GetProperty("Item inventory", "General");
+        Assert.Equal("3", property.Value);
+        Assert.True(property.CanDrillDown);
+
+        DrillDownResponse response = DiagnosticManager.GetDrillDown(
+            new[] { new RegisteredObject(sample, "Tests", "Collection") },
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Item inventory" } }
+        );
+
+        Assert.Equal(2, response.DisplayedCount);
+        Assert.Equal(3, response.TotalCount);
+        Assert.True(response.IsTruncated);
     }
 
     [Fact]
@@ -1130,9 +1193,9 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<StrategySample>(type =>
         {
             type.ExcludeAll();
-            type.Rate(sample => sample.Requests).Named("Requests").ShowRate(false).ShowTotal();
-            type.Date(sample => sample.Started).ShowDate(false).ShowElapsed();
-            type.Expanded(sample => sample.Details).Named("Details");
+            type.Property(sample => sample.Requests).Named("Requests").ShowRate(false).ShowTotal();
+            type.Property(sample => sample.Started).ShowDate(false).ShowElapsed();
+            type.Property(sample => sample.Details).Named("Details").Expand();
         });
         configuration.Configure<ChildSample>(type =>
         {
@@ -1153,16 +1216,52 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void DatePropertyOverloadsInferDateStrategy()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            StrategySample.ConfigurePrivateDateProperty(type);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new StrategySample());
+
+        Assert.NotNull(bag.GetProperty("Time since _privateStarted", "General"));
+        Assert.NotNull(bag.GetProperty("Time since Last updated", "General"));
+    }
+
+    [Fact]
+    public void RatePropertyOverloadsInferRateStrategy()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            StrategySample.ConfigurePrivateRateProperty(type);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        StrategySample sample = new();
+        sample._privateRequests.Register(4);
+        PropertyBag bag = Render(sample);
+
+        Assert.Equal("4", bag.GetProperty("Total _privateRequests", "General").Value);
+        Assert.Equal("4", bag.GetProperty("Total Background requests", "General").Value);
+    }
+
+    [Fact]
     public void FluentStrategiesOverrideSpecializedAttributesAndPreserveTheirMetadata()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<AttributedStrategySample>(type =>
         {
             type.ExcludeAll();
-            type.Collection(sample => sample.Items).Concatenate(", ").WithMaxItems(2);
-            type.Rate(sample => sample.Requests).ShowRate(false).ShowTotal();
-            type.Date(sample => sample.Started).ShowDate(false).ShowElapsed();
-            type.Expanded(sample => sample.Details).Named("Configured details");
+            type.Property(sample => sample.Items).ConcatItems(", ").WithMaxItems(2);
+            type.Property(sample => sample.Requests).ShowRate(false).ShowTotal();
+            type.Property(sample => sample.Started).ShowDate(false).ShowElapsed();
+            type.Property(sample => sample.Details).Named("Configured details").Expand();
         });
         configuration.Configure<ChildSample>(type =>
         {
@@ -1438,7 +1537,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         Assert.Throws<ArgumentException>(() => configuration.Configure<StrategySample>(type => type.Property(sample => sample.Details.Name)));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            configuration.Configure<CollectionSample>(type => type.Collection(sample => sample.Items).WithMaxItems(0))
+            configuration.Configure<CollectionSample>(type => type.Property(sample => sample.Items).WithMaxItems(0))
         );
     }
 
@@ -1501,19 +1600,28 @@ public sealed class FluentConfigurationTests : IDisposable
 
     private sealed class CollectionSample
     {
-        public IList<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1), new("Two", 2), new("Three", 3) };
-        private readonly IList<CollectionItem> _privateItems = new List<CollectionItem> { new("One", 1), new("Two", 2) };
+        public ICollection<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1), new("Two", 2), new("Three", 3) };
+        private readonly ICollection<CollectionItem> _privateItems = new List<CollectionItem> { new("One", 1), new("Two", 2) };
 
         public static void ConfigurePrivateItems(ITypeConfigurator<CollectionSample> type)
         {
-            type.Collection("Private items", sample => sample._privateItems)
-                .AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+            type.Property("Private items", sample => sample._privateItems)
+                .ListItems(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
         }
 
         public static void ConfigurePrivateItemsFromField(ITypeConfigurator<CollectionSample> type)
         {
-            type.Collection(sample => sample._privateItems).AsList(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
+            type.Property(sample => sample._privateItems).ListItems(list => list.Name(item => item.Name).Value(item => item.Value.ToString()));
         }
+    }
+
+    private sealed class CollectionInterfaceSample
+    {
+        public IList<CollectionItem> List { get; } = new List<CollectionItem> { new("List", 1) };
+        public IReadOnlyList<CollectionItem> ReadOnlyList { get; } = new List<CollectionItem> { new("Read-only list", 1) };
+        public ICollection<CollectionItem> Collection { get; } = new List<CollectionItem> { new("Collection", 1) };
+        public IReadOnlyCollection<CollectionItem> ReadOnlyCollection { get; } = new List<CollectionItem> { new("Read-only collection", 1) };
+        public ISet<CollectionItem> Set { get; } = new HashSet<CollectionItem> { new("Set", 1) };
     }
 
     private sealed class CollectionItem
@@ -1550,24 +1658,37 @@ public sealed class FluentConfigurationTests : IDisposable
         public RateCounter Requests { get; } = new(5);
         internal readonly RateCounter _privateRequests = new(5);
         public DateTime Started { get; } = DateTime.UtcNow.AddMinutes(-1);
+        private readonly DateTime _privateStarted = DateTime.UtcNow.AddMinutes(-2);
         public ChildSample Details { get; } = new();
         private readonly ChildSample _privateDetails = new();
 
         public static void ConfigurePrivateDetails(ITypeConfigurator<StrategySample> type)
         {
-            type.Expanded("Private details", sample => sample._privateDetails);
+            type.Property("Private details", sample => sample._privateDetails).Expand();
         }
 
         public static void ConfigurePrivateDetailsFromField(ITypeConfigurator<StrategySample> type)
         {
-            type.Expanded(sample => sample._privateDetails);
+            type.Property(sample => sample._privateDetails).Expand();
+        }
+
+        public static void ConfigurePrivateDateProperty(ITypeConfigurator<StrategySample> type)
+        {
+            type.Property(sample => sample._privateStarted).ShowDate(false).ShowElapsed();
+            type.Property("Last updated", sample => sample._privateStarted).ShowDate(false).ShowElapsed();
+        }
+
+        public static void ConfigurePrivateRateProperty(ITypeConfigurator<StrategySample> type)
+        {
+            type.Property(sample => sample._privateRequests).ShowRate(false).ShowTotal();
+            type.Property("Background requests", sample => sample._privateRequests).ShowRate(false).ShowTotal();
         }
     }
 
     private sealed class AttributedStrategySample
     {
         [CollectionCount("Attributed items", "Collections")]
-        public IList<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1), new("Two", 2), new("Three", 3) };
+        public ICollection<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1), new("Two", 2), new("Three", 3) };
 
         [RateProperty("Attributed requests", "Metrics", ExposeRate = true, ExposeTotal = false)]
         public RateCounter Requests { get; } = new(5);
@@ -1591,7 +1712,7 @@ public sealed class FluentConfigurationTests : IDisposable
     private sealed class DrillDownRoot
     {
         public ChildSample Child { get; } = new();
-        public IReadOnlyList<CollectionItem> Items { get; } = new[] { new CollectionItem("One", 1) };
+        public ICollection<CollectionItem> Items { get; } = new List<CollectionItem> { new("One", 1) };
         public RateCounter Requests { get; } = new(5);
     }
 

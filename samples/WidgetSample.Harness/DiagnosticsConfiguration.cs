@@ -59,11 +59,11 @@ internal static class DiagnosticsConfiguration
         config.Configure<WidgetConfig>(options =>
         {
             options.IncludeAll();
-            options.Expanded(configuration => configuration.Connection).Category("Connection");
+            options.Property(instance => instance.Connection).Category("Connection").Expand();
             options
-                .Collection(configuration => configuration.Items)
-                .AsList(items =>
-                    items
+                .Property(configuration => configuration.Items)
+                .ListItems(listConf =>
+                    listConf
                         .Name(item => $"Item: {item.Name}")
                         .Category(item => "Items")
                         .Value(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
@@ -83,7 +83,7 @@ internal static class DiagnosticsConfiguration
             options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Purpose).AllowSet();
-            options.Expanded(gadget => gadget.Configuration).Category("Configuration");
+            options.Property(gadget => gadget.Configuration).Category("Configuration").Expand();
         });
 
         config.ConfigureDrillDown<Gadget>(options =>
@@ -91,7 +91,7 @@ internal static class DiagnosticsConfiguration
             options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
-            options.Expanded(gadget => gadget.Configuration);
+            options.Property(gadget => gadget.Configuration).Expand();
             options.Route(
                 gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
                 LoggerNameMatchMode.Exact,
@@ -105,7 +105,7 @@ internal static class DiagnosticsConfiguration
         config.Configure<GadgetConfig>(options =>
         {
             options.IncludeAll();
-            // options.Expanded(obj => obj.Power).Category("Power");
+            // options.Property(obj => obj.Power).Category("Power").Expand();
             options.Property(obj => obj.CommissionedOn).AsDateOnly();
             options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
             options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
@@ -114,8 +114,8 @@ internal static class DiagnosticsConfiguration
                 .AsJson(100)
                 .WithExpandedHover()
                 .WithDrillDown();
-            options.Expanded(obj => obj.Network).Category("Network");
-            options.Expanded(obj => obj.Maintenance).Category("Maintenance");
+            options.Property(obj => obj.Network).Category("Network").Expand();
+            options.Property(obj => obj.Maintenance).Category("Maintenance").Expand();
         });
 
         config.Configure<GadgetPowerConfig>(options =>

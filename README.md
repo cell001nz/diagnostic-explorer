@@ -93,10 +93,9 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
         options.ExcludeAll();
 
         options.Property(widget => widget.Name).Named("Widget name").Category("Details").AllowSet();
-        options.Expanded(widget => widget.Connection).Category("Connection");
-        options.Collection(widget => widget.Components)
-            .ShowCount()
-            .AsList(list => list.Name(component => component.Name).Value(component => component.Status))
+        options.Property(widget => widget.Connection).Category("Connection").Expand();
+        options.Property(widget => widget.Components)
+            .ListItems(list => list.Name(component => component.Name).Value(component => component.Status))
             .WithMaxItems(50);
         options.Property(widget => widget.Configuration).AsJson(100).WithJsonHover().WithDrillDown();
     });
@@ -105,17 +104,21 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
     {
         options.ExcludeAll();
         options.Property(instance => instance.Status);
-        options.Property(instance => instance.Owner).WithDrillDown();
+        options.Property(instance => instance.Owner).AsDrillDown();
     });
 }
 ```
 
 Use `IncludeAll()` to start from every public property, or `ExcludeAll()` to
-start from none. `Property`, `Expanded`, and `Collection` add display metadata,
-nested object bags, and collection rendering. `AllowSet()` exposes an editable
-property. `AsJson()` with `WithJsonHover()` fetches JSON only on hover.
+start from none. `Property` adds display metadata and can render nested object
+bags with `Expand()`. For properties declared as an array, `ICollection<T>`,
+`IList<T>`, `IReadOnlyCollection<T>`, `IReadOnlyList<T>`, or `ISet<T>`, use
+`Property(...)` to display a count by default, or `ListItems(...)` and
+`ConcatItems(...)` to select another rendering. Use `Property(name, value)` for
+named or computed properties. `AllowSet()` exposes an editable property.
+`AsJson()` with `WithJsonHover()` fetches JSON only on hover.
 
-`WithDrillDown()` makes a complex value, collection item, or custom property
+`AsDrillDown()` makes a complex value, collection item, or custom property
 interactive. `AsDrillDownIcon()` provides a compact icon-only entry point. A
 dedicated drilldown profile controls the overlay; otherwise the normal type
 profile is reused:
@@ -124,8 +127,8 @@ profile is reused:
 diagnostics.Configure<Widget>(options =>
 {
     options.Property(widget => widget.Configuration).WithDrillDown(maxItems: 50);
-    options.Collection(widget => widget.Components)
-        .AsList(list => list.Name(component => component.Name))
+    options.Property(widget => widget.Components)
+        .ListItems(list => list.Name(component => component.Name))
         .AsDrillDownIcon();
 });
 
@@ -151,6 +154,21 @@ private static void ConfigureDiagnostics(IDiagConfigurator diagnostics)
         options.Property("Last error", widget => widget._lastError?.Message).Category("Internal");
     });
 }
+```
+
+For `DateTime` and `DateTimeOffset` values, date display options are available
+directly from `Property`:
+
+```csharp
+options.Property(widget => widget._lastUpdated).ShowElapsed();
+options.Property("Last updated", widget => widget._lastUpdated).ShowDate(false).ShowElapsed();
+```
+
+For `RateCounter` values, configure rate and total displays the same way:
+
+```csharp
+options.Property(widget => widget._requests).ShowRate(false).ShowTotal();
+options.Property("Background requests", widget => widget._backgroundRequests).ShowTotal();
 ```
 
 Return an anonymous object for a small, read-only diagnostic snapshot. Its

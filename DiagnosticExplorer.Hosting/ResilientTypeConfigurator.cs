@@ -29,8 +29,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
     public IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property) =>
         Try(() => _inner.Property(property), new NoOpPropertyConfigurator<TProperty>(), "Property");
 
-    public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value) =>
-        Try(() => _inner.Property(name, value), new NoOpCustomPropertyConfigurator(), "Property");
+    public IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value) =>
+        Try(() => _inner.Property(name, value), new NoOpPropertyConfigurator<TProperty>(), "Property");
 
     public ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure) =>
         Try(
@@ -38,31 +38,6 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
             new NoOpCustomPropertyConfigurator(),
             "Custom"
         );
-
-    public ICollectionConfigurator<T, TItem> Collection<TItem>(Expression<Func<T, IEnumerable<TItem>>> property) =>
-        Try(() => _inner.Collection(property), new NoOpCollectionConfigurator<TItem>(), "Collection");
-
-    public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value) =>
-        Try(() => _inner.Collection(name, value), new NoOpCollectionConfigurator<TItem>(), "Collection");
-
-    public IRateConfigurator<T> Rate(Expression<Func<T, RateCounter>> property) =>
-        Try(() => _inner.Rate(property), new NoOpRateConfigurator(), "Rate");
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTime>> property) => Try(() => _inner.Date(property), new NoOpDateConfigurator(), "Date");
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTime?>> property) => Try(() => _inner.Date(property), new NoOpDateConfigurator(), "Date");
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset>> property) =>
-        Try(() => _inner.Date(property), new NoOpDateConfigurator(), "Date");
-
-    public IDateConfigurator<T> Date(Expression<Func<T, DateTimeOffset?>> property) =>
-        Try(() => _inner.Date(property), new NoOpDateConfigurator(), "Date");
-
-    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(Expression<Func<T, TProperty>> property) =>
-        Try(() => _inner.Expanded(property), new NoOpExtendedPropertyConfigurator<TProperty>(), "Extended");
-
-    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value) =>
-        Try(() => _inner.Expanded(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Extended");
 
     public ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure) =>
         Try(() => _inner.Route(loggerName, matchMode, configure), this, "Route");
@@ -129,6 +104,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         public IPropertyConfigurator<T, TProperty> AsDateOnly() => this;
 
         public IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
+
+        public IPropertyConfigurator<T, TProperty> AsDrillDown(int? maxItems = null) => this;
 
         public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null) => this;
 
@@ -205,176 +182,7 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
             _owner = owner;
         }
 
-        public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value) =>
-            _owner.Try(() => _inner.Property(name, value), new NoOpCustomPropertyConfigurator(), "Custom property");
-
-        public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value) =>
-            _owner.Try(() => _inner.Expanded(name, value), new NoOpExtendedPropertyConfigurator<TProperty>(), "Custom extended property");
-
-        public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value) =>
-            _owner.Try(() => _inner.Collection(name, value), new NoOpCollectionConfigurator<TItem>(), "Custom collection");
-
-        public IRateConfigurator<T> Rate(string name, Func<T, RateCounter> value) =>
-            _owner.Try(() => _inner.Rate(name, value), new NoOpRateConfigurator(), "Custom rate");
-    }
-
-    private sealed class NoOpCollectionConfigurator<TItem> : ICollectionConfigurator<T, TItem>
-    {
-        IPropertyConfigurator IPropertyConfigurator.Named(string name) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Category(string category) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Description(string description) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Format(string formatString) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.AllowSet(bool allowSet) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Named(string name) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Named(Func<T, string> name) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Category(string category) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Category(Func<T, string> category) =>
-            this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Description(string description) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Description(
-            Func<T, string> description
-        ) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.Format(string formatString) => this;
-
-        ICollectionConfigurator<T, TItem> IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>.AllowSet(bool allowSet) => this;
-
-        public ICollectionConfigurator<T, TItem> ShowCount(string name = null) => this;
-
-        public ICollectionConfigurator<T, TItem> Concatenate(string separator = null, string name = null) => this;
-
-        public ICollectionConfigurator<T, TItem> AsList(Action<ICollectionListConfigurator<TItem>> configure = null) => this;
-
-        public ICollectionConfigurator<T, TItem> Categories(Expression<Func<TItem, object>> category, string name = null) => this;
-
-        public ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems) => this;
-
-        public ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null) => this;
-
-        public ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null) => this;
-
-        public ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null) => this;
-    }
-
-    private sealed class NoOpRateConfigurator : IRateConfigurator<T>
-    {
-        IPropertyConfigurator IPropertyConfigurator.Named(string name) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Category(string category) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Description(string description) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Format(string formatString) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.AllowSet(bool allowSet) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Named(string name) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Named(Func<T, string> name) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Category(string category) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Category(Func<T, string> category) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Description(string description) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Description(Func<T, string> description) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.Format(string formatString) => this;
-
-        IRateConfigurator<T> IObjectPropertyConfigurator<T, IRateConfigurator<T>>.AllowSet(bool allowSet) => this;
-
-        public IRateConfigurator<T> ShowRate(bool expose = true) => this;
-
-        public IRateConfigurator<T> ShowTotal(bool expose = true) => this;
-    }
-
-    private sealed class NoOpDateConfigurator : IDateConfigurator<T>
-    {
-        IPropertyConfigurator IPropertyConfigurator.Named(string name) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Category(string category) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Description(string description) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Format(string formatString) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.AllowSet(bool allowSet) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Named(string name) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Named(Func<T, string> name) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Category(string category) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Category(Func<T, string> category) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Description(string description) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Description(Func<T, string> description) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.Format(string formatString) => this;
-
-        IDateConfigurator<T> IObjectPropertyConfigurator<T, IDateConfigurator<T>>.AllowSet(bool allowSet) => this;
-
-        public IDateConfigurator<T> ShowDate(bool expose = true) => this;
-
-        public IDateConfigurator<T> ShowElapsed(bool expose = true) => this;
-
-        public IDateConfigurator<T> ShowTimeUntil(bool expose = true) => this;
-    }
-
-    private sealed class NoOpExtendedPropertyConfigurator<TProperty> : IExtendedPropertyConfigurator<T, TProperty>
-    {
-        IPropertyConfigurator IPropertyConfigurator.Named(string name) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Category(string category) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Description(string description) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.Format(string formatString) => this;
-
-        IPropertyConfigurator IPropertyConfigurator.AllowSet(bool allowSet) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Named(string name) =>
-            this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Named(
-            Func<T, string> name
-        ) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Category(
-            string category
-        ) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Category(
-            Func<T, string> category
-        ) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Description(
-            string description
-        ) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Description(
-            Func<T, string> description
-        ) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.Format(
-            string formatString
-        ) => this;
-
-        IExtendedPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IExtendedPropertyConfigurator<T, TProperty>>.AllowSet(
-            bool allowSet
-        ) => this;
+        public IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value) =>
+            _owner.Try(() => _inner.Property(name, value), new NoOpPropertyConfigurator<TProperty>(), "Custom property");
     }
 }

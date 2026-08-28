@@ -552,15 +552,44 @@ public static class DiagnosticManager
             return PropertyStrategy.Collection;
         if (attribute is ExtendedPropertyAttribute)
             return PropertyStrategy.Extended;
-        if (attribute is RatePropertyAttribute || info.PropertyType == typeof(RateCounter))
+        Type propertyType = info?.PropertyType ?? configuration?.ValueType;
+        if (attribute is RatePropertyAttribute || propertyType == typeof(RateCounter))
             return PropertyStrategy.Rate;
 
-        Type underlying = GetUnderlyingType(info.PropertyType);
+        Type underlying = GetUnderlyingType(propertyType);
         if (attribute is DatePropertyAttribute || underlying == typeof(DateTime) || underlying == typeof(DateTimeOffset))
             return PropertyStrategy.Date;
+        if (configuration?.UsesPropertyDefaults == true && UsesDefaultCollectionPresentation(underlying, configuration))
+            return PropertyStrategy.Collection;
         if (useDefaultPropertyPresentation && IsDefaultCollectionType(underlying))
             return PropertyStrategy.Collection;
         return PropertyStrategy.Default;
+    }
+
+    private static bool UsesDefaultCollectionPresentation(Type type, PropertyConfiguration configuration)
+    {
+        return configuration.ValueFormatter == null && !configuration.FormatString.IsSet && IsConfiguredCollectionType(type);
+    }
+
+    private static bool IsConfiguredCollectionType(Type type)
+    {
+        Type underlyingType = GetUnderlyingType(type);
+        if (underlyingType == typeof(string))
+            return false;
+        if (underlyingType.IsArray)
+            return true;
+
+        return ImplementsGenericInterface(underlyingType, typeof(ICollection<>))
+            || ImplementsGenericInterface(underlyingType, typeof(IList<>))
+            || ImplementsGenericInterface(underlyingType, typeof(IReadOnlyCollection<>))
+            || ImplementsGenericInterface(underlyingType, typeof(IReadOnlyList<>))
+            || ImplementsGenericInterface(underlyingType, typeof(ISet<>));
+    }
+
+    private static bool ImplementsGenericInterface(Type type, Type genericInterface)
+    {
+        return (type.IsGenericType && type.GetGenericTypeDefinition() == genericInterface)
+            || type.GetInterfaces().Any(candidate => candidate.IsGenericType && candidate.GetGenericTypeDefinition() == genericInterface);
     }
 
     private static void AddCollectionGetters(

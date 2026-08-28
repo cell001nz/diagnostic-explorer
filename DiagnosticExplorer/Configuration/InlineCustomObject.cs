@@ -14,40 +14,7 @@ internal sealed class InlineCustomObjectConfigurator<T> : ICustomObjectConfigura
 
     public IReadOnlyList<InlineCustomObjectMember> Members => _members;
 
-    public ICustomPropertyConfigurator<T> Property(string name, Func<T, object> value)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("A property name is required.", nameof(name));
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
-
-        CustomPropertyConfiguration configuration = new(name, item => value((T)item));
-        _members.Add(new InlineCustomPropertyMember(configuration));
-        return new CustomPropertyConfigurator<T>(configuration);
-    }
-
-    public IExtendedPropertyConfigurator<T, TProperty> Expanded<TProperty>(string name, Func<T, TProperty> value)
-    {
-        PropertyConfiguration configuration = AddConfiguredProperty(name, typeof(TProperty), item => value((T)item), PropertyStrategy.Extended);
-        return new ExtendedPropertyConfigurator<T, TProperty>(configuration);
-    }
-
-    public ICollectionConfigurator<T, TItem> Collection<TItem>(string name, Func<T, IEnumerable<TItem>> value)
-    {
-        PropertyConfiguration configuration = AddConfiguredProperty(
-            name,
-            typeof(IEnumerable<TItem>),
-            item => value((T)item),
-            PropertyStrategy.Collection
-        );
-        return new CollectionConfigurator<T, TItem>(configuration);
-    }
-
-    public IRateConfigurator<T> Rate(string name, Func<T, RateCounter> value)
-    {
-        PropertyConfiguration configuration = AddConfiguredProperty(name, typeof(RateCounter), item => value((T)item), PropertyStrategy.Rate);
-        return new RateConfigurator<T>(configuration);
-    }
+    public IPropertyConfigurator<T, TProperty> Property<TProperty>(string name, Func<T, TProperty> value) => ConfigureProperty(name, value);
 
     private PropertyConfiguration AddConfiguredProperty(string name, Type valueType, Func<object, object> value, PropertyStrategy strategy)
     {
@@ -59,6 +26,12 @@ internal sealed class InlineCustomObjectConfigurator<T> : ICustomObjectConfigura
         PropertyConfiguration configuration = new(name, valueType, value) { Strategy = strategy };
         _members.Add(new InlineConfiguredPropertyMember(configuration));
         return configuration;
+    }
+
+    private IPropertyConfigurator<T, TProperty> ConfigureProperty<TProperty>(string name, Func<T, TProperty> value)
+    {
+        PropertyConfiguration configuration = AddConfiguredProperty(name, typeof(TProperty), item => value((T)item), PropertyStrategy.Default);
+        return new PropertyConfigurator<T, TProperty>(configuration);
     }
 }
 
@@ -83,16 +56,6 @@ internal sealed class InlineCustomObject<T> : IInlineCustomObject
 internal abstract class InlineCustomObjectMember
 {
     public abstract void AddProperties(object source, object projection, PropertyBag bag);
-}
-
-internal sealed class InlineCustomPropertyMember : InlineCustomObjectMember
-{
-    private readonly CustomPropertyConfiguration _configuration;
-
-    public InlineCustomPropertyMember(CustomPropertyConfiguration configuration) => _configuration = configuration;
-
-    public override void AddProperties(object source, object projection, PropertyBag bag) =>
-        new CustomPropertyGetter(_configuration.Bind(source)).GetProperties(projection, bag, null);
 }
 
 internal sealed class InlineConfiguredPropertyMember : InlineCustomObjectMember

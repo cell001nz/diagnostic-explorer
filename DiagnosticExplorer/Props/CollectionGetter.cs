@@ -124,7 +124,7 @@ internal class CollectionGetter : PropertyGetter
 
             if (count == 0)
             {
-                bag.AddProperty(new Property(name, FormatValue(count)), PrependToCategory(catPrepend, obj));
+                AddCountProperty(name, count, col, bag, catPrepend, obj);
                 return;
             }
 
@@ -132,7 +132,7 @@ internal class CollectionGetter : PropertyGetter
             {
                 case CollectionMode.Count:
                 {
-                    bag.AddProperty(new Property(name, FormatValue(count)), PrependToCategory(catPrepend, obj));
+                    AddCountProperty(name, count, col, bag, catPrepend, obj);
                     break;
                 }
                 case CollectionMode.Concatenate:
@@ -153,6 +153,13 @@ internal class CollectionGetter : PropertyGetter
             string error = $"<{ex.Message}>";
             bag.AddProperty(new Property(GetName(obj), error), PrependToCategory(catPrepend, obj));
         }
+    }
+
+    private void AddCountProperty(string name, int count, IEnumerable collection, PropertyBag bag, string catPrepend, object owner)
+    {
+        Property property = new(name, FormatValue(count));
+        ApplyDrillDown(property, collection);
+        bag.AddProperty(property, PrependToCategory(catPrepend, owner));
     }
 
     private void AppendSeparateCategories(IEnumerable col, PropertyBag bag, string catPrepend, object owner)

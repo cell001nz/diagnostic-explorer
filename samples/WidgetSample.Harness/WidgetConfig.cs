@@ -31,7 +31,7 @@ public sealed class WidgetConfig
 
     public WidgetConnectionConfig Connection { get; } = new();
 
-    public List<WidgetConfigItem> Items { get; }
+    public ICollection<WidgetConfigItem> Items { get; }
 
     public void RefreshValues(decimal percentage)
     {
