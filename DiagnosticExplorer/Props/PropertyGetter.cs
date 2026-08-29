@@ -36,7 +36,7 @@ namespace DiagnosticExplorer;
 
 internal class PropertyGetter
 {
-    public const int MaxConcatItems = 10;
+    public const int MaxConcatItems = 100;
     private Func<object, string> _nameFormatter;
     private Func<object, string> _categoryFormatter;
     private Func<object, string> _descriptionFormatter;
@@ -125,9 +125,6 @@ internal class PropertyGetter
                 configuration.DrillDownText
             );
             ConfigureHover(configuration.JsonHover, configuration.ExpandedHover);
-
-            if (configuration.UsesPropertyDefaults && string.IsNullOrWhiteSpace(Category))
-                Category = "General";
         }
 
         if (FormatString == null && defaultFormat != null)
@@ -277,6 +274,8 @@ internal class PropertyGetter
 
     protected static string CombineCategories(string start, string end)
     {
+        start = CategoryExtensions.NormalizeName(start);
+        end = CategoryExtensions.NormalizeName(end);
         if (string.IsNullOrEmpty(start))
             return end;
 
@@ -365,7 +364,7 @@ internal class PropertyGetter
     protected void ConfigureCustomProperty(CustomPropertyConfiguration configuration)
     {
         Name = configuration.Name;
-        Category = configuration.Category.IsSet ? configuration.Category.Value : "General";
+        Category = configuration.Category.IsSet ? configuration.Category.Value : null;
         Description = configuration.Description.IsSet ? configuration.Description.Value : null;
         _valueFormatter = configuration.ValueFormatter;
         _alerts = configuration.Alerts;

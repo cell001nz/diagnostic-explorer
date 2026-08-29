@@ -50,7 +50,7 @@ export interface PropertyBag {
 }
 
 export interface SubBag {
-    name: string;
+    name: string | null;
     operationSet: string;
     canDrillDown: boolean;
     properties: Property[];

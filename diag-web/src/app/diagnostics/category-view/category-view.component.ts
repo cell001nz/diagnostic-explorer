@@ -3,7 +3,6 @@ import { CategoryModel } from '@model/CategoryModel';
 import { take } from 'rxjs';
 import { Panel } from 'primeng/panel';
 import { PanelModule } from 'primeng/panel';
-import { Fieldset } from 'primeng/fieldset';
 import { PropModel } from '@model/PropModel';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { SetPropertyDialogComponent } from '@app/diagnostics/set-property-dialog/set-property-dialog.component';
@@ -17,7 +16,7 @@ import { SelfHostNavigationService } from '../../../self-host/self-host-navigati
 
 @Component({
     selector: 'app-category-view',
-    imports: [Panel, PanelModule, Fieldset, EventSinkViewComponent, PropertyHoverComponent],
+    imports: [Panel, PanelModule, EventSinkViewComponent, PropertyHoverComponent],
     templateUrl: './category-view.component.html',
     styleUrl: './category-view.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

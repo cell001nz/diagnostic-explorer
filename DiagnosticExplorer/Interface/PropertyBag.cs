@@ -56,16 +56,15 @@ public class PropertyBag
     {
         if (property == null)
             throw new ArgumentNullException(nameof(property));
-        if (string.IsNullOrWhiteSpace(category))
-            category = "General";
 
         property.InferValueKind();
-        Category cat = FindOrCreateCategory(category);
+        Category cat = FindOrCreateCategory(CategoryExtensions.NormalizeName(category));
         cat.Properties.Add(property);
     }
 
     public Category FindOrCreateCategory(string category)
     {
+        category = CategoryExtensions.NormalizeName(category);
         Category cat = Categories.FindByName(category);
         if (cat == null)
         {

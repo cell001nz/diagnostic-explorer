@@ -15,10 +15,10 @@ public class PropertyGroup
         {
             PropertyGroup groupResult = new()
             {
-                Name = group.Name ?? "General",
+                Name = group.Name,
             };
             result.Add(groupResult);
-            groupResult.Properties = Property.Map(path + "|" + group.Name ?? "", group.Properties).ToArray();
+            groupResult.Properties = Property.Map(path + "|" + (group.Name ?? ""), group.Properties).ToArray();
         }
 
         return result;

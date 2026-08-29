@@ -118,7 +118,9 @@ common concrete `List<T>`, `HashSet<T>`, `ObservableCollection<T>`, and
 `ListItems(...)` and `ConcatItems(...)` to select another rendering.
 `Dictionary<TKey, TValue>`, `IDictionary<TKey, TValue>`, and
 `IReadOnlyDictionary<TKey, TValue>` are also supported and present their key/value
-pairs. Use `Property(name, value)` for named or computed properties.
+pairs. Collection list, category, and concatenated outputs show up to 100 items by
+default; capped list and category outputs include a row showing how many items were
+not displayed. Use `WithMaxItems(...)` to set a different limit. Use `Property(name, value)` for named or computed properties.
 `AllowSet()` exposes an editable property.
 `AsJson()` with `WithJsonHover()` fetches JSON only on hover.
 

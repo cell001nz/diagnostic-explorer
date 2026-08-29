@@ -179,12 +179,16 @@ public partial class Form1 : Form, INotifyPropertyChanged
                         projection.Property("Gadget1", form => form.Gadget1).Expand();
                     }
                 )
-                .AsDrillDownIcon("I am a drill down icon");
+                .AsDrillDownIcon("I am a drill down icon")
+                .WithExpandedHover();
 
-            options.Property("Widgets 1", form => form.Widgets).Named("Widgets1").ListItems();
+            options.Property(form => form.Widgets).Named("Widgets Hello").Category("Widgets").ListItems().WithExpandedHover().WithDrillDown();
+            ;
+
             options
                 .Property("Widgets 2", form => form.Widgets)
                 .Named("Widgets2")
+                .Category("Widgets")
                 .ConcatItems(Environment.NewLine, obj => $"********** {obj.Name} **********")
                 .AsDrillDown();
 

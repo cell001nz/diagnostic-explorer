@@ -1,15 +1,10 @@
 // Event severity level row styles — moved to event-sink-view.component.scss
 
-$property-name-width: 200px;
-$property-value-min-width: 256px;
-$property-column-min-width: $property-name-width + $property-value-min-width;
-$wide-property-name-width: 337px;
-$wide-property-column-min-width: $wide-property-name-width + $property-value-min-width;
-$property-grid-gap: 8px;
-$property-column-transition-buffer: 1.3;
-$two-property-grid-min-width: $property-column-min-width * 2 + $property-grid-gap * 3;
-$three-property-grid-min-width: ($wide-property-column-min-width * 3 + $property-grid-gap * 5) * $property-column-transition-buffer;
-$four-property-grid-min-width: ($wide-property-column-min-width * 4 + $property-grid-gap * 7) * $property-column-transition-buffer;
+$property-pair-min-width: 36rem;
+$property-grid-gap: 0.5rem;
+$two-property-grid-min-width: $property-pair-min-width * 2 + $property-grid-gap * 3;
+$two-property-hover-grid-min-width: 69rem;
+$three-property-grid-min-width: $property-pair-min-width * 3 + $property-grid-gap * 5;
 $event-grid-min-width: 60rem;
 
 .category-view {
@@ -18,26 +13,111 @@ $event-grid-min-width: 60rem;
 
 .property-grid {
 	display: grid;
-	grid-template-columns: $property-name-width minmax($property-value-min-width, 1fr);
+	grid-template-columns: auto minmax(0, 1fr);
 	gap: $property-grid-gap;
 	margin-left: 1rem;
 }
 
+.sub-bag {
+	display: contents;
+}
+
+.sub-bag > app-property-hover .property-name {
+	position: relative;
+	left: calc(var(--sub-bag-depth, 0) * 1rem);
+	white-space: nowrap;
+}
+
+.bag-title {
+	color: #f8fafc;
+	font-size: 1.0625rem;
+	font-weight: 700;
+}
+
+.property-drilldown-icon {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #7dd3fc;
+	cursor: pointer;
+	font-size: 0.5rem;
+	line-height: 1;
+	opacity: 0.75;
+	transform: translateY(-0.08em);
+}
+
+.property-drilldown-icon i {
+	display: block;
+	transform: scale(0.5);
+	transform-origin: center;
+}
+
+.property-drilldown-icon:hover,
+.property-drilldown-icon:focus-visible {
+	opacity: 1;
+}
+
+.sub-bag-title {
+	grid-column: 1 / -1;
+	margin-top: 0.75rem;
+	margin-bottom: 0.25rem;
+	color: #cbd5e1;
+	font-weight: 600;
+}
+
+.flat-bag-title {
+	grid-column: 1 / -1;
+	margin-top: 0.75rem;
+	color: #e2e8f0;
+	font-weight: 600;
+}
+
+.flat-bag-title:first-child {
+	margin-top: 0;
+}
+
+@container (min-width: #{$two-property-hover-grid-min-width}) {
+	.category-view.max-property-columns-2 .property-grid {
+		grid-template-columns: repeat(2, auto minmax(0, 1fr));
+	}
+
+	.category-view.max-property-columns-2 .sub-bag > app-property-hover .property-name {
+		left: 0;
+	}
+
+	.category-view.max-property-columns-2 .sub-bag > app-property-hover:nth-of-type(odd) .property-name {
+		left: calc(var(--sub-bag-depth, 0) * 1rem);
+	}
+}
+
 @container (min-width: #{$two-property-grid-min-width}) {
 	.property-grid {
-		grid-template-columns: repeat(2, $property-name-width minmax($property-value-min-width, 1fr));
+		grid-template-columns: repeat(2, auto minmax(0, 1fr));
+	}
+
+	.category-view:not(.max-property-columns-2) .sub-bag > app-property-hover .property-name {
+		left: 0;
+	}
+
+	.category-view:not(.max-property-columns-2) .sub-bag > app-property-hover:nth-of-type(odd) .property-name {
+		left: calc(var(--sub-bag-depth, 0) * 1rem);
 	}
 }
 
 @container (min-width: #{$three-property-grid-min-width}) {
 	.category-view:not(.max-property-columns-2) .property-grid {
-		grid-template-columns: repeat(3, $wide-property-name-width minmax($property-value-min-width, 1fr));
+		grid-template-columns: repeat(3, auto minmax(0, 1fr));
 	}
-}
 
-@container (min-width: #{$four-property-grid-min-width}) {
-	.category-view:not(.max-property-columns-2) .property-grid {
-		grid-template-columns: repeat(4, $wide-property-name-width minmax($property-value-min-width, 1fr));
+	.category-view:not(.max-property-columns-2) .sub-bag > app-property-hover:nth-of-type(n) .property-name {
+		left: 0;
+	}
+
+	.category-view:not(.max-property-columns-2) .sub-bag > app-property-hover:nth-of-type(3n + 1) .property-name {
+		left: calc(var(--sub-bag-depth, 0) * 1rem);
 	}
 }
 
@@ -57,8 +137,34 @@ $event-grid-min-width: 60rem;
 }
 
 .value-text {
-	white-space: pre-wrap;
-	overflow-wrap: anywhere;
+	display: grid;
+	min-width: 0;
+	max-width: 100%;
+	margin-right: 1rem;
+}
+
+.value-line {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.show-more {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #64748b;
+	cursor: pointer;
+	font: inherit;
+	font-style: italic;
+	white-space: nowrap;
+}
+
+.show-more:hover,
+.show-more:focus-visible {
+	color: #94a3b8;
 }
 
 [data-value-kind=null] {
@@ -106,8 +212,10 @@ $event-grid-min-width: 60rem;
 }
 
 .diag-drilldown-value {
+	display: grid;
 	max-width: 100%;
 	min-width: 0;
+	margin-right: 1rem;
 	padding: 0;
 	border: 0;
 	background: transparent;
@@ -117,8 +225,6 @@ $event-grid-min-width: 60rem;
 	letter-spacing: 0;
 	text-align: left;
 	text-decoration: none;
-	white-space: pre-wrap;
-	overflow-wrap: anywhere;
 }
 
 .diag-drilldown-value:hover,

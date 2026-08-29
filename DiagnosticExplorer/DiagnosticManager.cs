@@ -1132,7 +1132,7 @@ public static class DiagnosticManager
             throw new ArgumentException(msg);
         }
 
-        return new DrillDownTarget(propertyValue, prop.DrillDownMaxItems);
+        return new DrillDownTarget(propertyValue, prop.DrillDownMaxItems, ident.PropName);
     }
 
     #region SetProperty
@@ -1432,7 +1432,7 @@ public static class DiagnosticManager
             object item = items[index];
             if (!IsDrillDownValue(item))
                 item = new DrillDownScalarValue(item);
-            registered.Add(new RegisteredObject(item, "Items", $"[{index}]"));
+            registered.Add(new RegisteredObject(item, "Items", $"{target.ItemName ?? "Items"}[{index}]"));
         }
 
         int? totalCount =
@@ -1444,14 +1444,16 @@ public static class DiagnosticManager
 
     private sealed class DrillDownTarget
     {
-        public DrillDownTarget(object value, int maxItems)
+        public DrillDownTarget(object value, int maxItems, string itemName = null)
         {
             Value = value ?? throw new ArgumentNullException(nameof(value));
             MaxItems = maxItems;
+            ItemName = itemName;
         }
 
         public object Value { get; }
         public int MaxItems { get; }
+        public string ItemName { get; }
     }
 
     private sealed class DrillDownMaterialization

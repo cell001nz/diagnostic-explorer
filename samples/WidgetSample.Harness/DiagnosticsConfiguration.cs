@@ -12,6 +12,8 @@ namespace WidgetSample.Harness;
 
 internal static class DiagnosticsConfiguration
 {
+    private static WidgetConfig _widgetConfig = new();
+
     public static void Configure(IDiagConfigurator config, IConfiguration configuration)
     {
         if (configuration == null)
@@ -28,11 +30,10 @@ internal static class DiagnosticsConfiguration
         config.DefaultFormat<DateTime>("{0:d MMM yyyy HH:mm:ss.fff}");
         config.DefaultFormat<Point>("Located at {0}");
 
-        // Form1.ConfigureDiagnostics(config);
-        // Widget.ConfigureDiagnostics(config);
-        // ConfigureWidgetConfig(config);
-        // ConfigureGadget(config);
-        // ConfigureGadgetConfig(config);
+        Form1.ConfigureDiagnostics(config);
+        Widget.ConfigureDiagnostics(config);
+        Gadget.ConfigureGadget(config);
+        ConfigureWidgetConfig(config);
     }
 
     private static void RegisterObjects(IDiagRegistrar registrar)
@@ -40,6 +41,7 @@ internal static class DiagnosticsConfiguration
         var form1 = registrar.GetRequiredService<Form1>();
 
         registrar.RegisterService<Form1>("Form 1", "Main Form");
+        registrar.Register(_widgetConfig, "My Config", "Main Form");
         foreach (var widget in form1.Widgets)
             registrar.Register(widget, widget.FullName, widget.FullName);
     }
@@ -74,55 +76,5 @@ internal static class DiagnosticsConfiguration
 
         // config.Configure<WidgetConfigItem>(options => options.IncludeAll());
         // config.Configure<WidgetConnectionConfig>(options => options.IncludeAll());
-    }
-
-    private static void ConfigureGadget(IDiagConfigurator config)
-    {
-        config.Configure<Gadget>(options =>
-        {
-            options.IncludeAll();
-            options.Property(gadget => gadget.Name).AllowSet();
-            options.Property(gadget => gadget.Purpose).AllowSet();
-            options.Property(gadget => gadget.Configuration).Category("Configuration").Expand();
-        });
-
-        config.ConfigureDrillDown<Gadget>(options =>
-        {
-            options.IncludeAll();
-            options.Property(gadget => gadget.Name).AllowSet();
-            options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
-            options.Property(gadget => gadget.Configuration).Expand();
-            options.Route(
-                gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
-                LoggerNameMatchMode.Exact,
-                route => route.To("Gadget", "Gadget Events")
-            );
-        });
-    }
-
-    private static void ConfigureGadgetConfig(IDiagConfigurator config)
-    {
-        config.Configure<GadgetConfig>(options =>
-        {
-            options.IncludeAll();
-            // options.Property(obj => obj.Power).Category("Power").Expand();
-            options.Property(obj => obj.CommissionedOn).AsDateOnly();
-            options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
-            options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
-            options
-                .Property("Network2 This has a very very long name which is very long", obj => obj.Network)
-                .AsJson(100)
-                .WithExpandedHover()
-                .WithDrillDown();
-            options.Property(obj => obj.Network).Category("Network").Expand();
-            options.Property(obj => obj.Maintenance).Category("Maintenance").Expand();
-        });
-
-        config.Configure<GadgetPowerConfig>(options =>
-        {
-            options.IncludeAll();
-        });
-        // config.Configure<GadgetNetworkConfig>(options => options.IncludeAll());
-        // config.Configure<GadgetMaintenanceConfig>(options => options.IncludeAll());
     }
 }

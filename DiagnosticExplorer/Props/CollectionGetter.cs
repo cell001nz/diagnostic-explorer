@@ -143,10 +143,10 @@ internal class CollectionGetter : PropertyGetter
                     break;
                 }
                 case CollectionMode.List:
-                    AppendAllProperties(col, bag, catPrepend, obj);
+                    AppendAllProperties(col, count, bag, catPrepend, obj);
                     break;
                 case CollectionMode.Categories:
-                    AppendSeparateCategories(col, bag, catPrepend, obj);
+                    AppendSeparateCategories(col, count, bag, catPrepend, obj);
                     break;
             }
         }
@@ -164,7 +164,7 @@ internal class CollectionGetter : PropertyGetter
         bag.AddProperty(property, PrependToCategory(catPrepend, owner));
     }
 
-    private void AppendSeparateCategories(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
+    private void AppendSeparateCategories(IEnumerable col, int count, PropertyBag bag, string catPrepend, object owner)
     {
         int index = 0;
         foreach (object listObject in GetLimitedItems(col))
@@ -197,9 +197,11 @@ internal class CollectionGetter : PropertyGetter
                 }
             }
         }
+
+        AddTruncationProperty(count, bag, catPrepend, owner);
     }
 
-    private void AppendAllProperties(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
+    private void AppendAllProperties(IEnumerable col, int count, PropertyBag bag, string catPrepend, object owner)
     {
         int index = 0;
         foreach (object obj in GetLimitedItems(col))
@@ -215,6 +217,8 @@ internal class CollectionGetter : PropertyGetter
             ApplyDrillDown(prop, obj);
             bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend, owner), cat));
         }
+
+        AddTruncationProperty(count, bag, catPrepend, owner);
     }
 
     private void AppendConcatenated(IEnumerable col, PropertyBag bag, string catPrepend, object owner)
@@ -250,9 +254,21 @@ internal class CollectionGetter : PropertyGetter
         return propFunc(obj);
     }
 
+    private void AddTruncationProperty(int count, PropertyBag bag, string catPrepend, object owner)
+    {
+        int remaining = count - GetMaxItems();
+        if (remaining <= 0)
+            return;
+
+        string name = GetName(owner) + " (more)";
+        string value = string.Format("{0} more item{1}", remaining, remaining == 1 ? "" : "s");
+        bag.AddProperty(CreateOutputProperty(name, value, owner, null), PrependToCategory(catPrepend, owner));
+    }
+
     private IEnumerable<object> GetLimitedItems(IEnumerable collection)
     {
-        int maxItems = _maxItems <= 0 ? MaxConcatItems : _maxItems;
-        return collection.Cast<object>().Take(maxItems);
+        return collection.Cast<object>().Take(GetMaxItems());
     }
+
+    private int GetMaxItems() => _maxItems <= 0 ? MaxConcatItems : _maxItems;
 }

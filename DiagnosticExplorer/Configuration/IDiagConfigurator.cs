@@ -128,6 +128,8 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null);
     ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null);
+    ICollectionConfigurator<T, TItem> WithJsonHover(bool enabled = true);
+    ICollectionConfigurator<T, TItem> WithExpandedHover(bool enabled = true);
 }
 
 public interface ICollectionListConfigurator<TItem>

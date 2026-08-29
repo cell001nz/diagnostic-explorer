@@ -36,4 +36,13 @@ describe('PropModel', () => {
 
         expect(model.canDrillDown()).toBeTrue();
     });
+
+    it('splits values into display lines', () => {
+        const property = createProperty('None');
+        property.value = 'Widget X\r\nWidget Y';
+
+        const model = new PropModel({} as SubBagModel, property);
+
+        expect(model.valueLines()).toEqual(['Widget X', 'Widget Y']);
+    });
 });

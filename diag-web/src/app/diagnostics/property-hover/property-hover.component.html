@@ -1,9 +1,9 @@
-<span class="property-hover-trigger" (mouseenter)="show()" (mouseleave)="scheduleHide()" (focusin)="show()" (focusout)="scheduleHide()">
+<span class="property-hover-trigger" (mouseenter)="show($event.currentTarget)" (mouseleave)="scheduleHide()" (focusin)="show($event.currentTarget)" (focusout)="scheduleHide()">
     <ng-content />
 </span>
 
 @if (visible()) {
-    <section class="property-hover-tooltip" role="tooltip" (mouseenter)="cancelHide()" (mouseleave)="scheduleHide()">
+    <section class="property-hover-tooltip" role="tooltip" [style.left.px]="tooltipLeft()" [style.top.px]="tooltipTop()" [style.max-height.px]="tooltipMaxHeight()" (mouseenter)="cancelHide()" (mouseleave)="scheduleHide()">
         @if (loading()) {
             <div class="property-hover-status">Loading...</div>
         } @else if (errorMessage()) {

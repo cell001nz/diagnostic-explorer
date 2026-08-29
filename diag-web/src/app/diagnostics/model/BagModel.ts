@@ -8,6 +8,14 @@ export class BagModel {
     cat: CategoryModel;
     name = signal('');
     subBags = signal<SubBagModel[]>([]);
+    orderedSubBags = computed(() =>
+        [...this.subBags()].sort((left, right) => {
+            if (!left.name()) return -1;
+            if (!right.name()) return 1;
+
+            return 0;
+        })
+    );
     isCollapsed = signal(false);
     isExpanded = computed(() => !this.isCollapsed());
 
@@ -28,7 +36,7 @@ export class BagModel {
             customMerge(
                 bag.categories,
                 this.subBags(),
-                (s) => s.name ?? 'General',
+                (s) => s.name === 'General' ? '' : (s.name ?? ''),
                 (t) => t.name(),
                 (s) => new SubBagModel(this, s),
                 (s, t) => t.update(s)

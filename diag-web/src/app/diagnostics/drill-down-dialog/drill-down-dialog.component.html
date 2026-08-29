@@ -25,7 +25,7 @@
     } @else {
         <div class="drilldown-content" [class.drilldown-refreshing]="loading()">
             @for (category of processModel.categories(); track category.name()) {
-                <app-category-view [category]="category" [process]="process()" [flatRoot]="true"
+                <app-category-view [category]="category" [process]="process()"
                                    [breadcrumbs]="breadcrumbs()"
                                    (eventSelected)="onEventSelected($event)" />
             }

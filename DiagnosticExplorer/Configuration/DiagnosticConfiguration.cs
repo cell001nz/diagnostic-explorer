@@ -190,8 +190,12 @@ internal sealed class DiagnosticConfigurationSnapshot
 
     public TypeConfiguration GetEffectiveTypeConfiguration(Type runtimeType, bool drillDown = false)
     {
-        IReadOnlyDictionary<Type, TypeConfiguration> source = drillDown && HasConfiguration(runtimeType, _drillDownTypes) ? _drillDownTypes : _types;
-        return MergeTypeConfiguration(runtimeType, source);
+        TypeConfiguration effective = MergeTypeConfiguration(runtimeType, _types);
+        if (!drillDown || !HasConfiguration(runtimeType, _drillDownTypes))
+            return effective;
+
+        effective.Merge(MergeTypeConfiguration(runtimeType, _drillDownTypes));
+        return effective;
     }
 
     public bool HasDrillDownConfiguration(Type runtimeType)
@@ -1391,6 +1395,20 @@ internal sealed class CollectionConfigurator<T, TItem>
 
         AsDrillDownIcon(maxItems);
         Configuration.DrillDownText = new ConfiguredValue<string>(text);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithJsonHover(bool enabled = true)
+    {
+        Configuration.JsonHover = new ConfiguredValue<bool>(enabled);
+        Configuration.ExpandedHover = new ConfiguredValue<bool>(false);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithExpandedHover(bool enabled = true)
+    {
+        Configuration.JsonHover = new ConfiguredValue<bool>(false);
+        Configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
         return this;
     }
 

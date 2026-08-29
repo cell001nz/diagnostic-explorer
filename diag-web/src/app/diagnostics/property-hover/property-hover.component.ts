@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, inject, input, OnDestroy, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, HostListener, inject, input, OnDestroy, signal } from '@angular/core';
 import { DiagProcess } from '@domain/DiagProcess';
 import { DiagHubService } from '@services/diag-hub.service';
 import { PropModel } from '@model/PropModel';
@@ -24,6 +24,9 @@ export class PropertyHoverComponent implements OnDestroy {
     readonly loading = signal(false);
     readonly errorMessage = signal('');
     readonly json = signal('');
+    readonly tooltipLeft = signal(16);
+    readonly tooltipTop = signal(16);
+    readonly tooltipMaxHeight = signal(512);
     readonly isJsonHover = computed(() => this.prop().canJsonHover());
     readonly jsonTokens = computed(() => tokenizeJson(this.json()));
 
@@ -32,11 +35,14 @@ export class PropertyHoverComponent implements OnDestroy {
     #hideTimer: number | undefined;
     #refreshTimer: number | undefined;
     #loadPending = false;
+    #trigger: HTMLElement | null = null;
 
-    show(): void {
+    show(trigger: EventTarget | null): void {
         this.cancelHide();
         if (this.visible() || (!this.prop().canJsonHover() && !this.prop().canExpandedHover())) return;
 
+        this.#trigger = trigger instanceof HTMLElement ? trigger : null;
+        this.positionTooltip();
         this.visible.set(true);
         this.loading.set(true);
         this.errorMessage.set('');
@@ -63,6 +69,31 @@ export class PropertyHoverComponent implements OnDestroy {
     ngOnDestroy(): void {
         this.cancelHide();
         this.stopRefreshing();
+    }
+
+    @HostListener('window:resize')
+    @HostListener('window:scroll')
+    onWindowViewportChanged(): void {
+        if (this.visible()) this.positionTooltip();
+    }
+
+    private positionTooltip(): void {
+        const trigger = this.#trigger;
+        if (!trigger) return;
+
+        const padding = 16;
+        const gap = 6;
+        const maximumWidth = 1_152;
+        const triggerRect = trigger.getBoundingClientRect();
+        const tooltipWidth = Math.min(maximumWidth, window.innerWidth - padding * 2);
+        const availableBelow = window.innerHeight - triggerRect.bottom - padding - gap;
+        const availableAbove = triggerRect.top - padding - gap;
+        const showAbove = availableBelow < Math.min(320, availableAbove);
+        const availableHeight = Math.max(0, showAbove ? availableAbove : availableBelow);
+
+        this.tooltipLeft.set(Math.max(padding, Math.min(triggerRect.left, window.innerWidth - tooltipWidth - padding)));
+        this.tooltipTop.set(showAbove ? Math.max(padding, triggerRect.top - availableHeight) : triggerRect.bottom + gap);
+        this.tooltipMaxHeight.set(availableHeight);
     }
 
     private startRefreshing(): void {

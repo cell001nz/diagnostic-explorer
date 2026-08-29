@@ -26,6 +26,7 @@ using System;
 using System.ComponentModel;
 using System.Text.Json;
 using DiagnosticExplorer;
+using DiagnosticExplorer.Logging;
 
 namespace WidgetSample.Harness;
 
@@ -106,5 +107,51 @@ public partial class Gadget : INotifyPropertyChanged
             _purpose = value;
             OnPropertyChanged("Purpose");
         }
+    }
+
+    public static void ConfigureGadget(IDiagConfigurator config)
+    {
+        config.Configure<Gadget>(options =>
+        {
+            options.IncludeAll();
+            options.Property(gadget => gadget.Name).AllowSet();
+            options.Property(gadget => gadget.Purpose).AllowSet();
+            options.Property(gadget => gadget.Configuration).Category("Configuration").Expand();
+        });
+
+        config.ConfigureDrillDown<Gadget>(options =>
+        {
+            options.IncludeAll();
+            options.Property(gadget => gadget.Name).AllowSet();
+            options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
+            options.Route(
+                gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
+                LoggerNameMatchMode.Exact,
+                route => route.To("Gadget", "Gadget Events")
+            );
+        });
+
+        ConfigureGadgetConfig(config);
+    }
+
+    private static void ConfigureGadgetConfig(IDiagConfigurator config)
+    {
+        config.Configure<GadgetConfig>(options =>
+        {
+            options.IncludeAll();
+            // options.Property(obj => obj.Power).Category("Power").Expand();
+            options.Property(obj => obj.CommissionedOn).AsDateOnly();
+            options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
+            options.Property("Network2", obj => obj.Network).AsJson(100).WithExpandedHover().WithDrillDown();
+            options.Property(obj => obj.Network).Category("Network").Expand();
+            options.Property(obj => obj.Maintenance).Category("Maintenance").Expand();
+        });
+
+        config.Configure<GadgetPowerConfig>(options =>
+        {
+            options.IncludeAll();
+        });
+        // config.Configure<GadgetNetworkConfig>(options => options.IncludeAll());
+        // config.Configure<GadgetMaintenanceConfig>(options => options.IncludeAll());
     }
 }

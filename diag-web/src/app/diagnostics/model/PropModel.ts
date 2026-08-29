@@ -40,6 +40,7 @@ export class PropModel {
     subBag: SubBagModel;
     name = signal('');
     value = signal('');
+    valueLines = computed(() => this.value().split(/\r?\n/));
     description = signal('');
     operationSet = signal('');
     canSet = signal(false);

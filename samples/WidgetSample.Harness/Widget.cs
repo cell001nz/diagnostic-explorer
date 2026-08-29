@@ -68,8 +68,9 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
             options.Property(widget => widget._dateCreated).ShowElapsed();
-            options.Property(widget => widget.PrimaryConfig).Named("Widget Config").AsDrillDownIcon("View more details");
-            options.Property(widget => widget.SecondaryConfig).AsDrillDownIcon();
+            options.Property(widget => widget.PrimaryConfig).Expand().Named("Widget Config").WithExpandedHover(); //.AsDrillDownIcon("View more details");
+            options.Property(widget => widget.SecondaryConfig).Expand().AsDrillDownIcon().WithExpandedHover();
+
             options
                 .Custom(
                     "Config",
@@ -82,17 +83,16 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
                         projection.Property("Names", widget => _names).ListItems();
                     }
                 )
-                .AsDrillDownIcon();
+                .AsDrillDownIcon()
+                .WithExpandedHover();
         });
 
         config.ConfigureDrillDown<Widget>(options =>
         {
-            options.ExcludeAll();
             options.Property("Some Prop", widget => widget._someProp);
             options.Property("Private String", widget => widget._privateString);
             options.Property(widget => widget._myDecimal);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property("BlahConfig", widget => widget.PrimaryConfig).AsDrillDownIcon();
             options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
             options.Property(widget => widget.Size).Category("Info").AllowSet();
             // options.Route(

@@ -6,7 +6,9 @@ import { computed, signal } from '@angular/core';
 
 export class SubBagModel {
     bag: BagModel;
-    readonly name = signal('');
+    readonly name = signal<string | null>(null);
+    readonly depth = computed(() => (this.name()?.split('.').filter(Boolean).length ?? 1) - 1);
+    readonly displayName = computed(() => this.name()?.split('.').at(-1) ?? '');
     readonly operationSet = signal('');
     readonly canDrillDown = signal(false);
 
@@ -33,10 +35,11 @@ export class SubBagModel {
     }
 
     getOperationPath(): string {
-        return this.bag.getOperationPath() + '|' + this.name();
+        return this.bag.getOperationPath() + '|' + (this.name() ?? '');
     }
 
     update(propCat: SubBag) {
+        this.name.set(propCat.name === 'General' ? null : propCat.name);
         this.canDrillDown.set(propCat.canDrillDown);
         this.properties.set(
             customMerge(

@@ -44,11 +44,17 @@ public static class CategoryExtensions
 {
     private static readonly StringComparer _ignoreCase = StringComparer.CurrentCultureIgnoreCase;
 
+    public static string NormalizeName(string name)
+    {
+        return string.IsNullOrWhiteSpace(name) || string.Equals(name, "General", StringComparison.OrdinalIgnoreCase) ? null : name;
+    }
+
     public static Category FindByName(this IEnumerable<Category> list, string name)
     {
         if (list == null)
             throw new ArgumentNullException(nameof(list));
 
+        name = NormalizeName(name);
         return list.FirstOrDefault(x => _ignoreCase.Equals(x.Name, name));
     }
 }

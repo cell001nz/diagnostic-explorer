@@ -46,16 +46,16 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new AttributeSample());
 
-        Property property = bag.GetProperty(nameof(AttributeSample.Attributed), "General");
+        Property property = bag.GetProperty(nameof(AttributeSample.Attributed), null);
         Assert.NotNull(property);
         Assert.Equal("7", property.Value);
         Assert.Null(property.Description);
         Assert.False(property.CanSet);
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Plain), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored), null));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden), null));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Plain), null));
         Assert.DoesNotContain(bag.Categories, category => category.Name == "Source");
-        Assert.All(bag.Categories.Single(category => category.Name == "General").Properties, item => Assert.NotNull(item));
+        Assert.All(bag.Categories.Single(category => category.Name == null).Properties, item => Assert.NotNull(item));
     }
 
     [Fact]
@@ -63,23 +63,23 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         PropertyBag bag = Render(new DefaultScalarSample());
 
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Text), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Status), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Count), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.OptionalCount), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Amount), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Created), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Duration), "General"));
-        Property point = bag.GetProperty(nameof(DefaultScalarSample.Point), "General");
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Text), null));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Status), null));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Count), null));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.OptionalCount), null));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Amount), null));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Created), null));
+        Assert.NotNull(bag.GetProperty(nameof(DefaultScalarSample.Duration), null));
+        Property point = bag.GetProperty(nameof(DefaultScalarSample.Point), null);
         Assert.False(point.CanDrillDown);
         Assert.False(point.DrillDownIconOnly);
         Assert.Equal("(3, 4)", point.Value);
-        Property child = bag.GetProperty(nameof(DefaultScalarSample.Child), "General");
+        Property child = bag.GetProperty(nameof(DefaultScalarSample.Child), null);
         Assert.True(child.CanDrillDown);
         Assert.True(child.DrillDownIconOnly);
         Assert.Null(child.Value);
-        Assert.Equal("2", bag.GetProperty(nameof(DefaultScalarSample.Items), "General").Value);
-        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Pending), "General"));
+        Assert.Equal("2", bag.GetProperty(nameof(DefaultScalarSample.Items), null).Value);
+        Assert.Null(bag.GetProperty(nameof(DefaultScalarSample.Pending), null));
     }
 
     [Fact]
@@ -91,15 +91,15 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new ValueKindSample());
 
-        Assert.Equal(PropertyValueKind.Text, bag.GetProperty(nameof(ValueKindSample.Text), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.PositiveNumber, bag.GetProperty(nameof(ValueKindSample.Positive), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.ZeroNumber, bag.GetProperty(nameof(ValueKindSample.Zero), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.NegativeNumber, bag.GetProperty(nameof(ValueKindSample.Negative), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.DateTime, bag.GetProperty(nameof(ValueKindSample.Timestamp), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.Duration, bag.GetProperty(nameof(ValueKindSample.Duration), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.Boolean, bag.GetProperty(nameof(ValueKindSample.Enabled), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.Enumeration, bag.GetProperty(nameof(ValueKindSample.Status), "General").ValueKind);
-        Assert.Equal(PropertyValueKind.Object, bag.GetProperty(nameof(ValueKindSample.Details), "General").ValueKind);
+        Assert.Equal(PropertyValueKind.Text, bag.GetProperty(nameof(ValueKindSample.Text), null).ValueKind);
+        Assert.Equal(PropertyValueKind.PositiveNumber, bag.GetProperty(nameof(ValueKindSample.Positive), null).ValueKind);
+        Assert.Equal(PropertyValueKind.ZeroNumber, bag.GetProperty(nameof(ValueKindSample.Zero), null).ValueKind);
+        Assert.Equal(PropertyValueKind.NegativeNumber, bag.GetProperty(nameof(ValueKindSample.Negative), null).ValueKind);
+        Assert.Equal(PropertyValueKind.DateTime, bag.GetProperty(nameof(ValueKindSample.Timestamp), null).ValueKind);
+        Assert.Equal(PropertyValueKind.Duration, bag.GetProperty(nameof(ValueKindSample.Duration), null).ValueKind);
+        Assert.Equal(PropertyValueKind.Boolean, bag.GetProperty(nameof(ValueKindSample.Enabled), null).ValueKind);
+        Assert.Equal(PropertyValueKind.Enumeration, bag.GetProperty(nameof(ValueKindSample.Status), null).ValueKind);
+        Assert.Equal(PropertyValueKind.Object, bag.GetProperty(nameof(ValueKindSample.Details), null).ValueKind);
     }
 
     [Fact]
@@ -243,16 +243,16 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new DefaultFormatSample());
 
-        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value), "General").Value);
-        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue), "General").Value);
+        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value), null).Value);
+        Assert.Equal("2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue), null).Value);
 
         configuration.DefaultFormat<DateTime>("The date is {0:d MMM yyyy HH:mm:ss}");
         DiagnosticManager.UseConfiguration(configuration);
 
         bag = Render(new DefaultFormatSample());
 
-        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value), "General").Value);
-        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue), "General").Value);
+        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.Value), null).Value);
+        Assert.Equal("The date is 2 Jan 2025 03:04:05", bag.GetProperty(nameof(DefaultFormatSample.NullableValue), null).Value);
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         DiagnosticManager.UseConfiguration(configuration);
 
-        Property property = Render(new JsonFormatSample()).GetProperty(nameof(JsonFormatSample.Details), "General");
+        Property property = Render(new JsonFormatSample()).GetProperty(nameof(JsonFormatSample.Details), null);
 
         Assert.Equal("{\"Value\":\"JSON\"}", property.Value);
     }
@@ -298,7 +298,7 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         DiagnosticManager.UseConfiguration(configuration);
 
-        Property property = Render(new DefaultFormatSample()).GetProperty(nameof(DefaultFormatSample.Value), "General");
+        Property property = Render(new DefaultFormatSample()).GetProperty(nameof(DefaultFormatSample.Value), null);
 
         Assert.Equal(new DateTime(2025, 1, 2).ToString("d"), property.Value);
         Assert.Equal(PropertyValueKind.DateTime, property.ValueKind);
@@ -315,7 +315,7 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         DiagnosticManager.UseConfiguration(configuration);
 
-        Property property = Render(new JsonFormatSample()).GetProperty(nameof(JsonFormatSample.Details), "General");
+        Property property = Render(new JsonFormatSample()).GetProperty(nameof(JsonFormatSample.Details), null);
 
         Assert.Equal("{\"Value\":\"JS", property.Value);
     }
@@ -352,9 +352,9 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         DiagnosticManager.UseConfiguration(configuration);
 
-        Property warningProperty = Render(new WarningSample(3, 5)).GetProperty(nameof(WarningSample.Current), "General");
-        Property errorProperty = Render(new WarningSample(-1, 5)).GetProperty(nameof(WarningSample.Current), "General");
-        Property validProperty = Render(new WarningSample(5, 3)).GetProperty(nameof(WarningSample.Current), "General");
+        Property warningProperty = Render(new WarningSample(3, 5)).GetProperty(nameof(WarningSample.Current), null);
+        Property errorProperty = Render(new WarningSample(-1, 5)).GetProperty(nameof(WarningSample.Current), null);
+        Property validProperty = Render(new WarningSample(5, 3)).GetProperty(nameof(WarningSample.Current), null);
 
         Assert.Collection(
             warningProperty.Alerts,
@@ -442,7 +442,7 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         DiagnosticManager.UseConfiguration(configuration);
 
-        Property property = Render(new ReplacementSample()).GetProperty("Computed", "General");
+        Property property = Render(new ReplacementSample()).GetProperty("Computed", null);
 
         Assert.Equal("\"FirstSecond\"", property.Value);
     }
@@ -458,7 +458,7 @@ public sealed class FluentConfigurationTests : IDisposable
         });
         DiagnosticManager.UseConfiguration(configuration);
 
-        Property property = Render(new StrategySample()).GetProperty("Details", "General");
+        Property property = Render(new StrategySample()).GetProperty("Details", null);
 
         Assert.True(property.CanDrillDown);
         Assert.True(property.DrillDownIconOnly);
@@ -478,7 +478,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(configuration);
 
         DrillDownRoot root = new();
-        Property property = Render(root).GetProperty(nameof(DrillDownRoot.Child), "General");
+        Property property = Render(root).GetProperty(nameof(DrillDownRoot.Child), null);
 
         Assert.True(property.CanJsonHover);
         Assert.False(property.CanExpandedHover);
@@ -488,7 +488,7 @@ public sealed class FluentConfigurationTests : IDisposable
             new[] { new RegisteredObject(root, "Tests", "Root") },
             new DrillDownRequest
             {
-                ObjectPaths = new List<string> { "Tests|Root|General|Child" },
+                ObjectPaths = new List<string> { "Tests|Root||Child" },
                 JsonHover = true,
                 ExcludeEventViews = true,
             }
@@ -514,7 +514,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(configuration);
 
         DrillDownRoot root = new();
-        Property property = Render(root).GetProperty(nameof(DrillDownRoot.Child), "General");
+        Property property = Render(root).GetProperty(nameof(DrillDownRoot.Child), null);
 
         Assert.False(property.CanJsonHover);
         Assert.True(property.CanExpandedHover);
@@ -522,7 +522,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         DrillDownResponse normalResponse = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(root, "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Child" } }
         );
         Assert.NotEmpty(normalResponse.EventViews);
 
@@ -530,7 +530,7 @@ public sealed class FluentConfigurationTests : IDisposable
             new[] { new RegisteredObject(root, "Tests", "Root") },
             new DrillDownRequest
             {
-                ObjectPaths = new List<string> { "Tests|Root|General|Child" },
+                ObjectPaths = new List<string> { "Tests|Root||Child" },
                 ExcludeEventViews = true,
             }
         );
@@ -564,15 +564,15 @@ public sealed class FluentConfigurationTests : IDisposable
         root.Requests.Register(5);
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(root, "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Summary" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Summary" } }
         );
 
         PropertyBag bag = Assert.Single(response.Diagnostics.PropertyBags);
-        Assert.Equal("Projection", bag.GetProperty("Name", "General").Value);
-        Assert.Null(bag.GetProperty("Child", "General"));
+        Assert.Equal("Projection", bag.GetProperty("Name", null).Value);
+        Assert.Null(bag.GetProperty("Child", null));
         Assert.NotNull(bag.GetProperty(nameof(ChildSample.Name), "Child"));
-        Assert.Equal("1", bag.GetProperty("One", "General").Value);
-        Assert.Equal("5", bag.GetProperty("Total Requests", "General").Value);
+        Assert.Equal("1", bag.GetProperty("One", null).Value);
+        Assert.Equal("5", bag.GetProperty("Total Requests", null).Value);
     }
 
     [Fact]
@@ -585,18 +585,18 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(configuration);
 
         DrillDownRoot root = new();
-        Property property = Render(root).GetProperty("Summary", "General");
+        Property property = Render(root).GetProperty("Summary", null);
 
         Assert.True(property.CanDrillDown);
         Assert.False(property.DrillDownIconOnly);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(root, "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Summary" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Summary" } }
         );
 
         PropertyBag bag = Assert.Single(response.Diagnostics.PropertyBags);
-        Assert.Equal("Projection", bag.GetProperty("Name", "General").Value);
+        Assert.Equal("Projection", bag.GetProperty("Name", null).Value);
     }
 
     [Fact]
@@ -611,11 +611,11 @@ public sealed class FluentConfigurationTests : IDisposable
         PrivatePropertySample sample = new();
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Projection" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Projection" } }
         );
 
         PropertyBag bag = Assert.Single(response.Diagnostics.PropertyBags);
-        Assert.Equal("Value", bag.GetProperty("_value", "General").Value);
+        Assert.Equal("Value", bag.GetProperty("_value", null).Value);
     }
 
     [Fact]
@@ -653,8 +653,8 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new AttributeSample());
 
         Assert.Null(bag.GetProperty("Attributed name", "Source"));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Ignored), null));
+        Assert.NotNull(bag.GetProperty(nameof(AttributeSample.Hidden), null));
         Assert.Null(bag.GetProperty(nameof(AttributeSample.Plain)));
     }
 
@@ -671,12 +671,12 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new ReplacementSample());
 
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), null));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.Second), null));
     }
 
     [Fact]
-    public void PropertiesWithoutCategoriesDefaultToGeneral()
+    public void PropertiesWithoutCategoriesUseAnUnnamedCategory()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<ReplacementSample>(type =>
@@ -689,8 +689,9 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new ReplacementSample());
 
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), null));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), null));
+        Assert.Null(Assert.Single(bag.Categories).Name);
     }
 
     [Fact]
@@ -706,8 +707,8 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionSample());
 
-        Assert.Equal("3", bag.GetProperty("Items count", "General").Value);
-        Assert.Equal("One, Two, ... (1 more item)", bag.GetProperty("Items", "General").Value);
+        Assert.Equal("3", bag.GetProperty("Items count", null).Value);
+        Assert.Equal("One, Two, ... (1 more item)", bag.GetProperty("Items", null).Value);
     }
 
     [Fact]
@@ -723,7 +724,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionSample());
 
-        Assert.Equal("One:1 / Two:2 / Three:3", bag.GetProperty("Items", "General").Value);
+        Assert.Equal("One:1 / Two:2 / Three:3", bag.GetProperty("Items", null).Value);
     }
 
     [Fact]
@@ -742,7 +743,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(configuration);
 
         PropertyBag bag = Render(new CollectionSample());
-        Property[] properties = { bag.GetProperty("Items count", "General"), bag.GetProperty("Items", "General") };
+        Property[] properties = { bag.GetProperty("Items count", null), bag.GetProperty("Items", null) };
 
         Assert.All(
             properties,
@@ -812,12 +813,12 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionInterfaceSample());
 
-        Assert.Equal("Array", bag.GetProperty(nameof(CollectionInterfaceSample.Array), "General").Value);
-        Assert.Equal("List", bag.GetProperty(nameof(CollectionInterfaceSample.List), "General").Value);
-        Assert.Equal("Read-only list", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyList), "General").Value);
-        Assert.Equal("Collection", bag.GetProperty(nameof(CollectionInterfaceSample.Collection), "General").Value);
-        Assert.Equal("Read-only collection", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyCollection), "General").Value);
-        Assert.Equal("Set", bag.GetProperty(nameof(CollectionInterfaceSample.Set), "General").Value);
+        Assert.Equal("Array", bag.GetProperty(nameof(CollectionInterfaceSample.Array), null).Value);
+        Assert.Equal("List", bag.GetProperty(nameof(CollectionInterfaceSample.List), null).Value);
+        Assert.Equal("Read-only list", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyList), null).Value);
+        Assert.Equal("Collection", bag.GetProperty(nameof(CollectionInterfaceSample.Collection), null).Value);
+        Assert.Equal("Read-only collection", bag.GetProperty(nameof(CollectionInterfaceSample.ReadOnlyCollection), null).Value);
+        Assert.Equal("Set", bag.GetProperty(nameof(CollectionInterfaceSample.Set), null).Value);
     }
 
     [Fact]
@@ -877,8 +878,8 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag collectionBag = Render(new CollectionSample());
         PropertyBag extendedBag = Render(new StrategySample());
 
-        Assert.Equal("1", collectionBag.GetProperty("One", "General").Value);
-        Assert.Equal("2", collectionBag.GetProperty("Two", "General").Value);
+        Assert.Equal("1", collectionBag.GetProperty("One", null).Value);
+        Assert.Equal("2", collectionBag.GetProperty("Two", null).Value);
         Assert.Equal("Nested", extendedBag.GetProperty(nameof(ChildSample.Name), "Private details").Value);
     }
 
@@ -906,8 +907,8 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag collectionBag = Render(new CollectionSample());
         PropertyBag extendedBag = Render(new StrategySample());
 
-        Assert.Equal("1", collectionBag.GetProperty("One", "General").Value);
-        Assert.Equal("2", collectionBag.GetProperty("Two", "General").Value);
+        Assert.Equal("1", collectionBag.GetProperty("One", null).Value);
+        Assert.Equal("2", collectionBag.GetProperty("Two", null).Value);
         Assert.Equal("Nested", extendedBag.GetProperty(nameof(ChildSample.Name), "_privateDetails").Value);
     }
 
@@ -924,8 +925,8 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new PrivatePropertySample());
 
-        Assert.Equal("Value", bag.GetProperty("_value", "General").Value);
-        Assert.Equal("Private value", bag.GetProperty("_value", "General").Description);
+        Assert.Equal("Value", bag.GetProperty("_value", null).Value);
+        Assert.Equal("Private value", bag.GetProperty("_value", null).Description);
     }
 
     [Fact]
@@ -943,8 +944,8 @@ public sealed class FluentConfigurationTests : IDisposable
         sample._privateRequests.Register(4);
         PropertyBag bag = Render(sample);
 
-        Assert.Equal("4", bag.GetProperty("Total _privateRequests", "General").Value);
-        Assert.Null(bag.GetProperty("_privateRequests/sec", "General"));
+        Assert.Equal("4", bag.GetProperty("Total _privateRequests", null).Value);
+        Assert.Null(bag.GetProperty("_privateRequests/sec", null));
     }
 
     [Fact]
@@ -965,9 +966,10 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionSample());
 
-        Assert.Equal("1", bag.GetProperty(nameof(CollectionItem.Value), "General.One").Value);
-        Assert.Equal("2", bag.GetProperty(nameof(CollectionItem.Value), "General.Two").Value);
+        Assert.Equal("1", bag.GetProperty(nameof(CollectionItem.Value), "One").Value);
+        Assert.Equal("2", bag.GetProperty(nameof(CollectionItem.Value), "Two").Value);
         Assert.DoesNotContain(bag.Categories, category => category.Name == "Three");
+        Assert.Equal("1 more item", bag.GetProperty("Items (more)", null).Value);
     }
 
     [Fact]
@@ -993,7 +995,7 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.NotNull(property);
         Assert.Equal("3", property.Value);
         Assert.True(property.CanDrillDown);
-        Assert.Equal("1", bag.GetProperty(nameof(CollectionItem.Value), "General.3").Value);
+        Assert.Equal("1", bag.GetProperty(nameof(CollectionItem.Value), "3").Value);
     }
 
     [Fact]
@@ -1011,9 +1013,10 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionSample());
 
-        Assert.Equal("1", bag.GetProperty("One", "General").Value);
-        Assert.Equal("2", bag.GetProperty("Two", "General").Value);
-        Assert.Null(bag.GetProperty("Three", "General"));
+        Assert.Equal("1", bag.GetProperty("One", null).Value);
+        Assert.Equal("2", bag.GetProperty("Two", null).Value);
+        Assert.Null(bag.GetProperty("Three", null));
+        Assert.Equal("1 more item", bag.GetProperty("Items (more)", null).Value);
     }
 
     [Fact]
@@ -1035,7 +1038,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new CollectionSample());
 
-        Property property = bag.GetProperty("Item: One", "General.Group: One");
+        Property property = bag.GetProperty("Item: One", "Group: One");
         Assert.Equal("1", property.Value);
         Assert.Equal("Description: One", property.Description);
     }
@@ -1064,16 +1067,16 @@ public sealed class FluentConfigurationTests : IDisposable
         DrillDownRoot root = new();
         RegisteredObject registered = new(root, "Tests", "Root");
         PropertyBag rootBag = DiagnosticManager.ObjectToPropertyBag(root, "Root", "Tests");
-        Assert.True(rootBag.GetProperty(nameof(DrillDownRoot.Child), "General").CanDrillDown);
+        Assert.True(rootBag.GetProperty(nameof(DrillDownRoot.Child), null).CanDrillDown);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { registered },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Child" } }
         );
 
         PropertyBag childBag = Assert.Single(response.Diagnostics.PropertyBags);
-        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Excluded), "General").Value);
-        Assert.Null(childBag.GetProperty(nameof(ChildSample.Name), "General"));
+        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Excluded), null).Value);
+        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Name), null).Value);
     }
 
     [Fact]
@@ -1095,7 +1098,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(new DrillDownRoot(), "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Child" } }
         );
 
         Assert.Collection(
@@ -1124,7 +1127,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(new DrillDownRoot(), "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Child" } }
         );
 
         Assert.Null(response.ErrorMessage);
@@ -1150,10 +1153,10 @@ public sealed class FluentConfigurationTests : IDisposable
         DrillDownRoot root = new();
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(root, "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Child" } }
         );
 
-        Assert.Equal("Nested", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(ChildSample.Name), "General").Value);
+        Assert.Equal("Nested", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(ChildSample.Name), null).Value);
     }
 
     [Fact]
@@ -1174,7 +1177,7 @@ public sealed class FluentConfigurationTests : IDisposable
 
         DrillDownRoot root = new();
         PropertyBag bag = DiagnosticManager.ObjectToPropertyBag(root, "Root", "Tests");
-        Property property = bag.GetProperty(nameof(DrillDownRoot.Child), "General");
+        Property property = bag.GetProperty(nameof(DrillDownRoot.Child), null);
 
         Assert.True(property.CanDrillDown);
         Assert.True(property.DrillDownIconOnly);
@@ -1182,10 +1185,10 @@ public sealed class FluentConfigurationTests : IDisposable
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(root, "Tests", "Root") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root|General|Child" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Root||Child" } }
         );
 
-        Assert.Equal("Nested", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(ChildSample.Name), "General").Value);
+        Assert.Equal("Nested", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(ChildSample.Name), null).Value);
     }
 
     [Fact]
@@ -1216,8 +1219,8 @@ public sealed class FluentConfigurationTests : IDisposable
         );
 
         PropertyBag childBag = Assert.Single(response.Diagnostics.PropertyBags);
-        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Excluded), "General").Value);
-        Assert.Null(childBag.GetProperty(nameof(ChildSample.Name), "General"));
+        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Excluded), null).Value);
+        Assert.Equal("Nested", childBag.GetProperty(nameof(ChildSample.Name), null).Value);
     }
 
     [Fact]
@@ -1240,15 +1243,15 @@ public sealed class FluentConfigurationTests : IDisposable
 
         CollectionSample sample = new();
         PropertyBag bag = DiagnosticManager.ObjectToPropertyBag(sample, "Collection", "Tests");
-        Assert.True(bag.GetProperty("One", "General").CanDrillDown);
-        Assert.True(bag.GetProperty("One", "General").DrillDownIconOnly);
+        Assert.True(bag.GetProperty("One", null).CanDrillDown);
+        Assert.True(bag.GetProperty("One", null).DrillDownIconOnly);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Collection") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|One" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection||One" } }
         );
 
-        Assert.Equal("1", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(CollectionItem.Value), "General").Value);
+        Assert.Equal("1", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(CollectionItem.Value), null).Value);
     }
 
     [Fact]
@@ -1269,19 +1272,38 @@ public sealed class FluentConfigurationTests : IDisposable
 
         CollectionSample sample = new();
         PropertyBag bag = Render(sample);
-        Property property = bag.GetProperty("Items", "General");
+        Property property = bag.GetProperty("Items", null);
         Assert.Equal("3", property.Value);
         Assert.True(property.CanDrillDown);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Collection") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Items" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection||Items" } }
         );
 
         Assert.Equal(2, response.DisplayedCount);
         Assert.Equal(3, response.TotalCount);
         Assert.True(response.IsTruncated);
-        Assert.Equal(new[] { "[0]", "[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
+        Assert.Equal(new[] { "Items[0]", "Items[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
+    }
+
+    [Fact]
+    public void CollectionCountSupportsDrillDownAndExpandedHover()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ShowCount().AsDrillDown().WithExpandedHover();
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new CollectionSample()).GetProperty("Items", null);
+
+        Assert.Equal("3", property.Value);
+        Assert.True(property.CanDrillDown);
+        Assert.True(property.CanExpandedHover);
+        Assert.False(property.CanJsonHover);
     }
 
     [Fact]
@@ -1302,19 +1324,19 @@ public sealed class FluentConfigurationTests : IDisposable
 
         CollectionSample sample = new();
         PropertyBag bag = Render(sample);
-        Property property = bag.GetProperty("Items", "General");
+        Property property = bag.GetProperty("Items", null);
         Assert.Equal("One, Two, Three", property.Value);
         Assert.True(property.CanDrillDown);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Collection") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Items" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection||Items" } }
         );
 
         Assert.Equal(2, response.DisplayedCount);
         Assert.Equal(3, response.TotalCount);
         Assert.True(response.IsTruncated);
-        Assert.Equal(new[] { "[0]", "[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
+        Assert.Equal(new[] { "Items[0]", "Items[1]" }, response.Diagnostics.PropertyBags.Select(bag => bag.Name));
     }
 
     [Fact]
@@ -1335,13 +1357,13 @@ public sealed class FluentConfigurationTests : IDisposable
 
         CollectionSample sample = new();
         PropertyBag bag = Render(sample);
-        Property property = bag.GetProperty("Item inventory", "General");
+        Property property = bag.GetProperty("Item inventory", null);
         Assert.Equal("3", property.Value);
         Assert.True(property.CanDrillDown);
 
         DrillDownResponse response = DiagnosticManager.GetDrillDown(
             new[] { new RegisteredObject(sample, "Tests", "Collection") },
-            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection|General|Item inventory" } }
+            new DrillDownRequest { ObjectPaths = new List<string> { "Tests|Collection||Item inventory" } }
         );
 
         Assert.Equal(2, response.DisplayedCount);
@@ -1375,11 +1397,11 @@ public sealed class FluentConfigurationTests : IDisposable
             new[] { new RegisteredObject(root, "Tests", "Root") },
             new DrillDownRequest
             {
-                ObjectPaths = new List<string> { "Tests|Root|General|Child", "DrillDown|ChildSample|General|Details" },
+                ObjectPaths = new List<string> { "Tests|Root||Child", "DrillDown|ChildSample||Details" },
             }
         );
 
-        Assert.Equal("Deep", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(GrandChildSample.Value), "General").Value);
+        Assert.Equal("Deep", Assert.Single(response.Diagnostics.PropertyBags).GetProperty(nameof(GrandChildSample.Value), null).Value);
     }
 
     [Fact]
@@ -1403,8 +1425,8 @@ public sealed class FluentConfigurationTests : IDisposable
             new[] { new RegisteredObject(root, "Tests", "Root") },
             new SetPropertyRequest
             {
-                ObjectPaths = new[] { "Tests|Root|General|Child" },
-                Path = "DrillDown|ChildSample|General|Editable",
+                ObjectPaths = new[] { "Tests|Root||Child" },
+                Path = "DrillDown|ChildSample||Editable",
                 Value = "Changed",
             }
         );
@@ -1435,10 +1457,10 @@ public sealed class FluentConfigurationTests : IDisposable
         sample.Requests.Register(4);
         PropertyBag bag = Render(sample);
 
-        Assert.Equal("4", bag.GetProperty("Total Requests", "General").Value);
-        Assert.Null(bag.GetProperty("Requests/sec", "General"));
-        Assert.NotNull(bag.GetProperty("Time since Started", "General"));
-        Assert.Null(bag.GetProperty(nameof(StrategySample.Started), "General"));
+        Assert.Equal("4", bag.GetProperty("Total Requests", null).Value);
+        Assert.Null(bag.GetProperty("Requests/sec", null));
+        Assert.NotNull(bag.GetProperty("Time since Started", null));
+        Assert.Null(bag.GetProperty(nameof(StrategySample.Started), null));
         Assert.Equal("Nested", bag.GetProperty(nameof(ChildSample.Name), "Details").Value);
     }
 
@@ -1455,8 +1477,8 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new StrategySample());
 
-        Assert.NotNull(bag.GetProperty("Time since _privateStarted", "General"));
-        Assert.NotNull(bag.GetProperty("Time since Last updated", "General"));
+        Assert.NotNull(bag.GetProperty("Time since _privateStarted", null));
+        Assert.NotNull(bag.GetProperty("Time since Last updated", null));
     }
 
     [Fact]
@@ -1474,8 +1496,8 @@ public sealed class FluentConfigurationTests : IDisposable
         sample._privateRequests.Register(4);
         PropertyBag bag = Render(sample);
 
-        Assert.Equal("4", bag.GetProperty("Total _privateRequests", "General").Value);
-        Assert.Equal("4", bag.GetProperty("Total Background requests", "General").Value);
+        Assert.Equal("4", bag.GetProperty("Total _privateRequests", null).Value);
+        Assert.Equal("4", bag.GetProperty("Total Background requests", null).Value);
     }
 
     [Fact]
@@ -1527,9 +1549,9 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Render(new DerivedSample());
 
-        Assert.Equal("Base", bag.GetProperty("Derived override", "General").Value);
-        Assert.Equal("Derived", bag.GetProperty(nameof(DerivedSample.DerivedValue), "General").Value);
-        Assert.Null(bag.GetProperty("Base configured", "General"));
+        Assert.Equal("Base", bag.GetProperty("Derived override", null).Value);
+        Assert.Equal("Derived", bag.GetProperty(nameof(DerivedSample.DerivedValue), null).Value);
+        Assert.Null(bag.GetProperty("Base configured", null));
     }
 
     [Fact]
@@ -1542,7 +1564,7 @@ public sealed class FluentConfigurationTests : IDisposable
             type.Include(sample => sample.First);
         });
         DiagnosticManager.UseConfiguration(first);
-        Assert.NotNull(Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.NotNull(Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), null));
 
         DiagnosticConfiguration second = new();
         second.Configure<ReplacementSample>(type =>
@@ -1553,8 +1575,8 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticManager.UseConfiguration(second);
         PropertyBag bag = Render(new ReplacementSample());
 
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), null));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), null));
     }
 
     [Fact]
@@ -1572,8 +1594,8 @@ public sealed class FluentConfigurationTests : IDisposable
         );
 
         PropertyBag bag = Render(new ReplacementSample());
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), null));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), null));
     }
 
     [Fact]
@@ -1601,8 +1623,8 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new ReplacementSample());
 
         Assert.True(configured);
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), null));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), null));
     }
 
     [Fact]
@@ -1625,7 +1647,7 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticResponse response = DiagnosticManager.GetDiagnostics(provider);
 
         PropertyBag bag = Assert.Single(response.PropertyBags.Where(item => item.Name == "Sample"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), "General"));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), null));
     }
 
     [Fact]
@@ -1705,8 +1727,8 @@ public sealed class FluentConfigurationTests : IDisposable
         PropertyBag bag = Render(new ReplacementSample());
 
         Assert.True(DiagnosticManager.Enabled);
-        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), "General"));
-        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), "General"));
+        Assert.Null(bag.GetProperty(nameof(ReplacementSample.First), null));
+        Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.Second), null));
     }
 
     [Fact]
