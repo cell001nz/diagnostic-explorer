@@ -8,6 +8,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)SampleLogLevel.cs" Link="Harness\SampleLogLevel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TraceScopeExample.cs" Link="Harness\TraceScopeExample.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Widget.cs" Link="Harness\Widget.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Thing.cs" Link="Harness\Thing.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)WidgetConfig.cs" Link="Harness\WidgetConfig.cs" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Form1.resx" Link="Harness\Form1.resx" />
     <None Remove="$(MSBuildThisFileDirectory)config.json" Link="config.json" CopyToOutputDirectory="PreserveNewest" />

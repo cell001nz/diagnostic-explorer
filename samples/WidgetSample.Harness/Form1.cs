@@ -99,6 +99,8 @@ public partial class Form1 : Form, INotifyPropertyChanged
         AddWidget();
     }
 
+    public Thing Thing { get; } = new Thing();
+
     [ExtendedProperty]
     public Widget NullWidget => null;
 
@@ -170,7 +172,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
             // options.Property("Widget", form => form._widgets.Count);
 
             options.Property("FirstWidget", obj => obj.Widgets.FirstOrDefault()).Expand().WithPrimaryPropertiesOnly();
-
+            options.Property(obj => obj.Thing).Expand();
             // options
             //     .Custom(
             //         "Config1234",
