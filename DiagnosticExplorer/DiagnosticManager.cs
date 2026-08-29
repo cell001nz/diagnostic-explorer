@@ -435,9 +435,19 @@ public static class DiagnosticManager
 
             bool isStatic = obj is Type;
             bool useUnconfiguredDefaults = !isStatic && !_configuration.HasTypeConfiguration(type);
+            bool drillDown = renderMode == DiagnosticRenderMode.DrillDown;
             IEnumerable<PropertyInfo> properties = isStatic
                 ? GetStaticProperties(type, applyAttributes)
-                : GetInstanceProperties(type, null, typeConfiguration, applyAttributes, useUnconfiguredDefaults);
+                : GetInstanceProperties(
+                    type,
+                    null,
+                    typeConfiguration,
+                    applyAttributes,
+                    useUnconfiguredDefaults,
+                    drillDown,
+                    _configuration.GetNearestTypeIncludeAll(type),
+                    drillDown ? _configuration.GetNearestTypeIncludeAll(type, drillDown: true) : null
+                );
             foreach (PropertyInfo info in properties)
             {
                 DiagnosticPropertyAttribute propAttr = applyAttributes ? GetAttribute<DiagnosticPropertyAttribute>(info) : null;
@@ -739,13 +749,26 @@ public static class DiagnosticManager
         DiagnosticClassAttribute inheritedAttr,
         TypeConfiguration configuration,
         bool applyAttributes,
-        bool useUnconfiguredDefaults
+        bool useUnconfiguredDefaults,
+        bool drillDown,
+        bool? normalIncludeAll,
+        bool? drillDownIncludeAll
     )
     {
         if (type != typeof(object))
         {
             DiagnosticClassAttribute diagAttr = applyAttributes ? GetAttribute<DiagnosticClassAttribute>(type, false) : null;
             bool frameworkUserInterfaceType = IsFrameworkUserInterfaceElement(type);
+            bool? declaredNormalIncludeAll = _configuration.GetDeclaredTypeIncludeAll(type);
+            if (declaredNormalIncludeAll.HasValue)
+                normalIncludeAll = declaredNormalIncludeAll;
+            if (drillDown)
+            {
+                bool? declaredDrillDownIncludeAll = _configuration.GetDeclaredTypeIncludeAll(type, drillDown: true);
+                if (declaredDrillDownIncludeAll.HasValue)
+                    drillDownIncludeAll = declaredDrillDownIncludeAll;
+            }
+            bool? includeAll = drillDownIncludeAll ?? normalIncludeAll;
 
             if (inheritedAttr == null || !inheritedAttr.DeclaringTypeOnly || diagAttr != null)
             {
@@ -757,7 +780,8 @@ public static class DiagnosticManager
                             configuration,
                             applyAttributes,
                             useUnconfiguredDefaults,
-                            frameworkUserInterfaceType
+                            frameworkUserInterfaceType,
+                            includeAll
                         )
                     )
                         yield return propInfo;
@@ -772,7 +796,10 @@ public static class DiagnosticManager
                     diagAttr ?? inheritedAttr,
                     configuration,
                     applyAttributes,
-                    useUnconfiguredDefaults
+                    useUnconfiguredDefaults,
+                    drillDown,
+                    normalIncludeAll,
+                    drillDownIncludeAll
                 )
             )
                 yield return propInfo;
@@ -793,7 +820,8 @@ public static class DiagnosticManager
         TypeConfiguration configuration = null,
         bool applyAttributes = true,
         bool useUnconfiguredDefaults = false,
-        bool explicitlyConfiguredOnly = false
+        bool explicitlyConfiguredOnly = false,
+        bool? includeAll = null
     )
     {
         if (info.PropertyType == typeof(EventSink))
@@ -812,8 +840,8 @@ public static class DiagnosticManager
         if (explicitlyConfiguredOnly)
             return false;
 
-        if (configuration != null && configuration.IncludeAll.HasValue)
-            return configuration.IncludeAll.Value;
+        if (includeAll.HasValue)
+            return includeAll.Value;
 
         if (attributedOnly)
             return false;

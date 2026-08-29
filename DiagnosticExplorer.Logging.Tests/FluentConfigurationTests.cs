@@ -1779,6 +1779,31 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void ConfiguredBaseStartsASeparateDefaultConfigurationSegment()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ConfigurationBoundarySubBaseSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Include(sample => sample.SubBaseVisible);
+        });
+        configuration.Configure<ConfigurationBoundaryDerivedSample>(type =>
+        {
+            type.IncludeAll();
+            type.Exclude(sample => sample.DerivedHidden);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new ConfigurationBoundaryDerivedSample());
+
+        Assert.NotNull(bag.GetProperty(nameof(ConfigurationBoundarySubBaseSample.SubBaseVisible), null));
+        Assert.Null(bag.GetProperty(nameof(ConfigurationBoundarySubBaseSample.SubBaseHidden), null));
+        Assert.NotNull(bag.GetProperty(nameof(ConfigurationBoundaryMiddleSample.MiddleValue), null));
+        Assert.NotNull(bag.GetProperty(nameof(ConfigurationBoundaryDerivedSample.DerivedVisible), null));
+        Assert.Null(bag.GetProperty(nameof(ConfigurationBoundaryDerivedSample.DerivedHidden), null));
+    }
+
+    [Fact]
     public void ReplacingConfigurationInvalidatesGetterCacheWithoutMergingRules()
     {
         DiagnosticConfiguration first = new();
@@ -2241,6 +2266,23 @@ public sealed class FluentConfigurationTests : IDisposable
     private sealed class DerivedSample : BaseSample
     {
         public string DerivedValue { get; } = "Derived";
+    }
+
+    private class ConfigurationBoundarySubBaseSample
+    {
+        public string SubBaseVisible { get; } = "Sub-base visible";
+        public string SubBaseHidden { get; } = "Sub-base hidden";
+    }
+
+    private class ConfigurationBoundaryMiddleSample : ConfigurationBoundarySubBaseSample
+    {
+        public string MiddleValue { get; } = "Middle value";
+    }
+
+    private sealed class ConfigurationBoundaryDerivedSample : ConfigurationBoundaryMiddleSample
+    {
+        public string DerivedVisible { get; } = "Derived visible";
+        public string DerivedHidden { get; } = "Derived hidden";
     }
 
     private sealed class ReplacementSample

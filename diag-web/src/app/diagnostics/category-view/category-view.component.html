@@ -80,7 +80,7 @@
                         [class.text-stone-500]="!prop.alertSeverity()"
                         [class.text-amber-400]="prop.alertSeverity() === 1"
                         [class.text-red-400]="prop.alertSeverity() === 2"
-                        [attr.title]="prop.alertTooltip() || prop.description() || null"
+                        [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || prop.description() || null"
                         [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
                         <span class="property-name" [class.cursor-pointer]="prop.canDrillDown()" (click)="prop.canDrillDown() && showDrillDown(prop.getOperationPath(), prop.name())">{{ prop.name() }}</span>
                         @if (prop.canDrillDown()) {
@@ -100,7 +100,7 @@
                             </button>
                         }
                     </app-property-hover>
-                    <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [attr.data-value-kind]="prop.valueKind()" [attr.title]="prop.alertTooltip() || null">
+                    <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [attr.data-value-kind]="prop.valueKind()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || null">
                         <app-property-hover [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
                             @if (prop.canDrillDown() && prop.drillDownText()) {
                                 <button type="button" class="diag-drilldown-value inline-flex items-center gap-1 text-sky-300" [title]="prop.drillDownText()" [attr.aria-label]="prop.drillDownText()" (click)="showDrillDown(prop.getOperationPath(), prop.name())">
@@ -111,13 +111,13 @@
                                 @if (prop.canDrillDown()) {
                                     <button type="button" class="diag-drilldown-value" (click)="showDrillDown(prop.getOperationPath(), prop.name())">
                                         @for (line of prop.valueLines(); track $index) {
-                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [title]="line">{{ line }}</span>
+                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : line">{{ line }}</span>
                                         }
                                     </button>
                                 } @else {
                                     <span class="value-text">
                                         @for (line of prop.valueLines(); track $index) {
-                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [title]="line">{{ line }}</span>
+                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : line">{{ line }}</span>
                                         }
                                     </span>
                                 }

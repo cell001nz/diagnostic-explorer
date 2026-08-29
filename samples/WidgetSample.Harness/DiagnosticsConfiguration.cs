@@ -31,7 +31,7 @@ internal static class DiagnosticsConfiguration
         config.DefaultFormat<Point>("Located at {0}");
 
         Thing.ConfigureDiagnostics(config);
-        ThingBase.ConfigureDiagnostics(config);
+        ThingSubBase.ConfigureDiagnostics(config);
         Form1.ConfigureDiagnostics(config);
         Widget.ConfigureDiagnostics(config);
         Gadget.ConfigureGadget(config);

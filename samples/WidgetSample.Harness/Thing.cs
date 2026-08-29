@@ -33,7 +33,7 @@ public class Thing : ThingBase
         config.Configure<Thing>(options =>
         {
             options.ExcludeAll();
-            options.Include(widget => widget.ThingValue1);
+            options.Include(widget => widget.ThingValue2);
         });
     }
 
@@ -41,17 +41,23 @@ public class Thing : ThingBase
     public string ThingValue2 { get; set; } = "Value 2";
 }
 
-public class ThingBase
+public class ThingBase : ThingSubBase
+{
+    public string BaseValue1 { get; set; } = "Base Value 1";
+    public string BaseValue2 { get; set; } = "Base Value 2";
+}
+
+public class ThingSubBase
 {
     internal static void ConfigureDiagnostics(IDiagConfigurator config)
     {
-        config.Configure<ThingBase>(options =>
+        config.Configure<ThingSubBase>(options =>
         {
-            options.IncludeAll();
-            options.Exclude(widget => widget.BaseValue2);
+            options.ExcludeAll();
+            options.Include(widget => widget.SubBaseValue1);
         });
     }
 
-    public string BaseValue1 { get; set; } = "Base Value 1";
-    public string BaseValue2 { get; set; } = "Base Value 2";
+    public string SubBaseValue1 { get; set; } = "Sub Base Value 1";
+    public string SubBaseValue2 { get; set; } = "Sub Base Value 2";
 }

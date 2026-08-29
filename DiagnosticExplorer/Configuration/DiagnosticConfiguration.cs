@@ -208,6 +208,24 @@ internal sealed class DiagnosticConfigurationSnapshot
         return HasConfiguration(runtimeType, _types);
     }
 
+    public bool? GetDeclaredTypeIncludeAll(Type type, bool drillDown = false)
+    {
+        IReadOnlyDictionary<Type, TypeConfiguration> configurations = drillDown ? _drillDownTypes : _types;
+        return configurations.TryGetValue(type, out TypeConfiguration configuration) ? configuration.IncludeAll : null;
+    }
+
+    public bool? GetNearestTypeIncludeAll(Type runtimeType, bool drillDown = false)
+    {
+        for (Type type = runtimeType; type != null; type = type.BaseType)
+        {
+            bool? includeAll = GetDeclaredTypeIncludeAll(type, drillDown);
+            if (includeAll.HasValue)
+                return includeAll;
+        }
+
+        return null;
+    }
+
     private static TypeConfiguration MergeTypeConfiguration(Type runtimeType, IReadOnlyDictionary<Type, TypeConfiguration> configurations)
     {
         TypeConfiguration effective = null;
