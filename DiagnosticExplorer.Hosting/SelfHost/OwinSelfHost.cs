@@ -43,6 +43,7 @@ internal static class DiagnosticSelfHostFactory
     {
         JsonSerializer serializer = GlobalHost.DependencyResolver.Resolve<JsonSerializer>();
         serializer.ContractResolver = new SignalRProtocolContractResolver();
+        serializer.NullValueHandling = NullValueHandling.Ignore;
         GlobalHost.DependencyResolver.Register(typeof(SelfHostManager), () => manager);
         app.MapSignalR("/hub", new HubConfiguration { EnableDetailedErrors = options.EnableDetailedErrors });
         app.Run(context => WriteAssetAsync(context));
@@ -101,6 +102,12 @@ internal sealed class SignalRProtocolContractResolver : CamelCasePropertyNamesCo
             property.PropertyName = explicitName.PropertyName;
         else if (SignalRProtocolProperties.Contains(member.Name))
             property.PropertyName = member.Name;
+
+        if (property.PropertyType == typeof(bool) || Nullable.GetUnderlyingType(property.PropertyType) == typeof(bool))
+        {
+            Predicate<object> shouldSerialize = property.ShouldSerialize;
+            property.ShouldSerialize = parent => (shouldSerialize?.Invoke(parent) ?? true) && !Equals(property.ValueProvider.GetValue(parent), false);
+        }
 
         return property;
     }

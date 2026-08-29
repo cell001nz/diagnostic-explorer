@@ -1,4 +1,4 @@
-﻿export interface DiagnosticResponse {
+export interface DiagnosticResponse {
     processId: number;
     propertyBags: PropertyBag[];
     events: EventResponse[];
@@ -53,6 +53,8 @@ export interface SubBag {
     name: string | null;
     operationSet: string;
     canDrillDown: boolean;
+    isExpanded: boolean;
+    isExpandedProperty?: boolean;
     properties: Property[];
 }
 
@@ -68,6 +70,7 @@ export interface Property {
     drillDownText?: string;
     canJsonHover?: boolean;
     canExpandedHover?: boolean;
+    noTruncate?: boolean;
     alerts: PropertyAlert[];
 }
 

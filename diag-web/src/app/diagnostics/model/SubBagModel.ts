@@ -1,4 +1,4 @@
-﻿import { PropModel } from './PropModel';
+import { PropModel } from './PropModel';
 import { OperationSet, SubBag } from '@domain/DiagResponse';
 import { customMerge } from '@util/merge';
 import { BagModel } from './BagModel';
@@ -7,6 +7,8 @@ import { computed, signal } from '@angular/core';
 export class SubBagModel {
     bag: BagModel;
     readonly name = signal<string | null>(null);
+    readonly isExpanded = signal(false);
+    readonly isExpandedProperty = signal(false);
     readonly depth = computed(() => (this.name()?.split('.').filter(Boolean).length ?? 1) - 1);
     readonly displayName = computed(() => this.name()?.split('.').at(-1) ?? '');
     readonly operationSet = signal('');
@@ -40,6 +42,8 @@ export class SubBagModel {
 
     update(propCat: SubBag) {
         this.name.set(propCat.name === 'General' ? null : propCat.name);
+        this.isExpanded.set(propCat.isExpanded);
+        this.isExpandedProperty.set(propCat.isExpandedProperty ?? false);
         this.canDrillDown.set(propCat.canDrillDown);
         this.properties.set(
             customMerge(

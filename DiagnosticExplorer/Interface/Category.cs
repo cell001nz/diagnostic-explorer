@@ -33,6 +33,12 @@ public class Category
     [ProtoMember(4)]
     public bool CanDrillDown { get; set; }
 
+    [ProtoMember(5)]
+    public bool IsExpanded { get; set; }
+
+    [ProtoMember(6)]
+    public bool IsExpandedProperty { get; set; }
+
     internal object ValueObject { get; set; }
 
     internal object DrillDownObject { get; set; }

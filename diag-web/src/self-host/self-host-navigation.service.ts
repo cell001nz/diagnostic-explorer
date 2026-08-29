@@ -40,7 +40,7 @@ export class SelfHostNavigationService {
     replaceCategory(category: string, clearDrillDowns = false): void {
         const current = this.state();
         const drillDowns = clearDrillDowns ? [] : current.drillDowns;
-        if (current.category === category && current.drillDowns === drillDowns) return;
+        if (current.category === category && this.sameDrillDowns(current.drillDowns, drillDowns)) return;
 
         this.replace({ category, drillDowns });
     }
@@ -139,6 +139,10 @@ export class SelfHostNavigationService {
 
     private sameDrillDown(left: SelfHostDrillDownState, right: SelfHostDrillDownState): boolean {
         return left.category === right.category && this.samePaths(left.objectPaths, right.objectPaths) && this.samePaths(left.breadcrumbs, right.breadcrumbs);
+    }
+
+    private sameDrillDowns(left: readonly SelfHostDrillDownState[], right: readonly SelfHostDrillDownState[]): boolean {
+        return left.length === right.length && left.every((entry, index) => this.sameDrillDown(entry, right[index]));
     }
 
     private samePaths(left: readonly string[], right: readonly string[]): boolean {

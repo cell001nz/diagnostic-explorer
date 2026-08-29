@@ -41,6 +41,15 @@ export class ProcessEventStore {
         }
     }
 
+    reset(): void {
+        this.streamId = '';
+        this.records.clear();
+        this.destinationKeys.clear();
+        this.destinationLabels.clear();
+        this.events.set([]);
+        this.routing.set({ matchMode: 0, routes: [] });
+    }
+
     initialize(initialization: LogStreamInitialization): void {
         if (!initialization?.streamId) return;
 

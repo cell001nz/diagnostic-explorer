@@ -61,17 +61,20 @@ internal static class DiagnosticsConfiguration
         config.Configure<WidgetConfig>(options =>
         {
             options.IncludeAll();
-            options.Property(instance => instance.Connection).Category("Connection").Expand();
+            options.Exclude(obj => obj.Connection);
             options
                 .Property(configuration => configuration.Items)
-                .ListItems(listConf =>
-                    listConf
-                        .Name(item => $"Item: {item.Name}")
-                        .Category(item => "Items")
-                        .Value(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
-                        .Description(item => $"Installed {item.InstalledDate:d MMM yyyy}")
-                )
-                .AsDrillDown();
+                .ListItems()
+                .WithListItemName(item => $"Item: {item.Name}")
+                .WithListItemCategory(item => "Items")
+                .WithListItemValue(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
+                .WithListItemDescription(item => $"Installed {item.InstalledDate:d MMM yyyy}")
+                .WithDrillDown()
+                .WithExpandedHover();
+        });
+        config.Configure<WidgetConfig>(options =>
+        {
+            options.Property(instance => instance.Connection).WithCategory("Connection").Expand();
         });
 
         // config.Configure<WidgetConfigItem>(options => options.IncludeAll());

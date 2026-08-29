@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, HostListener, inject, input, OnDestroy, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, forwardRef, inject, Injector, input, OnDestroy, signal, TemplateRef, ViewContainerRef, viewChild } from '@angular/core';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
 import { DiagProcess } from '@domain/DiagProcess';
 import { DiagHubService } from '@services/diag-hub.service';
 import { PropModel } from '@model/PropModel';
@@ -24,25 +26,27 @@ export class PropertyHoverComponent implements OnDestroy {
     readonly loading = signal(false);
     readonly errorMessage = signal('');
     readonly json = signal('');
-    readonly tooltipLeft = signal(16);
-    readonly tooltipTop = signal(16);
-    readonly tooltipMaxHeight = signal(512);
     readonly isJsonHover = computed(() => this.prop().canJsonHover());
     readonly jsonTokens = computed(() => tokenizeJson(this.json()));
+    readonly tooltipContent = viewChild.required<TemplateRef<unknown>>('tooltipContent');
 
     readonly #hubService = inject(DiagHubService);
+    readonly #overlay = inject(Overlay);
+    readonly #injector = inject(Injector);
+    readonly #viewContainerRef = inject(ViewContainerRef);
     #requestVersion = 0;
     #hideTimer: number | undefined;
     #refreshTimer: number | undefined;
     #loadPending = false;
-    #trigger: HTMLElement | null = null;
+    #overlayRef: OverlayRef | undefined;
 
     show(trigger: EventTarget | null): void {
         this.cancelHide();
         if (this.visible() || (!this.prop().canJsonHover() && !this.prop().canExpandedHover())) return;
 
-        this.#trigger = trigger instanceof HTMLElement ? trigger : null;
-        this.positionTooltip();
+        if (!(trigger instanceof HTMLElement)) return;
+
+        this.openTooltip(trigger);
         this.visible.set(true);
         this.loading.set(true);
         this.errorMessage.set('');
@@ -55,6 +59,7 @@ export class PropertyHoverComponent implements OnDestroy {
         this.cancelHide();
         this.#hideTimer = window.setTimeout(() => {
             this.visible.set(false);
+            this.closeTooltip();
             this.stopRefreshing();
         }, 150);
     }
@@ -68,32 +73,40 @@ export class PropertyHoverComponent implements OnDestroy {
 
     ngOnDestroy(): void {
         this.cancelHide();
+        this.closeTooltip();
         this.stopRefreshing();
     }
 
-    @HostListener('window:resize')
-    @HostListener('window:scroll')
-    onWindowViewportChanged(): void {
-        if (this.visible()) this.positionTooltip();
+    private openTooltip(trigger: HTMLElement): void {
+        const positionStrategy = this.#overlay
+            .position()
+            .flexibleConnectedTo(trigger)
+            .withViewportMargin(16)
+            .withFlexibleDimensions(true)
+            .withGrowAfterOpen(true)
+            .withLockedPosition(true)
+            .withPush(true)
+            .withPositions([
+                { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+                { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+                { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
+                { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 }
+            ]);
+
+        this.#overlayRef = this.#overlay.create({
+            positionStrategy,
+            scrollStrategy: this.#overlay.scrollStrategies.reposition()
+        });
+        this.#overlayRef.attach(new TemplatePortal(this.tooltipContent(), this.#viewContainerRef));
     }
 
-    private positionTooltip(): void {
-        const trigger = this.#trigger;
-        if (!trigger) return;
+    private closeTooltip(): void {
+        this.#overlayRef?.dispose();
+        this.#overlayRef = undefined;
+    }
 
-        const padding = 16;
-        const gap = 6;
-        const maximumWidth = 1_152;
-        const triggerRect = trigger.getBoundingClientRect();
-        const tooltipWidth = Math.min(maximumWidth, window.innerWidth - padding * 2);
-        const availableBelow = window.innerHeight - triggerRect.bottom - padding - gap;
-        const availableAbove = triggerRect.top - padding - gap;
-        const showAbove = availableBelow < Math.min(320, availableAbove);
-        const availableHeight = Math.max(0, showAbove ? availableAbove : availableBelow);
-
-        this.tooltipLeft.set(Math.max(padding, Math.min(triggerRect.left, window.innerWidth - tooltipWidth - padding)));
-        this.tooltipTop.set(showAbove ? Math.max(padding, triggerRect.top - availableHeight) : triggerRect.bottom + gap);
-        this.tooltipMaxHeight.set(availableHeight);
+    repositionTooltipAfterRender(): void {
+        afterNextRender(() => this.#overlayRef?.updatePosition(), { injector: this.#injector });
     }
 
     private startRefreshing(): void {
@@ -145,7 +158,10 @@ export class PropertyHoverComponent implements OnDestroy {
         } catch (error: any) {
             if (requestVersion === this.#requestVersion) this.errorMessage.set(error?.message ?? 'Unable to load property hover.');
         } finally {
-            if (requestVersion === this.#requestVersion) this.loading.set(false);
+            if (requestVersion === this.#requestVersion) {
+                this.loading.set(false);
+                this.repositionTooltipAfterRender();
+            }
             this.#loadPending = false;
         }
     }

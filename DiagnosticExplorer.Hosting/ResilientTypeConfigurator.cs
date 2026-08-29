@@ -67,9 +67,9 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
     private sealed class NoOpPropertyConfigurator<TProperty> : IPropertyConfigurator<T, TProperty>
     {
-        IPropertyConfigurator IPropertyConfigurator.Named(string name) => this;
+        IPropertyConfigurator IPropertyConfigurator.WithLabel(string label) => this;
 
-        IPropertyConfigurator IPropertyConfigurator.Category(string category) => this;
+        IPropertyConfigurator IPropertyConfigurator.WithCategory(string category) => this;
 
         IPropertyConfigurator IPropertyConfigurator.Description(string description) => this;
 
@@ -77,14 +77,16 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         IPropertyConfigurator IPropertyConfigurator.AllowSet(bool allowSet) => this;
 
-        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.Named(string name) => this;
+        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithLabel(string label) => this;
 
-        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.Named(Func<T, string> name) => this;
-
-        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.Category(string category) => this;
-
-        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.Category(Func<T, string> category) =>
+        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithLabel(Func<T, string> label) =>
             this;
+
+        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithCategory(string category) => this;
+
+        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithCategory(
+            Func<T, string> category
+        ) => this;
 
         IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.Description(string description) =>
             this;
@@ -105,11 +107,9 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
 
-        public IPropertyConfigurator<T, TProperty> AsDrillDown(int? maxItems = null) => this;
+        public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(int? maxItems = null) => this;
 
-        public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null) => this;
-
-        public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(string text, int? maxItems = null) => this;
+        public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(string text, int? maxItems = null) => this;
 
         public IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true) => this;
 
@@ -136,21 +136,21 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
     {
         public ICustomPropertyConfigurator<T> AsJson(int maxLength = 100) => this;
 
+        public ICustomPropertyConfigurator<T> Expand(bool initiallyExpanded = true) => this;
+
         public ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null) => this;
 
-        public ICustomPropertyConfigurator<T> AsDrillDown(int? maxItems = null) => this;
+        public ICustomPropertyConfigurator<T> WithDrillDownOnly(int? maxItems = null) => this;
 
-        public ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null) => this;
-
-        public ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null) => this;
+        public ICustomPropertyConfigurator<T> WithDrillDownOnly(string text, int? maxItems = null) => this;
 
         public ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true) => this;
 
         public ICustomPropertyConfigurator<T> WithExpandedHover(bool enabled = true) => this;
 
-        public ICustomPropertyConfigurator<T> Category(string category) => this;
+        public ICustomPropertyConfigurator<T> WithCategory(string category) => this;
 
-        public ICustomPropertyConfigurator<T> Category(Func<T, string> category) => this;
+        public ICustomPropertyConfigurator<T> WithCategory(Func<T, string> category) => this;
 
         public ICustomPropertyConfigurator<T> Description(string description) => this;
 

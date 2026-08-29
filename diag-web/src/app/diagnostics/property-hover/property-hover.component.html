@@ -2,8 +2,8 @@
     <ng-content />
 </span>
 
-@if (visible()) {
-    <section class="property-hover-tooltip" role="tooltip" [style.left.px]="tooltipLeft()" [style.top.px]="tooltipTop()" [style.max-height.px]="tooltipMaxHeight()" (mouseenter)="cancelHide()" (mouseleave)="scheduleHide()">
+<ng-template #tooltipContent>
+    <section class="property-hover-tooltip" role="tooltip" (mouseenter)="cancelHide()" (mouseleave)="scheduleHide()">
         @if (loading()) {
             <div class="property-hover-status">Loading...</div>
         } @else if (errorMessage()) {
@@ -12,8 +12,8 @@
             <pre>@for (token of jsonTokens(); track $index) {<span [class]="token.type">{{ token.text }}</span>}</pre>
         } @else {
             @for (category of processModel.categories(); track category.name()) {
-                <app-category-view [category]="category" [process]="process()" [flatRoot]="true" [maxPropertyColumns]="2" [breadcrumbs]="[prop().name()]" />
+                <app-category-view [category]="category" [process]="process()" [flatRoot]="true" [maxPropertyColumns]="2" [breadcrumbs]="[prop().name()]" (sectionToggled)="repositionTooltipAfterRender()" />
             }
         }
     </section>
-}
+</ng-template>

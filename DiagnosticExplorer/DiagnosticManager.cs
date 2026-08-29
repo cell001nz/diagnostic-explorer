@@ -628,9 +628,12 @@ public static class DiagnosticManager
             options.CategoryProperty = output.CategoryProperty ?? options.CategoryProperty;
             options.CategoryFormatter = output.CategoryFormatter ?? options.CategoryFormatter;
             options.Separator = output.Separator ?? options.Separator;
+            options.InitiallyExpanded = output.InitiallyExpanded;
+            options.PrimaryPropertiesOnly = output.PrimaryPropertiesOnly;
             ApplyCollectionConfiguration(options, configuration);
 
-            PropertyConfiguration outputConfiguration = configuration;
+            PropertyConfiguration outputConfiguration = configuration.Clone();
+            ApplyCollectionOutputConfiguration(outputConfiguration, output);
             string outputName = output.Name;
             if (outputName == null && outputs.Count > 1 && output.Mode == CollectionMode.Count)
             {
@@ -664,6 +667,8 @@ public static class DiagnosticManager
             CategoryFormatter = source.CategoryFormatter,
             Separator = source.Separator,
             MaxItems = source.MaxItems,
+            InitiallyExpanded = source.InitiallyExpanded,
+            PrimaryPropertiesOnly = source.PrimaryPropertiesOnly,
         };
     }
 
@@ -671,6 +676,17 @@ public static class DiagnosticManager
     {
         if (configuration != null && configuration.MaxItems.IsSet)
             options.MaxItems = configuration.MaxItems.Value;
+    }
+
+    private static void ApplyCollectionOutputConfiguration(PropertyConfiguration configuration, CollectionOutputConfiguration output)
+    {
+        configuration.NoTruncate = output.NoTruncate.Or(configuration.NoTruncate);
+        configuration.DrillDown = output.DrillDown.Or(configuration.DrillDown);
+        configuration.DrillDownMaxItems = output.DrillDownMaxItems.Or(configuration.DrillDownMaxItems);
+        configuration.DrillDownIconOnly = output.DrillDownIconOnly.Or(configuration.DrillDownIconOnly);
+        configuration.DrillDownText = output.DrillDownText.Or(configuration.DrillDownText);
+        configuration.JsonHover = output.JsonHover.Or(configuration.JsonHover);
+        configuration.ExpandedHover = output.ExpandedHover.Or(configuration.ExpandedHover);
     }
 
     private static RatePropertyAttribute CreateRateOptions(RatePropertyAttribute source, PropertyConfiguration configuration)

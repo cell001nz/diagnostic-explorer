@@ -1,6 +1,7 @@
 ﻿﻿import { OperationSet, PropertyBag } from '@domain/DiagResponse';
 import { customMerge } from '@util/merge';
 import { SubBagModel } from './SubBagModel';
+import { PropertySectionModel } from './PropertySectionModel';
 import { CategoryModel } from './CategoryModel';
 import { computed, signal } from '@angular/core';
 
@@ -16,8 +17,10 @@ export class BagModel {
             return 0;
         })
     );
+    propertySections = computed(() => PropertySectionModel.create(this.orderedSubBags()));
     isCollapsed = signal(false);
     isExpanded = computed(() => !this.isCollapsed());
+    readonly #sectionExpansionOverrides = signal<ReadonlyMap<string, boolean>>(new Map());
 
     operationSet = signal('');
     canDrillDown = signal(false);
@@ -36,7 +39,7 @@ export class BagModel {
             customMerge(
                 bag.categories,
                 this.subBags(),
-                (s) => s.name === 'General' ? '' : (s.name ?? ''),
+                (s) => (s.name === 'General' ? '' : (s.name ?? '')),
                 (t) => t.name(),
                 (s) => new SubBagModel(this, s),
                 (s, t) => t.update(s)
@@ -46,6 +49,19 @@ export class BagModel {
 
     toggleCollapsed() {
         this.isCollapsed.update((v) => !v);
+    }
+
+    isSectionCollapsed(section: PropertySectionModel, firstLevelExpanded = true): boolean {
+        const defaultExpanded = firstLevelExpanded && section.depth === 1 && section.isExpanded;
+        return !(this.#sectionExpansionOverrides().get(section.path) ?? defaultExpanded);
+    }
+
+    toggleSection(section: PropertySectionModel): void {
+        this.#sectionExpansionOverrides.update((overrides) => {
+            const updated = new Map(overrides);
+            updated.set(section.path, this.isSectionCollapsed(section));
+            return updated;
+        });
     }
 
     getOperationPath(): string {

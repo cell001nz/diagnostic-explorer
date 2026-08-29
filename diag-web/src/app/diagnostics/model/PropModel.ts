@@ -49,6 +49,7 @@ export class PropModel {
     drillDownText = signal('');
     canJsonHover = signal(false);
     canExpandedHover = signal(false);
+    noTruncate = signal(false);
     valueKind = signal<DisplayValueKind>('text');
     alerts = signal<PropertyAlert[]>([]);
     alertSeverity = computed(() => Math.max(0, ...this.alerts().map(getAlertSeverity)));
@@ -74,6 +75,7 @@ export class PropModel {
         this.drillDownText.set(source.drillDownText ?? '');
         this.canJsonHover.set(source.canJsonHover ?? false);
         this.canExpandedHover.set(source.canExpandedHover ?? false);
+        this.noTruncate.set(source.noTruncate ?? false);
         this.valueKind.set(getValueKind(source.valueKind));
         this.alerts.set(source.alerts ?? []);
     }

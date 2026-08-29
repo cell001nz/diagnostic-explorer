@@ -23,6 +23,7 @@ export class DiagHubService implements OnDestroy {
     diagsArrived$ = new Subject<{ processId: string; response: DiagnosticResponse }>();
     logStreamInitialized$ = new Subject<{ processId: string; initialization: LogStreamInitialization }>();
     logStreamEvents$ = new Subject<{ processId: string; events: LogStreamEvent[] }>();
+    connectionReconnected$ = new Subject<string>();
     retroResults$ = new Subject<RetroSearchResult>();
     retroSearchEnd$ = new Subject<number>();
     retroSearchError$ = new Subject<{ searchId: number; error: string; detail: string }>();
@@ -46,7 +47,7 @@ export class DiagHubService implements OnDestroy {
                 await hub.start();
                 const register = (name: string, callback: (...args: any[]) => void): void =>
                     hub.on(name, (...args: any[]) => {
-                        console.log(`Server message: ${name}`, ...args);
+                        if (name === 'ShowDiagnostics') console.log(`Server message: ${name}`, ...args);
                         callback(...args);
                     });
 
@@ -77,7 +78,10 @@ export class DiagHubService implements OnDestroy {
                 });
                 console.log('Hub connection configured');
                 hub.onreconnected(() => {
-                    if (this.#selectedProcessId) void hub.invoke('Subscribe', this.#selectedProcessId);
+                    if (!this.#selectedProcessId) return;
+
+                    this.connectionReconnected$.next(this.#selectedProcessId);
+                    void hub.invoke('Subscribe', this.#selectedProcessId);
                 });
                 hub.onclose((error) => this.handleConnectionClosed(error));
                 if (this.#selectedProcessId) await hub.invoke('Subscribe', this.#selectedProcessId);

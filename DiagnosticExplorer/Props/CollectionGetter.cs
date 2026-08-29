@@ -20,9 +20,13 @@ internal class CollectionGetter : PropertyGetter
     private Func<object, string> _descriptionFormatter;
     private Func<object, object> _catFunc;
     private Func<object, string> _categoryFormatter;
+    private bool _initiallyExpanded;
+    private NestedPropertyRenderMode _itemRenderMode;
 
     public CollectionGetter(PropertyInfo info, CollectionPropertyAttribute attr, bool isStatic)
         : this(info, attr.CreateOptions(), attr, null, isStatic) { }
+
+    internal override bool IsDirectProperty => _mode != CollectionMode.ExpandedItems;
 
     internal CollectionGetter(
         PropertyInfo info,
@@ -35,12 +39,14 @@ internal class CollectionGetter : PropertyGetter
     )
         : base(info, metadata, configuration, isStatic, applyAttributes, defaultFormat)
     {
-        _separator = options.Separator ?? Environment.NewLine;
+        _separator = options.Separator ?? ", ";
         _mode = options.Mode;
         _nameFormatter = options.NameFormatter;
         _valueFormatter = options.ValueFormatter;
         _descriptionFormatter = options.DescriptionFormatter;
         _categoryFormatter = options.CategoryFormatter;
+        _initiallyExpanded = options.InitiallyExpanded;
+        _itemRenderMode = options.PrimaryPropertiesOnly ? NestedPropertyRenderMode.PrimaryOnly : NestedPropertyRenderMode.All;
 
         Type collectionType = info?.PropertyType ?? configuration.ValueType;
         Type genericType =
@@ -148,6 +154,9 @@ internal class CollectionGetter : PropertyGetter
                 case CollectionMode.Categories:
                     AppendSeparateCategories(col, count, bag, catPrepend, obj);
                     break;
+                case CollectionMode.ExpandedItems:
+                    AppendExpandedItems(col, count, bag, catPrepend, obj);
+                    break;
             }
         }
         catch (Exception ex) // May get exception if the collection is modified during iteration
@@ -160,7 +169,8 @@ internal class CollectionGetter : PropertyGetter
     private void AddCountProperty(string name, int count, IEnumerable collection, PropertyBag bag, string catPrepend, object owner)
     {
         Property property = CreateOutputProperty(name, FormatValue(count), owner, collection);
-        ApplyDrillDown(property, collection);
+        if (count > 0)
+            ApplyDrillDown(property, collection);
         bag.AddProperty(property, PrependToCategory(catPrepend, owner));
     }
 
@@ -199,6 +209,41 @@ internal class CollectionGetter : PropertyGetter
         }
 
         AddTruncationProperty(count, bag, catPrepend, owner);
+    }
+
+    private void AppendExpandedItems(IEnumerable col, int count, PropertyBag bag, string catPrepend, object owner)
+    {
+        bool isInlineCustomProjection = owner is IInlineCustomObject;
+        string category = isInlineCustomProjection ? catPrepend : CombineCategories(PrependToCategory(catPrepend, owner), GetName(owner));
+        int index = 0;
+        foreach (object listObject in GetLimitedItems(col))
+        {
+            string itemName =
+                _categoryFormatter?.Invoke(listObject) ?? Convert.ToString(GetNextPropVal(listObject, _catFunc, index++, GetName(owner)));
+            string itemCategory = CombineCategories(category, itemName);
+
+            NestedPropertyRenderer.Render(listObject, bag, itemCategory, _itemRenderMode);
+
+            Category item = bag.Categories.FindByName(itemCategory);
+            if (item != null)
+            {
+                item.ValueObject = listObject;
+                if (DrillDownEnabled && DiagnosticManager.IsDrillDownValue(listObject))
+                {
+                    item.CanDrillDown = true;
+                    item.DrillDownObject = listObject;
+                    item.DrillDownMaxItems = DrillDownMaxItems;
+                }
+            }
+        }
+
+        if (!isInlineCustomProjection)
+        {
+            Category expandedCategory = bag.FindOrCreateCategory(category);
+            expandedCategory.IsExpanded = _initiallyExpanded;
+            expandedCategory.IsExpandedProperty = true;
+        }
+        AddTruncationProperty(count, bag, category, owner, applyOwnerCategory: false);
     }
 
     private void AppendAllProperties(IEnumerable col, int count, PropertyBag bag, string catPrepend, object owner)
@@ -243,6 +288,7 @@ internal class CollectionGetter : PropertyGetter
             Alerts = GetAlerts(owner),
             SourceObject = owner,
             SourceProperty = PropInfo,
+            NoTruncate = NoTruncate,
         };
     }
 
@@ -254,7 +300,7 @@ internal class CollectionGetter : PropertyGetter
         return propFunc(obj);
     }
 
-    private void AddTruncationProperty(int count, PropertyBag bag, string catPrepend, object owner)
+    private void AddTruncationProperty(int count, PropertyBag bag, string catPrepend, object owner, bool applyOwnerCategory = true)
     {
         int remaining = count - GetMaxItems();
         if (remaining <= 0)
@@ -262,7 +308,8 @@ internal class CollectionGetter : PropertyGetter
 
         string name = GetName(owner) + " (more)";
         string value = string.Format("{0} more item{1}", remaining, remaining == 1 ? "" : "s");
-        bag.AddProperty(CreateOutputProperty(name, value, owner, null), PrependToCategory(catPrepend, owner));
+        string category = applyOwnerCategory ? PrependToCategory(catPrepend, owner) : catPrepend;
+        bag.AddProperty(CreateOutputProperty(name, value, owner, null), category);
     }
 
     private IEnumerable<object> GetLimitedItems(IEnumerable collection)

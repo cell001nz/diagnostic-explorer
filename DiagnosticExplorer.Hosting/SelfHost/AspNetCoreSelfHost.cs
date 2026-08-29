@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -63,8 +65,30 @@ public static class DiagnosticSelfHostServiceCollectionExtensions
         services
             .AddSignalR()
             .AddHubOptions<SelfHostWebHub>(hub => hub.EnableDetailedErrors = options.EnableDetailedErrors)
-            .AddJsonProtocol(json => json.PayloadSerializerOptions.PropertyNameCaseInsensitive = true);
+            .AddJsonProtocol(json =>
+            {
+                json.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
+                json.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                json.PayloadSerializerOptions.TypeInfoResolver = CreateCompactPayloadResolver();
+            });
         return services;
+    }
+
+    private static DefaultJsonTypeInfoResolver CreateCompactPayloadResolver()
+    {
+        DefaultJsonTypeInfoResolver resolver = new();
+        resolver.Modifiers.Add(typeInfo =>
+        {
+            foreach (JsonPropertyInfo property in typeInfo.Properties)
+            {
+                if (property.PropertyType != typeof(bool) && Nullable.GetUnderlyingType(property.PropertyType) != typeof(bool))
+                    continue;
+
+                Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
+                property.ShouldSerialize = (parent, value) => (shouldSerialize?.Invoke(parent, value) ?? true) && !Equals(value, false);
+            }
+        });
+        return resolver;
     }
 }
 

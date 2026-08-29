@@ -13,10 +13,7 @@ public class PropertyGroup
         List<PropertyGroup> result = new();
         foreach (DiagnosticExplorer.Category group in propertyGroups)
         {
-            PropertyGroup groupResult = new()
-            {
-                Name = group.Name,
-            };
+            PropertyGroup groupResult = new() { Name = group.Name };
             result.Add(groupResult);
             groupResult.Properties = Property.Map(path + "|" + (group.Name ?? ""), group.Properties).ToArray();
         }

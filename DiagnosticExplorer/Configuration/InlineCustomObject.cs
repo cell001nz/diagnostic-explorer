@@ -8,6 +8,7 @@ namespace DiagnosticExplorer;
 internal interface IInlineCustomObject
 {
     void AddProperties(PropertyBag bag);
+    void AddProperties(PropertyBag bag, string category);
 }
 
 internal sealed class InlineCustomObjectConfigurator<T> : ICustomObjectConfigurator<T>
@@ -59,14 +60,19 @@ internal sealed class InlineCustomObject<T> : IInlineCustomObject
 
     public void AddProperties(PropertyBag bag)
     {
+        AddProperties(bag, null);
+    }
+
+    public void AddProperties(PropertyBag bag, string category)
+    {
         foreach (InlineCustomObjectMember member in _members)
-            member.AddProperties(_source, this, bag);
+            member.AddProperties(_source, this, bag, category);
     }
 }
 
 internal abstract class InlineCustomObjectMember
 {
-    public abstract void AddProperties(object source, object projection, PropertyBag bag);
+    public abstract void AddProperties(object source, object projection, PropertyBag bag, string category);
 }
 
 internal sealed class InlineConfiguredPropertyMember : InlineCustomObjectMember
@@ -75,11 +81,11 @@ internal sealed class InlineConfiguredPropertyMember : InlineCustomObjectMember
 
     public InlineConfiguredPropertyMember(PropertyConfiguration configuration) => _configuration = configuration;
 
-    public override void AddProperties(object source, object projection, PropertyBag bag)
+    public override void AddProperties(object source, object projection, PropertyBag bag, string category)
     {
         List<PropertyGetter> getters = new();
         DiagnosticManager.AddPropertyGetters(getters, null, null, _configuration.Bind(source), false, false, null);
         foreach (PropertyGetter getter in getters)
-            getter.GetProperties(projection, bag, null);
+            getter.GetProperties(projection, bag, category);
     }
 }

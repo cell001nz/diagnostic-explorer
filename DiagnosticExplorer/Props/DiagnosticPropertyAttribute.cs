@@ -29,40 +29,40 @@ namespace DiagnosticExplorer;
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public class DiagnosticPropertyAttribute : Attribute
 {
-	public DiagnosticPropertyAttribute() {}
+    public DiagnosticPropertyAttribute() { }
 
-	public DiagnosticPropertyAttribute(string name, string category = null, string description = null)
-	{
-		Ignore = false;
-		Name = name;
-		Category = category;
-		Description = description;
-	}
+    public DiagnosticPropertyAttribute(string name, string category = null, string description = null)
+    {
+        Ignore = false;
+        Name = name;
+        Category = category;
+        Description = description;
+    }
 
-	public bool Ignore { get; set; }
+    public bool Ignore { get; set; }
 
-	public string Name { get; set; }
+    public string Name { get; set; }
 
-	public string FormatString { get; set; }
+    public string FormatString { get; set; }
 
-	public string Category
-	{
-		get => field;
-		set => field = value;
-	}
+    public string Category
+    {
+        get => field;
+        set => field = value;
+    }
 
-	public string Description { get; set; }
+    public string Description { get; set; }
 
-	private bool _allowSet;
-	public bool AllowSet
-	{
-		get { return _allowSet; }
-		set
-		{
-			_allowSet = value;
-			AllowSetSpecified = true;
-		}
-	}
+    private bool _allowSet;
+    public bool AllowSet
+    {
+        get { return _allowSet; }
+        set
+        {
+            _allowSet = value;
+            AllowSetSpecified = true;
+        }
+    }
 
-	internal bool AllowSetSpecified { get; private set; }
+    internal bool AllowSetSpecified { get; private set; }
 }

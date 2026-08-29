@@ -75,6 +75,13 @@ export class DiagnosticsViewComponent implements OnDestroy {
             )
             .subscribe((d) => this.processModel().appendLogStreamEvents(d.events));
 
+        this.#hubService.connectionReconnected$
+            .pipe(
+                filter((processId) => processId === this.processId()),
+                takeUntilDestroyed()
+            )
+            .subscribe(() => this.processModel().resetEventStream());
+
         this.#hubService.diagsArrived$
             .pipe(
                 filter((d) => d.processId === this.processId()),

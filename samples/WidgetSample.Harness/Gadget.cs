@@ -116,14 +116,14 @@ public partial class Gadget : INotifyPropertyChanged
             options.IncludeAll();
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Purpose).AllowSet();
-            options.Property(gadget => gadget.Configuration).Category("Configuration").Expand();
         });
 
         config.ConfigureDrillDown<Gadget>(options =>
         {
             options.IncludeAll();
+            options.Property(gadget => gadget.Configuration).WithCategory("Configuration").Expand();
             options.Property(gadget => gadget.Name).AllowSet();
-            options.Property(gadget => gadget.Configuration).Named("Gadget Config").AsDrillDownIcon();
+            options.Property(gadget => gadget.Configuration).WithLabel("Gadget Config").WithDrillDownOnly();
             options.Route(
                 gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
                 LoggerNameMatchMode.Exact,
@@ -139,12 +139,12 @@ public partial class Gadget : INotifyPropertyChanged
         config.Configure<GadgetConfig>(options =>
         {
             options.IncludeAll();
-            // options.Property(obj => obj.Power).Category("Power").Expand();
+            // options.Property(obj => obj.Power).WithCategory("Power").Expand();
             options.Property(obj => obj.CommissionedOn).AsDateOnly();
             options.Property(obj => obj.Power).AsJson(100).WithJsonHover().WithDrillDown();
             options.Property("Network2", obj => obj.Network).AsJson(100).WithExpandedHover().WithDrillDown();
-            options.Property(obj => obj.Network).Category("Network").Expand();
-            options.Property(obj => obj.Maintenance).Category("Maintenance").Expand();
+            options.Property(obj => obj.Network).WithCategory("Network").Expand();
+            options.Property(obj => obj.Maintenance).WithCategory("Maintenance").Expand();
         });
 
         config.Configure<GadgetPowerConfig>(options =>

@@ -27,6 +27,7 @@
             @for (category of processModel.categories(); track category.name()) {
                 <app-category-view [category]="category" [process]="process()"
                                    [breadcrumbs]="breadcrumbs()"
+                                   [firstLevelExpanded]="false"
                                    (eventSelected)="onEventSelected($event)" />
             }
         </div>

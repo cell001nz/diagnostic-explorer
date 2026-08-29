@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { CategoryModel } from '@model/CategoryModel';
 import { take } from 'rxjs';
 import { Panel } from 'primeng/panel';
@@ -13,10 +14,12 @@ import { EventSinkViewComponent } from '@app/diagnostics/event-sink-view/event-s
 import { EventModel } from '@model/EventModel';
 import { PropertyHoverComponent } from '@app/diagnostics/property-hover/property-hover.component';
 import { SelfHostNavigationService } from '../../../self-host/self-host-navigation.service';
+import { BagModel } from '@model/BagModel';
+import { PropertySectionModel } from '@model/PropertySectionModel';
 
 @Component({
     selector: 'app-category-view',
-    imports: [Panel, PanelModule, EventSinkViewComponent, PropertyHoverComponent],
+    imports: [Panel, PanelModule, EventSinkViewComponent, NgTemplateOutlet, PropertyHoverComponent],
     templateUrl: './category-view.component.html',
     styleUrl: './category-view.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,10 +32,12 @@ export class CategoryViewComponent {
     category = input.required<CategoryModel>();
     process = input.required<DiagProcess>();
     flatRoot = input(false);
+    firstLevelExpanded = input(true);
     maxPropertyColumns = input<number>();
     breadcrumbs = input<readonly string[]>([]);
     dialogService = inject(DialogService);
     eventSelected = output<EventModel>();
+    sectionToggled = output<void>();
     readonly #selfHostNavigation = inject(SelfHostNavigationService, { optional: true });
     #activeDrillDown?: { objectPaths: readonly string[]; ref: DynamicDialogRef };
 
@@ -72,6 +77,11 @@ export class CategoryViewComponent {
                 objectPaths: this.category().realtimeModel.objectPaths
             }
         });
+    }
+
+    toggleSection(bag: BagModel, section: PropertySectionModel): void {
+        bag.toggleSection(section);
+        this.sectionToggled.emit();
     }
 
     async showDrillDown(path: string, name: string): Promise<void> {
@@ -170,7 +180,7 @@ export class CategoryViewComponent {
     }
 
     private static readonly onDocumentPointerDown = (event: PointerEvent): void => {
-        if (event.target instanceof Element && event.target.closest('.p-dialog')) return;
+        if (event.target instanceof Element && event.target.closest('.p-dialog, .property-hover-tooltip')) return;
 
         CategoryViewComponent.dismissTopmostDrillDown();
     };

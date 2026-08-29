@@ -40,6 +40,9 @@ public enum CollectionMode
 
     /// <summary>Each item in a collection property is exposed in its own category</summary>
     Categories,
+
+    /// <summary>The collection is exposed as an expanded category containing one category per item</summary>
+    ExpandedItems,
 }
 
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
@@ -146,4 +149,6 @@ internal sealed class CollectionOptions
     public Func<object, string> CategoryFormatter { get; set; }
     public string Separator { get; set; }
     public int MaxItems { get; set; }
+    public bool InitiallyExpanded { get; set; } = true;
+    public bool PrimaryPropertiesOnly { get; set; }
 }

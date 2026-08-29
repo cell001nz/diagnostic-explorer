@@ -1,5 +1,6 @@
 using System.Configuration;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Common;
 using Diagnostics.Service.Common.Hubs;
@@ -10,7 +11,8 @@ public static class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Services.AddWindowsService(options => {
+        builder.Services.AddWindowsService(options =>
+        {
             options.ServiceName = "DiagnosticExplorer";
         });
 
@@ -21,33 +23,47 @@ public static class Program
 
         var services = builder.Services;
 
-        services.AddCors(opt => {
-            opt.AddPolicy("CorsPolicy", builder => {
-                builder
-                    .AllowAnyOrigin()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod();
-            });
+        services.AddCors(opt =>
+        {
+            opt.AddPolicy(
+                "CorsPolicy",
+                builder =>
+                {
+                    builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                }
+            );
         });
         services.AddSignalR();
 
         services.AddSingleton<RealtimeManager>();
         services.AddSingleton<RetroManager>();
-        services.AddSignalR().AddHubOptions<DiagnosticHub>(options => {
-            options.MaximumReceiveMessageSize = int.MaxValue;
-            options.MaximumParallelInvocationsPerClient = 5;
-        }).AddHubOptions<WebHub>(options => {
-            options.MaximumReceiveMessageSize = int.MaxValue;
-            options.MaximumParallelInvocationsPerClient = 5;
-            options.EnableDetailedErrors = true;
-        }).AddJsonProtocol(options => {
-            options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
-        });
+        services
+            .AddSignalR()
+            .AddHubOptions<DiagnosticHub>(options =>
+            {
+                options.MaximumReceiveMessageSize = int.MaxValue;
+                options.MaximumParallelInvocationsPerClient = 5;
+            })
+            .AddHubOptions<WebHub>(options =>
+            {
+                options.MaximumReceiveMessageSize = int.MaxValue;
+                options.MaximumParallelInvocationsPerClient = 5;
+                options.EnableDetailedErrors = true;
+            })
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
+                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                options.PayloadSerializerOptions.TypeInfoResolver = CreateCompactPayloadResolver();
+            });
 
         string spaDir = builder.Configuration.GetValue<string>("DiagServiceSettings:SpaDirectory")!;
         string spaPath = Expand(spaDir);
-        services.AddSpaStaticFiles(conf => { conf.RootPath = spaPath; });
+        services.AddSpaStaticFiles(conf =>
+        {
+            conf.RootPath = spaPath;
+        });
 
         var app = builder.Build();
 
@@ -56,15 +72,19 @@ public static class Program
         if (app.Environment.IsDevelopment())
             app.UseDeveloperExceptionPage();
         else
-            app.UseExceptionHandler(errorApp => errorApp.Run(async context => {
-                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                context.Response.ContentType = "text/plain";
-                await context.Response.WriteAsync("An unexpected error occurred.");
-            }));
+            app.UseExceptionHandler(errorApp =>
+                errorApp.Run(async context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    context.Response.ContentType = "text/plain";
+                    await context.Response.WriteAsync("An unexpected error occurred.");
+                })
+            );
 
         app.UseRouting();
         app.UseCors(x => x.SetIsOriginAllowed(x => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
-        app.UseEndpoints(endpoints => {
+        app.UseEndpoints(endpoints =>
+        {
             endpoints.MapHub<WebHub>("/web-hub");
             endpoints.MapHub<DiagnosticHub>("/diagnostics");
         });
@@ -72,7 +92,8 @@ public static class Program
         if (!settings.UseSpaProxy && !Directory.Exists(spaPath))
             throw new ApplicationException($"Diagnostics SPA directory not found: {spaPath}");
 
-        app.UseSpa(spa => {
+        app.UseSpa(spa =>
+        {
             spa.Options.DefaultPage = "/index.html";
             if (!settings.UseSpaProxy)
                 app.UseSpaStaticFiles();
@@ -92,11 +113,23 @@ public static class Program
         app.Run();
     }
 
-
     static string? Expand(string? path) =>
-        path == null
-            ? null
-            : Path.GetFullPath(Path.IsPathRooted(path)
-                ? path
-                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path));
+        path == null ? null : Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path));
+
+    private static DefaultJsonTypeInfoResolver CreateCompactPayloadResolver()
+    {
+        DefaultJsonTypeInfoResolver resolver = new();
+        resolver.Modifiers.Add(typeInfo =>
+        {
+            foreach (JsonPropertyInfo property in typeInfo.Properties)
+            {
+                if (property.PropertyType != typeof(bool) && Nullable.GetUnderlyingType(property.PropertyType) != typeof(bool))
+                    continue;
+
+                Func<object, object?, bool>? shouldSerialize = property.ShouldSerialize;
+                property.ShouldSerialize = (parent, value) => (shouldSerialize?.Invoke(parent, value) ?? true) && !Equals(value, false);
+            }
+        });
+        return resolver;
+    }
 }

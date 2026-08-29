@@ -12,6 +12,7 @@
 
   <ItemGroup Condition="'$(IsDiagnosticExplorerPackage)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)Docs\agent-configuration-guide.md" Pack="true" PackagePath="Docs\" />
   </ItemGroup>
 
 </Project>

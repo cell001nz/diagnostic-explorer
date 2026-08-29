@@ -33,8 +33,13 @@ namespace DiagnosticExplorer;
 
 internal class ExtendedPropertyGetter : PropertyGetter
 {
+    private readonly bool _initiallyExpanded;
+    private readonly NestedPropertyRenderMode _childRenderMode;
+
     public ExtendedPropertyGetter(PropertyInfo info, ExtendedPropertyAttribute attr, bool isStatic)
         : this(info, attr, attr, null, isStatic) { }
+
+    internal override bool IsDirectProperty => false;
 
     internal ExtendedPropertyGetter(
         PropertyInfo info,
@@ -45,7 +50,14 @@ internal class ExtendedPropertyGetter : PropertyGetter
         bool applyAttributes = true,
         string defaultFormat = null
     )
-        : base(info, metadata, configuration, isStatic, applyAttributes, defaultFormat) { }
+        : base(info, metadata, configuration, isStatic, applyAttributes, defaultFormat)
+    {
+        _initiallyExpanded = configuration?.InitiallyExpanded.IsSet == true ? configuration.InitiallyExpanded.Value : true;
+        _childRenderMode =
+            configuration?.PrimaryPropertiesOnly.IsSet == true && configuration.PrimaryPropertiesOnly.Value
+                ? NestedPropertyRenderMode.PrimaryOnly
+                : NestedPropertyRenderMode.All;
+    }
 
     public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
     {
@@ -67,14 +79,17 @@ internal class ExtendedPropertyGetter : PropertyGetter
         }
         else
         {
-            List<PropertyGetter> getters = DiagnosticManager.GetPropertyGetters(val);
-            foreach (PropertyGetter getter in getters)
-            {
-                getter.GetProperties(val, bag, newPrepend);
-            }
+            NestedPropertyRenderer.Render(val, bag, newPrepend, _childRenderMode);
             Category cat = bag.Categories.FindByName(newPrepend);
             if (cat != null)
+            {
+                cat.IsExpanded = _initiallyExpanded;
+                cat.IsExpandedProperty = true;
                 cat.ValueObject = val;
+                cat.CanDrillDown = DrillDownEnabled && DiagnosticManager.IsDrillDownValue(val);
+                cat.DrillDownObject = cat.CanDrillDown ? val : null;
+                cat.DrillDownMaxItems = DrillDownMaxItems;
+            }
         }
     }
 }

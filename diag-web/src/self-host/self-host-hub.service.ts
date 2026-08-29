@@ -48,6 +48,7 @@ export class SelfHostDiagHubService {
     readonly diagsArrived$ = new Subject<{ processId: string; response: DiagnosticResponse }>();
     readonly logStreamInitialized$ = new Subject<{ processId: string; initialization: LogStreamInitialization }>();
     readonly logStreamEvents$ = new Subject<{ processId: string; events: LogStreamEvent[] }>();
+    readonly connectionReconnected$ = new Subject<void>();
     #connection?: Promise<SelfHostConnection>;
     #hubProxyLoad?: Promise<void>;
     #reconnectTimer?: ReturnType<typeof setTimeout>;
@@ -138,6 +139,7 @@ export class SelfHostDiagHubService {
         connection.onreconnected(() => {
             this.connectionState.set('connected');
             this.error.set('');
+            this.connectionReconnected$.next();
             void this.subscribeProcess(LOCAL_PROCESS_ID);
         });
         connection.onclose((error) => this.handleDisconnected(error));
@@ -172,6 +174,7 @@ export class SelfHostDiagHubService {
         connection.reconnected(() => {
             this.connectionState.set('connected');
             this.error.set('');
+            this.connectionReconnected$.next();
             void this.subscribeProcess(LOCAL_PROCESS_ID);
         });
         connection.disconnected(() => this.handleDisconnected());
@@ -194,7 +197,7 @@ export class SelfHostDiagHubService {
     private registerCallbacks(register: (name: string, callback: (...args: any[]) => void) => void): void {
         const registerLogged = (name: string, callback: (...args: any[]) => void): void =>
             register(name, (...args: any[]) => {
-                console.log(`Server message: ${name}`, ...args);
+                if (name === 'ShowDiagnostics') console.log(`Server message: ${name}`, ...args);
                 callback(...args);
             });
 
@@ -235,7 +238,10 @@ export class SelfHostDiagHubService {
 
         try {
             const connection = await this.getConnection();
-            if (!this.#stopRequested) await connection.subscribe(LOCAL_PROCESS_ID);
+            if (!this.#stopRequested) {
+                this.connectionReconnected$.next();
+                await connection.subscribe(LOCAL_PROCESS_ID);
+            }
         } catch {}
     }
 

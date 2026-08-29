@@ -48,6 +48,7 @@ internal class PropertyGetter
     protected string DrillDownText { get; private set; }
     protected bool JsonHoverEnabled { get; private set; }
     protected bool ExpandedHoverEnabled { get; private set; }
+    protected bool NoTruncate { get; private set; }
 
     protected PropertyGetter() { }
 
@@ -125,6 +126,8 @@ internal class PropertyGetter
                 configuration.DrillDownText
             );
             ConfigureHover(configuration.JsonHover, configuration.ExpandedHover);
+            if (configuration.NoTruncate.IsSet)
+                NoTruncate = configuration.NoTruncate.Value;
         }
 
         if (FormatString == null && defaultFormat != null)
@@ -213,6 +216,10 @@ internal class PropertyGetter
     protected virtual string GetDescription(object obj) => GetFormattedMetadata(_descriptionFormatter, obj, Description);
 
     protected virtual string GetCategory(object obj) => GetFormattedMetadata(_categoryFormatter, obj, Category);
+
+    internal virtual bool IsDirectProperty => true;
+
+    internal bool IsInGeneralCategory(object obj) => CategoryExtensions.NormalizeName(GetCategory(obj)) == null;
 
     protected List<PropertyAlert> GetAlerts(object obj)
     {

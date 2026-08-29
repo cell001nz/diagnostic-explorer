@@ -6,6 +6,7 @@ internal sealed class CustomPropertyGetter : PropertyGetter
 {
     private readonly Func<object, string> _categoryFormatter;
     private readonly Func<object, string> _descriptionFormatter;
+    private readonly ConfiguredValue<bool> _initiallyExpanded;
 
     public CustomPropertyGetter(CustomPropertyConfiguration configuration)
     {
@@ -13,6 +14,25 @@ internal sealed class CustomPropertyGetter : PropertyGetter
         GetFunc = configuration.Value;
         _categoryFormatter = configuration.CategoryFormatter;
         _descriptionFormatter = configuration.DescriptionFormatter;
+        _initiallyExpanded = configuration.InitiallyExpanded;
+    }
+
+    internal override bool IsDirectProperty => false;
+
+    public override void GetProperties(object obj, PropertyBag bag, string catPrepend)
+    {
+        if (!_initiallyExpanded.IsSet || GetFunc(obj) is not IInlineCustomObject inlineCustomObject)
+        {
+            base.GetProperties(obj, bag, catPrepend);
+            return;
+        }
+
+        string category = CombineCategories(catPrepend, GetName(obj));
+        inlineCustomObject.AddProperties(bag, category);
+
+        Category expandedCategory = bag.FindOrCreateCategory(category);
+        expandedCategory.IsExpanded = _initiallyExpanded.Value;
+        expandedCategory.IsExpandedProperty = true;
     }
 
     protected override string GetCategory(object obj)

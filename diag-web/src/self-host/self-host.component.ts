@@ -36,6 +36,7 @@ export class SelfHostComponent implements OnInit, OnDestroy {
         this.processModel().setProcessId(LOCAL_PROCESS_ID);
         this.hub.logStreamInitialized$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().initializeLogStream(data.initialization));
         this.hub.logStreamEvents$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().appendLogStreamEvents(data.events));
+        this.hub.connectionReconnected$.pipe(takeUntilDestroyed()).subscribe(() => this.processModel().resetEventStream());
         this.hub.diagsArrived$.pipe(takeUntilDestroyed()).subscribe((data) => this.processModel().update(data.response));
 
         this.#navigation.initialize();

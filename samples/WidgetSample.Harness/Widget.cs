@@ -68,8 +68,8 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
             options.Property(widget => widget._dateCreated).ShowElapsed();
-            options.Property(widget => widget.PrimaryConfig).Expand().Named("Widget Config").WithExpandedHover(); //.AsDrillDownIcon("View more details");
-            options.Property(widget => widget.SecondaryConfig).Expand().AsDrillDownIcon().WithExpandedHover();
+            options.Property(widget => widget.PrimaryConfig).Expand(true).WithLabel("Widget Config").WithExpandedHover();
+            options.Property(widget => widget.SecondaryConfig).Expand().WithDrillDownOnly().WithExpandedHover();
 
             options
                 .Custom(
@@ -83,7 +83,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
                         projection.Property("Names", widget => _names).ListItems();
                     }
                 )
-                .AsDrillDownIcon()
+                .WithDrillDownOnly()
                 .WithExpandedHover();
         });
 
@@ -93,8 +93,8 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.Property("Private String", widget => widget._privateString);
             options.Property(widget => widget._myDecimal);
             options.Property(widget => widget.Name).AllowSet();
-            options.Property(widget => widget.DateCreated).Category("Info").AllowSet();
-            options.Property(widget => widget.Size).Category("Info").AllowSet();
+            options.Property(widget => widget.DateCreated).WithCategory("Info").AllowSet();
+            options.Property(widget => widget.Size).WithCategory("Info").AllowSet();
             // options.Route(
             // widget => $"{typeof(Widget).FullName}.{widget.FullName}",
             // LoggerNameMatchMode.Exact,

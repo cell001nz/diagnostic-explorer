@@ -7,10 +7,10 @@
              <div class="bag-title flex-1 cursor-pointer select-none" (click)="bag.toggleCollapsed()">
                  {{bag.name()}}
                  @if (bag.canDrillDown()) {
-                     <button type="button" class="diag-icon-link diag-drilldown-icon ml-1"
+                     <button type="button" class="property-drilldown-icon ml-1"
                              title="Open drilldown" aria-label="Open drilldown"
                              (click)="showDrillDown(bag.getOperationPath(), bag.name()); $event.stopPropagation()">
-                         <i class="pi pi-external-link"></i>
+                         <i class="pi pi-arrow-up-right"></i>
                      </button>
                  }
                  @if (bag.operationSet()) {
@@ -23,107 +23,121 @@
              </div>
          </ng-template>
         }
-        <div class="property-grid">
-        @for (subBag of bag.orderedSubBags(); track subBag.name()) {
-            <section class="sub-bag" [style.--sub-bag-depth]="subBag.depth()">
-            @if (flatRoot() && category().bags().length > 1 && !subBag.name()) {
-                <div class="flat-bag-title">{{ bag.name() }}</div>
-            }
-            @if (subBag.name()) {
-                <div class="sub-bag-title" [title]="subBag.name()">
-                    {{subBag.name()}}
-                    @if (subBag.canDrillDown()) {
-                        <button type="button" class="diag-icon-link diag-drilldown-icon ml-1"
-                                title="Open drilldown" aria-label="Open drilldown"
-                                (click)="showDrillDown(subBag.getOperationPath(), subBag.name()!); $event.stopPropagation()">
-                            <i class="pi pi-external-link"></i>
-                        </button>
-                    }
-                    @if (subBag.alertSeverity()) {
-                        <i class="bi bi-exclamation-triangle-fill ml-2"
-                           [class.text-amber-400]="subBag.alertSeverity() === 1"
-                           [class.text-red-400]="subBag.alertSeverity() === 2"
-                           [attr.title]="subBag.alertTooltip()"></i>
-                    }
-                    @if (subBag.operationSet()) {
-                        <span class="text-yellow-500 ml-1 cursor-pointer" title="Has executable operations"
-                              (click)="showOperationsDialog(subBag.getOperationSet()!, subBag.getOperationPath()); $event.stopPropagation()">&#9733;</span>
-                    }
-                </div>
-            }
-                    @for (prop of subBag.properties(); track prop.name()) {
+        @if (flatRoot() && category().bags().length > 1 && bag.propertySections().subBag) {
+            <div class="flat-bag-title">{{ bag.name() }}</div>
+        }
+        <div class="property-sheet">
+            <ng-container [ngTemplateOutlet]="sectionTemplate" [ngTemplateOutletContext]="{ $implicit: bag.propertySections(), bag: bag }" />
+        </div>
 
-                         <app-property-hover class="text-s my-1 flex items-center gap-1 min-w-0"
-                             [class.text-stone-500]="!prop.alertSeverity()"
-                             [class.text-amber-400]="prop.alertSeverity() === 1"
-                             [class.text-red-400]="prop.alertSeverity() === 2"
-                             [attr.title]="prop.alertTooltip() || prop.description() || null"
-                             [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
-                            <span class="property-name" [class.cursor-pointer]="prop.canDrillDown()" (click)="prop.canDrillDown() && showDrillDown(prop.getOperationPath(), prop.name())">{{ prop.name() }}</span>
+
+<ng-template #sectionTemplate let-section let-bag="bag">
+    @let isExpandedSection = section.depth === 1 && section.isExpandedProperty;
+    @let isCollapsibleSection = section.name !== null;
+    @let isCollapsed = isCollapsibleSection && bag.isSectionCollapsed(section, firstLevelExpanded());
+    @let title = section.hasExpandedAncestor ? section.name : (section.path.startsWith(bag.name() + '.') ? section.path.substring(bag.name().length + 1) : section.path);
+    <section class="property-section" [class.expanded-property-section]="isExpandedSection" [class.is-collapsed]="isCollapsed" [style.--section-depth]="section.depth">
+        @if (section.name) {
+            <div class="sub-bag-title" [class.owned-property-category-title]="section.depth === 1 && !section.isExpandedProperty"
+                 [class.section-toggle]="isCollapsibleSection" [class.is-collapsed]="isCollapsed"
+                 [attr.role]="isCollapsibleSection ? 'button' : null" [attr.tabindex]="isCollapsibleSection ? 0 : null"
+                 [attr.aria-expanded]="isCollapsibleSection ? !isCollapsed : null" [title]="section.path"
+                 (click)="isCollapsibleSection && toggleSection(bag, section)"
+                 (keydown.enter)="isCollapsibleSection && toggleSection(bag, section)"
+                 (keydown.space)="isCollapsibleSection && toggleSection(bag, section); $event.preventDefault()">
+                @if (isCollapsibleSection) {
+                    <i class="pi pi-chevron-down section-toggle-icon" aria-hidden="true"></i>
+                }
+                {{ title }}
+                @if (section.subBag?.canDrillDown()) {
+                    <button type="button" class="property-drilldown-icon ml-1"
+                            title="Open drilldown" aria-label="Open drilldown"
+                            (click)="showDrillDown(section.subBag!.getOperationPath(), section.path); $event.stopPropagation()">
+                        <i class="pi pi-arrow-up-right"></i>
+                    </button>
+                }
+                @if (section.subBag?.alertSeverity()) {
+                    <i class="bi bi-exclamation-triangle-fill ml-2"
+                       [class.text-amber-400]="section.subBag!.alertSeverity() === 1"
+                       [class.text-red-400]="section.subBag!.alertSeverity() === 2"
+                       [attr.title]="section.subBag!.alertTooltip()"></i>
+                }
+                @if (section.subBag?.operationSet()) {
+                    <button type="button" class="diag-icon-link text-yellow-500 ml-1" title="Executable operations" aria-label="Executable operations"
+                            (click)="showOperationsDialog(section.subBag!.getOperationSet()!, section.subBag!.getOperationPath()); $event.stopPropagation()">
+                        <i class="pi pi-bolt"></i>
+                    </button>
+                }
+            </div>
+        }
+
+        @if (!isCollapsed) {
+            @if (section.subBag; as subBag) {
+                <div class="section-property-grid">
+                    @for (prop of subBag.properties(); track prop.name()) {
+                    <div class="property-row">
+                    <app-property-hover class="text-s my-1 flex items-start gap-1 min-w-0"
+                        [class.text-stone-500]="!prop.alertSeverity()"
+                        [class.text-amber-400]="prop.alertSeverity() === 1"
+                        [class.text-red-400]="prop.alertSeverity() === 2"
+                        [attr.title]="prop.alertTooltip() || prop.description() || null"
+                        [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
+                        <span class="property-name" [class.cursor-pointer]="prop.canDrillDown()" (click)="prop.canDrillDown() && showDrillDown(prop.getOperationPath(), prop.name())">{{ prop.name() }}</span>
                         @if (prop.canDrillDown()) {
-                            <button type="button" class="property-drilldown-icon" title="Open drilldown" aria-label="Open drilldown"
-                                    (click)="showDrillDown(prop.getOperationPath(), prop.name())">
+                            <button type="button" class="property-drilldown-icon" title="Open drilldown" aria-label="Open drilldown" (click)="showDrillDown(prop.getOperationPath(), prop.name())">
                                 <i class="pi pi-arrow-up-right"></i>
                             </button>
                         }
                         @if (prop.canSet()) {
-                            <button type="button" class="diag-icon-link" title="Edit value" aria-label="Edit value"
-                                    (click)="showSetPropertyDialog(prop)">
+                            <button type="button" class="diag-icon-link" title="Edit value" aria-label="Edit value" (click)="showSetPropertyDialog(prop)">
                                 <i class="pi pi-pencil diag-pencil-icon"></i>
                             </button>
                         }
-                        @if (prop.operationSet())                         {
-                                <button type="button" class="diag-icon-link text-yellow-500" title="Executable operations" aria-label="Executable operations"
-                                      (click)="showOperationsDialog(prop.getOperationSet()!, prop.getOperationPath()); $event.stopPropagation()">
-                                    <i class="pi pi-bolt"></i>
-                                </button>
+                        @if (prop.operationSet()) {
+                            <button type="button" class="diag-icon-link text-yellow-500" title="Executable operations" aria-label="Executable operations"
+                                    (click)="showOperationsDialog(prop.getOperationSet()!, prop.getOperationPath()); $event.stopPropagation()">
+                                <i class="pi pi-bolt"></i>
+                            </button>
                         }
-                        </app-property-hover>
-
-
-<!--                    <button *ngIf="prop.canSet" class="text-blue-500 text-xs text-left"-->
-<!--                            (click)="showSetPropertyDialog(prop)">{{ prop.name }}-->
-<!--                    </button>-->
-<!--                    <span class="prop-value" (dblclick)="handleDoubleClick(prop, $event)"-->
-<!--                          [matTooltip]="prop.value" [matTooltipShowDelay]="0" matTooltipPosition="below"-->
-<!--                          matTooltipClass="tooltips">{{ prop.value }}</span>-->
-                        <span class="text-s my-1 flex items-center gap-1 min-w-0 value-kind"
-                            [attr.data-value-kind]="prop.valueKind()"
-                              [attr.title]="prop.alertTooltip() || null">
-                            <app-property-hover [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
-                                @if (prop.canDrillDown() && prop.drillDownText()) {
-                                    <button type="button" class="diag-drilldown-value inline-flex items-center gap-1 text-sky-300" [title]="prop.drillDownText()" [attr.aria-label]="prop.drillDownText()"
-                                            (click)="showDrillDown(prop.getOperationPath(), prop.name())">
-                                        <span>{{ prop.drillDownText() }}</span>
+                    </app-property-hover>
+                    <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [attr.data-value-kind]="prop.valueKind()" [attr.title]="prop.alertTooltip() || null">
+                        <app-property-hover [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
+                            @if (prop.canDrillDown() && prop.drillDownText()) {
+                                <button type="button" class="diag-drilldown-value inline-flex items-center gap-1 text-sky-300" [title]="prop.drillDownText()" [attr.aria-label]="prop.drillDownText()" (click)="showDrillDown(prop.getOperationPath(), prop.name())">
+                                    <span>{{ prop.drillDownText() }}</span>
+                                </button>
+                            }
+                            @if (!prop.drillDownIconOnly() && prop.value()) {
+                                @if (prop.canDrillDown()) {
+                                    <button type="button" class="diag-drilldown-value" (click)="showDrillDown(prop.getOperationPath(), prop.name())">
+                                        @for (line of prop.valueLines(); track $index) {
+                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [title]="line">{{ line }}</span>
+                                        }
                                     </button>
+                                } @else {
+                                    <span class="value-text">
+                                        @for (line of prop.valueLines(); track $index) {
+                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [title]="line">{{ line }}</span>
+                                        }
+                                    </span>
                                 }
-                                @if (!prop.drillDownIconOnly() && prop.value()) {
-                                    @if (prop.canDrillDown()) {
-                                        <button type="button" class="diag-drilldown-value"
-                                                (click)="showDrillDown(prop.getOperationPath(), prop.name())">
-                                            @for (line of prop.valueLines(); track $index) {
-                                                <span class="value-line" [title]="line">{{ line }}</span>
-                                            }
-                                        </button>
-                                    } @else {
-                                        <span class="value-text">
-                                            @for (line of prop.valueLines(); track $index) {
-                                                <span class="value-line" [title]="line">{{ line }}</span>
-                                            }
-                                        </span>
-                                    }
-                                }
-                                @if (prop.canDrillDown() && !prop.drillDownText() && (prop.drillDownIconOnly() || !prop.value())) {
-                                    <button type="button" class="show-more" title="Open drilldown" aria-label="Show more"
-                                            (click)="showDrillDown(prop.getOperationPath(), prop.name())">[show more]</button>
-                                }
-                            </app-property-hover>
-                        </span>
+                            }
+                            @if (prop.canDrillDown() && !prop.drillDownText() && (prop.drillDownIconOnly() || !prop.value())) {
+                                <button type="button" class="show-more" title="Open drilldown" aria-label="Show more" (click)="showDrillDown(prop.getOperationPath(), prop.name())">[show more]</button>
+                            }
+                        </app-property-hover>
+                    </span>
+                    </div>
                     }
-            </section>
-        }
-        </div>
+                </div>
+            }
 
+            @for (child of section.children; track child.path) {
+                <ng-container [ngTemplateOutlet]="sectionTemplate" [ngTemplateOutletContext]="{ $implicit: child, bag: bag }" />
+            }
+        }
+    </section>
+</ng-template>
     </p-panel>
 }
 

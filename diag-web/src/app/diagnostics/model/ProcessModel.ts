@@ -67,6 +67,16 @@ export class ProcessModel implements ObservableDisposable {
         this.activeCatName.set('');
     }
 
+    resetEventStream(): void {
+        this.eventStore?.reset();
+        const categories = this.categories().filter((category) => {
+            category.eventSinks.set([]);
+            return category.bags().length > 0;
+        });
+
+        this.categories.set(categories);
+    }
+
     public update(response: DiagnosticResponse) {
         this.titleMessage.set('Received ' + new Date().toLocaleTimeString());
         this.serverDate.set(new Date(response.serverDate));
@@ -108,7 +118,7 @@ export class ProcessModel implements ObservableDisposable {
         this.operationSets.set(response.operationSets);
         this.reconcileEventViews();
 
-        if (!this.activeCatName() && this.categories().length) this.activeCatName.set(this.categories()[0].name());
+        if (!this.categories().some((category) => category.name() === this.activeCatName())) this.activeCatName.set(this.categories()[0]?.name() ?? '');
     }
 
     getOperationSet(setName: string | null): OperationSet | null {

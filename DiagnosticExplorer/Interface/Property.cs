@@ -134,6 +134,9 @@ public class Property
     [ProtoMember(12)]
     public string DrillDownText { get; set; }
 
+    [ProtoMember(13)]
+    public bool NoTruncate { get; set; }
+
     internal object SourceObject { get; set; }
 
     internal object ValueObject { get; set; }

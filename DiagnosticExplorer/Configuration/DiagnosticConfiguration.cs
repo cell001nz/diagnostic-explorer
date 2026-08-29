@@ -461,7 +461,10 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<bool> ExposeDate { get; set; }
     public ConfiguredValue<bool> ExposeElapsed { get; set; }
     public ConfiguredValue<bool> ExposeTimeUntil { get; set; }
+    public ConfiguredValue<bool> InitiallyExpanded { get; set; }
+    public ConfiguredValue<bool> PrimaryPropertiesOnly { get; set; }
     public ConfiguredValue<int> MaxItems { get; set; }
+    public ConfiguredValue<bool> NoTruncate { get; set; }
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
@@ -516,7 +519,10 @@ internal sealed class PropertyConfiguration
         ExposeDate = source.ExposeDate.Or(ExposeDate);
         ExposeElapsed = source.ExposeElapsed.Or(ExposeElapsed);
         ExposeTimeUntil = source.ExposeTimeUntil.Or(ExposeTimeUntil);
+        InitiallyExpanded = source.InitiallyExpanded.Or(InitiallyExpanded);
+        PrimaryPropertiesOnly = source.PrimaryPropertiesOnly.Or(PrimaryPropertiesOnly);
         MaxItems = source.MaxItems.Or(MaxItems);
+        NoTruncate = source.NoTruncate.Or(NoTruncate);
         DrillDown = source.DrillDown.Or(DrillDown);
         DrillDownMaxItems = source.DrillDownMaxItems.Or(DrillDownMaxItems);
         DrillDownIconOnly = source.DrillDownIconOnly.Or(DrillDownIconOnly);
@@ -571,6 +577,7 @@ internal sealed class CustomPropertyConfiguration
     public Func<object, string> DescriptionFormatter { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
+    public ConfiguredValue<bool> InitiallyExpanded { get; set; }
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
@@ -587,6 +594,7 @@ internal sealed class CustomPropertyConfiguration
             Description = Description,
             DescriptionFormatter = DescriptionFormatter,
             ValueFormatter = ValueFormatter,
+            InitiallyExpanded = InitiallyExpanded,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
             DrillDownIconOnly = DrillDownIconOnly,
@@ -607,6 +615,7 @@ internal sealed class CustomPropertyConfiguration
             Description = Description,
             DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source),
             ValueFormatter = ValueFormatter,
+            InitiallyExpanded = InitiallyExpanded,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
             DrillDownIconOnly = DrillDownIconOnly,
@@ -653,6 +662,15 @@ internal sealed class CollectionOutputConfiguration
     public Func<object, string> DescriptionFormatter { get; set; }
     public string CategoryProperty { get; set; }
     public Func<object, string> CategoryFormatter { get; set; }
+    public ConfiguredValue<bool> NoTruncate { get; set; }
+    public ConfiguredValue<bool> DrillDown { get; set; }
+    public ConfiguredValue<int> DrillDownMaxItems { get; set; }
+    public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
+    public ConfiguredValue<string> DrillDownText { get; set; }
+    public ConfiguredValue<bool> JsonHover { get; set; }
+    public ConfiguredValue<bool> ExpandedHover { get; set; }
+    public bool InitiallyExpanded { get; set; } = true;
+    public bool PrimaryPropertiesOnly { get; set; }
 
     public CollectionOutputConfiguration Clone() => (CollectionOutputConfiguration)MemberwiseClone();
 }
@@ -842,13 +860,13 @@ internal class PropertyConfigurator : IPropertyConfigurator
         Configuration = configuration;
     }
 
-    public IPropertyConfigurator Named(string name)
+    public IPropertyConfigurator WithLabel(string label)
     {
-        Configuration.Name = new ConfiguredValue<string>(name);
+        Configuration.Name = new ConfiguredValue<string>(label);
         return this;
     }
 
-    public IPropertyConfigurator Category(string category)
+    public IPropertyConfigurator WithCategory(string category)
     {
         Configuration.Category = new ConfiguredValue<string>(category);
         return this;
@@ -880,28 +898,28 @@ internal abstract class ObjectPropertyConfigurator<T, TSelf> : PropertyConfigura
 
     private TSelf Self => (TSelf)(object)this;
 
-    public new TSelf Named(string name)
+    public new TSelf WithLabel(string label)
     {
-        base.Named(name);
+        base.WithLabel(label);
         return Self;
     }
 
-    public TSelf Named(Func<T, string> name)
+    public TSelf WithLabel(Func<T, string> label)
     {
-        if (name == null)
-            throw new ArgumentNullException(nameof(name));
+        if (label == null)
+            throw new ArgumentNullException(nameof(label));
 
-        Configuration.NameFormatter = item => name((T)item);
+        Configuration.NameFormatter = item => label((T)item);
         return Self;
     }
 
-    public new TSelf Category(string category)
+    public new TSelf WithCategory(string category)
     {
-        base.Category(category);
+        base.WithCategory(category);
         return Self;
     }
 
-    public TSelf Category(Func<T, string> category)
+    public TSelf WithCategory(Func<T, string> category)
     {
         if (category == null)
             throw new ArgumentNullException(nameof(category));
@@ -950,7 +968,8 @@ internal interface IRateStrategyConfigurator
 
 internal interface IExtendedStrategyConfigurator
 {
-    void ConfigureExtended();
+    void ConfigureExtended(bool initiallyExpanded);
+    void ConfigurePrimaryPropertiesOnly();
 }
 
 internal interface ICollectionStrategyConfigurator<T>
@@ -1014,15 +1033,13 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
-    public IPropertyConfigurator<T, TProperty> AsDrillDown(int? maxItems = null) => WithDrillDown(true, maxItems);
-
-    public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(int? maxItems = null)
+    public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(int? maxItems = null)
     {
         ConfigureDrillDown(Configuration, true, maxItems, true);
         return this;
     }
 
-    public IPropertyConfigurator<T, TProperty> AsDrillDownIcon(string text, int? maxItems = null)
+    public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(string text, int? maxItems = null)
     {
         ConfigureDrillDown(Configuration, true, maxItems, true, text);
         return this;
@@ -1062,9 +1079,15 @@ internal sealed class PropertyConfigurator<T, TProperty>
             Configuration.ExposeTotal = new ConfiguredValue<bool>(exposeTotal.Value);
     }
 
-    void IExtendedStrategyConfigurator.ConfigureExtended()
+    void IExtendedStrategyConfigurator.ConfigureExtended(bool initiallyExpanded)
     {
         Configuration.Strategy = PropertyStrategy.Extended;
+        Configuration.InitiallyExpanded = new ConfiguredValue<bool>(initiallyExpanded);
+    }
+
+    void IExtendedStrategyConfigurator.ConfigurePrimaryPropertiesOnly()
+    {
+        Configuration.PrimaryPropertiesOnly = new ConfiguredValue<bool>(true);
     }
 
     ICollectionConfigurator<T, TItem> ICollectionStrategyConfigurator<T>.ConfigureCollection<TItem>()
@@ -1175,6 +1198,12 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
+    public ICustomPropertyConfigurator<T> Expand(bool initiallyExpanded = true)
+    {
+        _configuration.InitiallyExpanded = new ConfiguredValue<bool>(initiallyExpanded);
+        return this;
+    }
+
     public ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null)
     {
         if (maxItems <= 0)
@@ -1186,9 +1215,7 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
-    public ICustomPropertyConfigurator<T> AsDrillDown(int? maxItems = null) => WithDrillDown(true, maxItems);
-
-    public ICustomPropertyConfigurator<T> AsDrillDownIcon(int? maxItems = null)
+    public ICustomPropertyConfigurator<T> WithDrillDownOnly(int? maxItems = null)
     {
         if (maxItems <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
@@ -1200,12 +1227,12 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
-    public ICustomPropertyConfigurator<T> AsDrillDownIcon(string text, int? maxItems = null)
+    public ICustomPropertyConfigurator<T> WithDrillDownOnly(string text, int? maxItems = null)
     {
         if (string.IsNullOrWhiteSpace(text))
             throw new ArgumentException("Drilldown text is required.", nameof(text));
 
-        AsDrillDownIcon(maxItems);
+        WithDrillDownOnly(maxItems);
         _configuration.DrillDownText = new ConfiguredValue<string>(text);
         return this;
     }
@@ -1224,13 +1251,13 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
-    public ICustomPropertyConfigurator<T> Category(string category)
+    public ICustomPropertyConfigurator<T> WithCategory(string category)
     {
         _configuration.Category = new ConfiguredValue<string>(category);
         return this;
     }
 
-    public ICustomPropertyConfigurator<T> Category(Func<T, string> category)
+    public ICustomPropertyConfigurator<T> WithCategory(Func<T, string> category)
     {
         if (category == null)
             throw new ArgumentNullException(nameof(category));
@@ -1318,6 +1345,8 @@ internal sealed class CollectionConfigurator<T, TItem>
     : ObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>,
         ICollectionConfigurator<T, TItem>
 {
+    private CollectionOutputConfiguration _lastOutput;
+
     public CollectionConfigurator(PropertyConfiguration configuration)
         : base(configuration) { }
 
@@ -1337,20 +1366,53 @@ internal sealed class CollectionConfigurator<T, TItem>
 
     public ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format) => ConcatItems(null, format);
 
-    public ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null)
+    public ICollectionConfigurator<T, TItem> ListItems()
     {
-        CollectionOutputConfiguration output = AddOutput(CollectionMode.List, null);
-        configure?.Invoke(new CollectionListConfigurator<TItem>(output));
+        AddOutput(CollectionMode.List, null);
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> SectionByItem(Func<TItem, object> category, string name = null)
+    public ICollectionConfigurator<T, TItem> WithListItemName(Func<TItem, string> format)
     {
-        if (category == null)
-            throw new ArgumentNullException(nameof(category));
+        ConfigureListItems().NameFormatter = CreateListItemFormatter(format);
+        return this;
+    }
 
-        CollectionOutputConfiguration output = AddOutput(CollectionMode.Categories, name);
-        output.CategoryFormatter = item => Convert.ToString(category((TItem)item));
+    public ICollectionConfigurator<T, TItem> WithListItemValue(Func<TItem, string> format)
+    {
+        ConfigureListItems().ValueFormatter = CreateListItemFormatter(format);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithListItemDescription(Func<TItem, string> format)
+    {
+        ConfigureListItems().DescriptionFormatter = CreateListItemFormatter(format);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithListItemCategory(Func<TItem, string> format)
+    {
+        ConfigureListItems().CategoryFormatter = CreateListItemFormatter(format);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> ExpandItems(Func<TItem, object> itemName, string name = null, bool initiallyExpanded = true)
+    {
+        if (itemName == null)
+            throw new ArgumentNullException(nameof(itemName));
+
+        CollectionOutputConfiguration output = AddOutput(CollectionMode.ExpandedItems, name);
+        output.CategoryFormatter = item => Convert.ToString(itemName((TItem)item));
+        output.InitiallyExpanded = initiallyExpanded;
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithPrimaryPropertiesOnly()
+    {
+        if (_lastOutput?.Mode != CollectionMode.ExpandedItems)
+            throw new InvalidOperationException("WithPrimaryPropertiesOnly requires ExpandItems to be configured first.");
+
+        _lastOutput.PrimaryPropertiesOnly = true;
         return this;
     }
 
@@ -1363,52 +1425,97 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null) => AsDrillDown(enabled, maxItems);
+    public ICollectionConfigurator<T, TItem> WithTextWrap()
+    {
+        if (_lastOutput == null)
+            Configuration.NoTruncate = new ConfiguredValue<bool>(true);
+        else
+            _lastOutput.NoTruncate = new ConfiguredValue<bool>(true);
+        return this;
+    }
 
-    public ICollectionConfigurator<T, TItem> AsDrillDown(bool enabled = true, int? maxItems = null)
+    public ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null)
     {
         if (maxItems <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
 
-        Configuration.DrillDown = new ConfiguredValue<bool>(enabled);
-        if (maxItems.HasValue)
-            Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        if (_lastOutput == null)
+        {
+            Configuration.DrillDown = new ConfiguredValue<bool>(enabled);
+            if (maxItems.HasValue)
+                Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        }
+        else
+        {
+            _lastOutput.DrillDown = new ConfiguredValue<bool>(enabled);
+            if (maxItems.HasValue)
+                _lastOutput.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        }
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> AsDrillDownIcon(int? maxItems = null)
+    public ICollectionConfigurator<T, TItem> WithDrillDownOnly(int? maxItems = null)
     {
         if (maxItems <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
 
-        Configuration.DrillDown = new ConfiguredValue<bool>(true);
-        Configuration.DrillDownIconOnly = new ConfiguredValue<bool>(true);
-        if (maxItems.HasValue)
-            Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        if (_lastOutput == null)
+        {
+            Configuration.DrillDown = new ConfiguredValue<bool>(true);
+            Configuration.DrillDownIconOnly = new ConfiguredValue<bool>(true);
+            if (maxItems.HasValue)
+                Configuration.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        }
+        else
+        {
+            _lastOutput.DrillDown = new ConfiguredValue<bool>(true);
+            _lastOutput.DrillDownIconOnly = new ConfiguredValue<bool>(true);
+            if (maxItems.HasValue)
+                _lastOutput.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        }
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> AsDrillDownIcon(string text, int? maxItems = null)
+    public ICollectionConfigurator<T, TItem> WithDrillDownOnly(string text, int? maxItems = null)
     {
         if (string.IsNullOrWhiteSpace(text))
             throw new ArgumentException("Drilldown text is required.", nameof(text));
 
-        AsDrillDownIcon(maxItems);
-        Configuration.DrillDownText = new ConfiguredValue<string>(text);
+        WithDrillDownOnly(maxItems);
+        if (_lastOutput == null)
+            Configuration.DrillDownText = new ConfiguredValue<string>(text);
+        else
+            _lastOutput.DrillDownText = new ConfiguredValue<string>(text);
         return this;
     }
 
     public ICollectionConfigurator<T, TItem> WithJsonHover(bool enabled = true)
     {
-        Configuration.JsonHover = new ConfiguredValue<bool>(enabled);
-        Configuration.ExpandedHover = new ConfiguredValue<bool>(false);
+        if (_lastOutput == null)
+        {
+            Configuration.JsonHover = new ConfiguredValue<bool>(enabled);
+            Configuration.ExpandedHover = new ConfiguredValue<bool>(false);
+        }
+        else
+        {
+            _lastOutput.JsonHover = new ConfiguredValue<bool>(enabled);
+            _lastOutput.ExpandedHover = new ConfiguredValue<bool>(false);
+        }
         return this;
     }
 
     public ICollectionConfigurator<T, TItem> WithExpandedHover(bool enabled = true)
     {
-        Configuration.JsonHover = new ConfiguredValue<bool>(false);
-        Configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
+        if (_lastOutput == null)
+        {
+            Configuration.JsonHover = new ConfiguredValue<bool>(false);
+            Configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
+        }
+        else
+        {
+            _lastOutput.JsonHover = new ConfiguredValue<bool>(false);
+            _lastOutput.ExpandedHover = new ConfiguredValue<bool>(enabled);
+        }
         return this;
     }
 
@@ -1416,53 +1523,24 @@ internal sealed class CollectionConfigurator<T, TItem>
     {
         CollectionOutputConfiguration output = new() { Mode = mode, Name = name };
         Configuration.CollectionOutputs.Add(output);
+        _lastOutput = output;
         return output;
     }
-}
 
-internal sealed class CollectionListConfigurator<TItem> : ICollectionListConfigurator<TItem>
-{
-    private readonly CollectionOutputConfiguration _output;
-
-    public CollectionListConfigurator(CollectionOutputConfiguration output)
+    private CollectionOutputConfiguration ConfigureListItems()
     {
-        _output = output;
+        if (_lastOutput?.Mode != CollectionMode.List)
+            throw new InvalidOperationException("ListItems must be configured before setting list item fields.");
+
+        return _lastOutput;
     }
 
-    public ICollectionListConfigurator<TItem> Name(Func<TItem, string> format)
+    private static Func<object, string> CreateListItemFormatter(Func<TItem, string> format)
     {
         if (format == null)
             throw new ArgumentNullException(nameof(format));
 
-        _output.NameFormatter = item => format((TItem)item);
-        return this;
-    }
-
-    public ICollectionListConfigurator<TItem> Value(Func<TItem, string> format)
-    {
-        if (format == null)
-            throw new ArgumentNullException(nameof(format));
-
-        _output.ValueFormatter = item => format((TItem)item);
-        return this;
-    }
-
-    public ICollectionListConfigurator<TItem> Description(Func<TItem, string> format)
-    {
-        if (format == null)
-            throw new ArgumentNullException(nameof(format));
-
-        _output.DescriptionFormatter = item => format((TItem)item);
-        return this;
-    }
-
-    public ICollectionListConfigurator<TItem> Category(Func<TItem, string> format)
-    {
-        if (format == null)
-            throw new ArgumentNullException(nameof(format));
-
-        _output.CategoryFormatter = item => format((TItem)item);
-        return this;
+        return item => format((TItem)item);
     }
 }
 

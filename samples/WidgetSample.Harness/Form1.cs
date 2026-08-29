@@ -161,36 +161,62 @@ public partial class Form1 : Form, INotifyPropertyChanged
         {
             options.ExcludeAll();
 
-            // options.Property(form => form.NullWidget).Category("NullWidget category").Expand();
-            // options.Property(form => form.InfoText).Named("Blah INFOTEXT").AllowSet();
+            // options.Property(form => form.NullWidget).WithCategory("NullWidget category").Expand();
+            // options.Property(form => form.InfoText).WithLabel("Blah INFOTEXT").AllowSet();
             // options.Property(form => form.SetMePlease).AllowSet();
             // options.Property(form => form.Counter2);
             // options.Property(form => form._infoText);
             // options.Property("HELLO123", form => "INFO TEXT LENGTH " + form._infoText);
             // options.Property("Widget", form => form._widgets.Count);
 
+            options.Property("FirstWidget", obj => obj.Widgets.FirstOrDefault()).Expand().WithPrimaryPropertiesOnly();
+
+            // options
+            //     .Custom(
+            //         "Config1234",
+            //         projection =>
+            //         {
+            //             // projection.Property(form => form.Name);
+            //             projection.Property("Widget1", form => form.Widget1).Expand();
+            //             projection.Property("Gadget1", form => form.Gadget1).Expand();
+            //         }
+            //     )
+            //     .WithDrillDownOnly("I am a drill down icon")
+            //     .WithExpandedHover();
+
+            options
+                .Property(obj => obj.Widgets)
+                .ExpandItems(obj => obj.FullName, initiallyExpanded: false)
+                .WithPrimaryPropertiesOnly()
+                .WithDrillDown();
+
             options
                 .Custom(
-                    "Config1234",
+                    "GadgetsTest",
                     projection =>
                     {
                         // projection.Property(form => form.Name);
-                        projection.Property("Widget1", form => form.Widget1).Expand();
-                        projection.Property("Gadget1", form => form.Gadget1).Expand();
+                        projection.Property("AllGadgets", form => form.Gadgets).ExpandItems(g => g.FullName).WithDrillDown().WithExpandedHover();
                     }
                 )
-                .AsDrillDownIcon("I am a drill down icon")
-                .WithExpandedHover();
+                .Expand(false);
 
-            options.Property(form => form.Widgets).Named("Widgets Hello").Category("Widgets").ListItems().WithExpandedHover().WithDrillDown();
-            ;
+            // options
+            //     .Property("Widgets Hello", form => form.Widgets.ToList())
+            //     .WithCategory("Widget List")
+            //     .ListItems()
+            //     .WithListItemName(obj => obj.FullName)
+            //     .WithExpandedHover()
+            //     .WithDrillDown();
 
-            options
-                .Property("Widgets 2", form => form.Widgets)
-                .Named("Widgets2")
-                .Category("Widgets")
-                .ConcatItems(Environment.NewLine, obj => $"********** {obj.Name} **********")
-                .AsDrillDown();
+            // options
+            //     .Property(form => form.Widgets)
+            //     .WithLabel("Widgets")
+            //     .WithCategory("WidgetConcat")
+            //     .ConcatItems(", ", obj => $"{obj.Name}")
+            //     .WithMaxItems(10)
+            //     .WithTextWrap()
+            //     .WithDrillDown();
 
             // options
             //     .Property("WidgetCount", form => form.Widgets.Count)
@@ -202,7 +228,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
             //     .Description(form => $"Control Info for {form.GetHashCode()}");
 
             // options.Property("Widget inventory", form => form.Widgets).WithDrillDown(maxItems: 25);
-            // options.Property(form => form.Widgets).SectionByItem(obj => obj.PrimaryConfig.EnvironmentName);
+            // options.Property(form => form.Widgets).ExpandItems(obj => obj.FullName);
 
             // options.Property("Widges2", form => form.Widgets.ToArray()).ConcatItems(", ");
 
@@ -210,11 +236,12 @@ public partial class Form1 : Form, INotifyPropertyChanged
             // {
             //     options.Property(form => form.WidgetIdCount);
             //     options.Property(form => form.WidgetEvents).ShowRate(false).ShowTotal();
-            //     options.Property("Widgety Things", form => form.Widgets).AsDrillDown();
+            //     options.Property("Widgety Things", form => form.Widgets).WithDrillDown();
             //     options
             //         .Property("Widgets from method", form => form.GetWidgets())
-            //         .ListItems(config => config.Name(obj => obj.FullName))
-            //         .AsDrillDownIcon("Click for more info");
+            //         .ListItems()
+            //         .WithListItemName(obj => obj.FullName)
+            //         .WithDrillDownOnly("Click for more info");
             // }
             // //
             // using (options.CreateCategoryScope("Gadgets"))
@@ -227,14 +254,12 @@ public partial class Form1 : Form, INotifyPropertyChanged
             // {
             //     options
             //         .Property("Gadgety Things", form => form.Gadgets)
-            //         .ListItems(options =>
-            //             options
-            //                 .Name(gadget => $"{gadget.Id} - {gadget.Name}")
-            //                 .Category(gadget => gadget.Purpose)
-            //                 .Description(gadget => $"Description for {gadget.Name}")
-            //         )
+            //         .ListItems()
+            //         .WithListItemName(gadget => $"{gadget.Id} - {gadget.Name}")
+            //         .WithListItemCategory(gadget => gadget.Purpose)
+            //         .WithListItemDescription(gadget => $"Description for {gadget.Name}")
             //         .WithMaxItems(int.MaxValue)
-            //         .AsDrillDown();
+            //         .WithDrillDown();
             // }
         });
     }

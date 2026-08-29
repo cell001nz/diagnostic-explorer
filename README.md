@@ -82,8 +82,8 @@ registering it. Use it for long-lived services, typically singletons.
 `Register` remains available for objects created at runtime.
 
 Without a type profile, Diagnostic Explorer displays public scalar properties,
-collection counts, and complex values as drilldown icons. Add a profile to
-choose exactly what users see and how it behaves:
+collection counts, and complex values as drilldown icons. A type profile lets
+you start small and make the display intentional. This is a good first profile:
 
 ```csharp
 private static void ConfigureClasses(IDiagConfigurator diagnostics)
@@ -92,50 +92,143 @@ private static void ConfigureClasses(IDiagConfigurator diagnostics)
     {
         options.ExcludeAll();
 
-        options.Property(widget => widget.Name).Named("Widget name").Category("Details").AllowSet();
-        options.Property(widget => widget.Connection).Category("Connection").Expand();
-        options.Property(widget => widget.Components)
-            .ListItems(list => list.Name(component => component.Name).Value(component => component.Status))
-            .WithMaxItems(50);
-        options.Property(widget => widget.Configuration).AsJson(100).WithJsonHover().WithDrillDown();
-    });
-
-    diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
-    {
-        options.ExcludeAll();
-        options.Property(instance => instance.Status);
-        options.Property(instance => instance.Owner).AsDrillDown();
+        options.Property(widget => widget.Name)
+            .WithLabel("Widget name")
+            .AllowSet();
+        options.Property(widget => widget.Status);
     });
 }
 ```
 
-Use `IncludeAll()` to start from every public property, or `ExcludeAll()` to
-start from none. `Property` adds display metadata and can render nested object
-bags with `Expand()`. For properties declared as an array, `ICollection<T>`,
-`IList<T>`, `IReadOnlyCollection<T>`, `IReadOnlyList<T>`, or `ISet<T>`, or the
-common concrete `List<T>`, `HashSet<T>`, `ObservableCollection<T>`, and
-`BindingList<T>` types, use `Property(...)` to display a count by default, or
-`ListItems(...)` and `ConcatItems(...)` to select another rendering.
-`Dictionary<TKey, TValue>`, `IDictionary<TKey, TValue>`, and
-`IReadOnlyDictionary<TKey, TValue>` are also supported and present their key/value
-pairs. Collection list, category, and concatenated outputs show up to 100 items by
-default; capped list and category outputs include a row showing how many items were
-not displayed. Use `WithMaxItems(...)` to set a different limit. Use `Property(name, value)` for named or computed properties.
-`AllowSet()` exposes an editable property.
-`AsJson()` with `WithJsonHover()` fetches JSON only on hover.
+`ExcludeAll()` starts with an empty display, then each `Property(...)` adds one
+row. Use `IncludeAll()` when the default public-property view is closer to what
+you need. `WithLabel(...)` changes only the text users see; it does not change
+which property is read. `AllowSet()` makes a writable property editable in the
+viewer.
 
-`AsDrillDown()` makes a complex value, collection item, or custom property
-interactive. `AsDrillDownIcon()` provides a compact icon-only entry point. A
-dedicated drilldown profile controls the overlay; otherwise the normal type
-profile is reused:
+### Organize properties
+
+Add `Category(...)` when a group makes the display easier to scan. Properties
+without a category appear at the top of the view, so there is no need to create
+a catch-all category such as `General`.
 
 ```csharp
 diagnostics.Configure<Widget>(options =>
 {
-    options.Property(widget => widget.Configuration).WithDrillDown(maxItems: 50);
+    options.ExcludeAll();
+
+    options.Property(widget => widget.Name).WithLabel("Widget name");
+    options.Property(widget => widget.Status).WithCategory("Health");
+    options.Property(widget => widget.LastUpdated)
+        .WithLabel("Last updated")
+        .WithCategory("Health")
+        .ShowElapsed();
+});
+```
+
+### Show nested details
+
+Use `Expand()` to place an object's properties directly in the current view.
+First-level expanded sections start open by default. Pass `false` when the
+details should start collapsed.
+
+```csharp
+diagnostics.Configure<Widget>(options =>
+{
+    options.Property(widget => widget.Connection)
+        .WithLabel("Connection")
+        .Expand(initiallyExpanded: false)
+        .WithExpandedHover();
+});
+```
+
+`WithExpandedHover()` opens the same nested details on hover. It is useful when
+you want the main display compact but still need quick inspection.
+
+### Configure collections
+
+For supported collection properties, `Property(...)` shows a count by default.
+Choose one of the collection outputs to show the items instead:
+
+```csharp
+diagnostics.Configure<Widget>(options =>
+{
     options.Property(widget => widget.Components)
-        .ListItems(list => list.Name(component => component.Name))
-        .AsDrillDownIcon();
+        .WithLabel("Components")
+        .WithCategory("Inventory")
+        .ListItems()
+        .WithListItemName(component => component.Name)
+        .WithListItemValue(component => component.Status)
+        .WithMaxItems(50)
+        .WithDrillDown();
+
+    options.Property(widget => widget.Tags)
+        .WithCategory("Inventory")
+        .ConcatItems(", ")
+        .WithTextWrap();
+});
+```
+
+`ListItems(...)` gives each item its own row. `ConcatItems(...)` creates one
+compact text value. `ExpandItems(item => item.Id)` creates an expanded section
+for the collection, then an item section for each value with that item's
+diagnostic properties. Its selector must produce a distinct label for every
+item; include an identifier when a readable name alone is not unique. Pass
+`initiallyExpanded: false` when the collection should start collapsed:
+
+```csharp
+options.Property(widget => widget.Gadgets)
+    .ExpandItems(gadget => gadget.FullName, initiallyExpanded: false);
+```
+
+Chain `WithPrimaryPropertiesOnly()` after `ExpandItems(...)` or `Expand()` to
+show only direct, uncategorized properties. Nested `Expand()` and `Custom()`
+sections are omitted, keeping the expanded section focused on primary values.
+
+`WithMaxItems(...)` limits list, category, and concatenated outputs; the viewer
+shows how many items were omitted. `WithTextWrap()` lets a concatenated value
+wrap instead of cutting it off.
+
+Arrays, the common collection interfaces, `List<T>`, `HashSet<T>`,
+`ObservableCollection<T>`, and `BindingList<T>` are supported. Dictionaries
+are also supported and display key/value pairs.
+
+### Group derived diagnostics
+
+Use `Custom(...).Expand()` to group derived properties in an expandable main
+view section. The projection may include a collection output:
+
+```csharp
+options.Custom("Gadgets", projection =>
+{
+    projection.Property("All gadgets", form => form.Gadgets)
+        .ExpandItems(gadget => gadget.FullName);
+}).Expand();
+```
+
+The `Gadgets` section contains the generated item sections directly; an
+`ExpandItems(...)` member does not add another collection section inside an
+expanded custom projection. This is useful when the group is diagnostic-only
+rather than a property on the application type.
+
+### Drill into a value
+
+`WithDrillDown()` makes a complex value, collection item, or custom property
+interactive while keeping its rendered value. Use `WithDrillDownOnly()` to show
+only a `[show more]` text value, or pass a custom string instead.
+
+```csharp
+diagnostics.Configure<Widget>(options =>
+{
+    options.Property(widget => widget.Configuration)
+        .WithDrillDown(maxItems: 50);
+
+    options.Property("Connection snapshot", widget => new
+        {
+            widget.Connection.Endpoint,
+            widget.Connection.IsConnected,
+        })
+        .WithDrillDownOnly("View connection");
 });
 
 diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
@@ -145,6 +238,13 @@ diagnostics.ConfigureDrillDown<WidgetConfiguration>(options =>
     options.Property(instance => instance.Owner).WithDrillDown();
 });
 ```
+
+`ConfigureDrillDown<T>(...)` controls what appears in that overlay. If you do
+not add a drilldown profile, Diagnostic Explorer reuses the normal type profile.
+Drilldowns are not shown for null values or empty collections.
+
+Use `Property("name", value)` for a named or computed property. `AsJson()`
+with `WithJsonHover()` fetches JSON only when users hover over the value.
 
 ### Private fields and anonymous objects
 
@@ -156,8 +256,8 @@ private static void ConfigureDiagnostics(IDiagConfigurator diagnostics)
 {
     diagnostics.Configure<Widget>(options =>
     {
-        options.Property("Retry count", widget => widget._retryCount).Category("Internal");
-        options.Property("Last error", widget => widget._lastError?.Message).Category("Internal");
+        options.Property("Retry count", widget => widget._retryCount).WithCategory("Internal");
+        options.Property("Last error", widget => widget._lastError?.Message).WithCategory("Internal");
     });
 }
 ```
@@ -189,10 +289,13 @@ options.Property(
             widget.Connection.IsConnected,
         }
     )
-    .AsDrillDownIcon("View connection");
+    .WithDrillDownOnly("View connection");
 ```
 
-See [fluent diagnostic configuration](Docs/fluent-configuration.md) for property, custom-property, category, limit, and nested drilldown behavior.
+The [widget sample configuration](samples/WidgetSample.Harness/Form1.cs) has
+more examples of custom properties, collection outputs, warnings, and errors.
+For an agent-focused, end-to-end integration guide, see
+[configuring Diagnostic Explorer in an application](Docs/agent-configuration-guide.md).
 
 This helper routes events from named loggers to separate event sinks. Each
 integration below uses these same routes:
