@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DiagnosticExplorer;
 using log4net.Repository.Hierarchy;
 
 namespace WidgetSample.Harness;
@@ -32,6 +33,29 @@ public sealed class WidgetConfig
     public WidgetConnectionConfig Connection { get; } = new();
 
     public ICollection<WidgetConfigItem> Items { get; }
+
+    // Invoked by Diagnostic Explorer assembly configuration discovery.
+    internal static void ConfigureDiagnostics(IDiagConfigurator config)
+    {
+        config.Configure<WidgetConfig>(options =>
+        {
+            options.IncludeAll();
+            options.Exclude(obj => obj.Connection);
+            options
+                .Property(configuration => configuration.Items)
+                .ListItems()
+                .WithListItemName(item => $"Item: {item.Name}")
+                .WithListItemCategory(item => "Items")
+                .WithListItemValue(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
+                .WithListItemDescription(item => $"Installed {item.InstalledDate:d MMM yyyy}")
+                .WithDrillDown()
+                .WithExpandedHover();
+        });
+        config.Configure<WidgetConfig>(options =>
+        {
+            options.Property(instance => instance.Connection).WithCategory("Connection").Expand();
+        });
+    }
 
     public void RefreshValues(decimal percentage)
     {

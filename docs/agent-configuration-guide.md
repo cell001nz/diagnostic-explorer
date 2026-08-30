@@ -127,6 +127,19 @@ use `Exclude(...)` for noisy or unsafe properties. Set
 only source of display rules; otherwise diagnostic attributes can also
 contribute configuration.
 
+For applications with many diagnostic profiles, place each profile in an
+`internal static void ConfigureDiagnostics(IDiagConfigurator diagnostics)`
+method on its related type, then register its assembly during startup:
+
+```csharp
+diagnostics.ConfigureAssemblies(typeof(Worker).Assembly);
+```
+
+Diagnostic Explorer invokes compatible methods from the registered assemblies.
+In a generic-host application, discovery and configuration are deferred until
+diagnostics is first requested. Keep application-wide registration, hosting,
+and event-routing configuration in the startup callback.
+
 `WithLabel(...)` changes display text only. `WithCategory(...)` creates a section
 inside an object's property bag. Leave properties uncategorized when they are
 the immediate summary. Never use a `General` section: null, empty, and

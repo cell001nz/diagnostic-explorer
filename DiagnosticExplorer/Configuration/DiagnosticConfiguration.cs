@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -71,6 +72,40 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
         _defaultFormats[type] = formatString;
     }
 
+    public void ConfigureAssemblies(params Assembly[] assemblies)
+    {
+        if (assemblies == null)
+            throw new ArgumentNullException(nameof(assemblies));
+
+        foreach (Assembly assembly in assemblies.Where(assembly => assembly != null).Distinct())
+        {
+            foreach (Type type in GetLoadableTypes(assembly).OrderBy(type => type.FullName, StringComparer.Ordinal))
+            {
+                if (type.ContainsGenericParameters)
+                    continue;
+
+                MethodInfo method = type.GetMethod(
+                    "ConfigureDiagnostics",
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly,
+                    null,
+                    new[] { typeof(IDiagConfigurator) },
+                    null
+                );
+                if (method?.ReturnType != typeof(void))
+                    continue;
+
+                try
+                {
+                    method.Invoke(null, new object[] { this });
+                }
+                catch (Exception exception)
+                {
+                    Trace.TraceError($"Diagnostic Explorer ignored ConfigureDiagnostics on '{type.FullName}': {exception}");
+                }
+            }
+        }
+    }
+
     public void Configure<T>(Action<ITypeConfigurator<T>> configure)
     {
         ConfigureType(_types, configure);
@@ -93,6 +128,19 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
         }
 
         configure(new TypeConfigurator<T>(typeConfiguration));
+    }
+
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException exception)
+        {
+            Trace.TraceError($"Diagnostic Explorer could not load all diagnostic configuration types from '{assembly.FullName}': {exception}");
+            return exception.Types.Where(type => type != null);
+        }
     }
 
     internal DiagnosticConfigurationSnapshot CreateSnapshot()

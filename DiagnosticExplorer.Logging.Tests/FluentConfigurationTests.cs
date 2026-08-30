@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
+using System.Security;
 using DiagnosticExplorer.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -1848,6 +1850,55 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void CallbackOnlyHostingExtensionDefersAssemblyConfigurationDiscovery()
+    {
+        AssemblyConfigurationSample.WasConfigured = false;
+        ServiceCollection services = new();
+
+        services.ConfigureDiagnosticExplorer(diagnostics => diagnostics.ConfigureAssemblies(typeof(AssemblyConfigurationSample).Assembly));
+
+        Assert.False(AssemblyConfigurationSample.WasConfigured);
+        _ = Render(new AssemblyConfigurationSample());
+        Assert.True(AssemblyConfigurationSample.WasConfigured);
+    }
+
+    [Fact]
+    public void CallbackOnlyHostingExtensionDoesNotThrowWhenRuntimeConfigurationFails()
+    {
+        ServiceCollection services = new();
+
+        Exception exception = Record.Exception(() =>
+            services.ConfigureDiagnosticExplorer(diagnostics =>
+                diagnostics.ConfigureHosting(_ => throw new InvalidOperationException("Configuration failed"))
+            )
+        );
+
+        Assert.Null(exception);
+        Assert.False(DiagnosticManager.Enabled);
+    }
+
+    [Fact]
+    public void SystemStatusDoesNotRegisterWhenRateCounterCreationFails()
+    {
+        Type systemStatusType = typeof(DiagnosticHostingService).Assembly.GetType("DiagnosticExplorer.SystemStatus");
+        ConstructorInfo constructor = systemStatusType.GetConstructor(
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            null,
+            new[] { typeof(Func<RateCounter>) },
+            null
+        );
+        int registrationsBefore = DiagnosticManager.GetRegisteredObjects().Count(item => item.Object?.GetType() == systemStatusType);
+
+        TargetInvocationException exception = Assert.Throws<TargetInvocationException>(() =>
+            constructor.Invoke(new object[] { (Func<RateCounter>)(() => throw new SecurityException("Counter creation denied")) })
+        );
+
+        Assert.IsType<SecurityException>(exception.InnerException);
+        int registrationsAfter = DiagnosticManager.GetRegisteredObjects().Count(item => item.Object?.GetType() == systemStatusType);
+        Assert.Equal(registrationsBefore, registrationsAfter);
+    }
+
+    [Fact]
     public void HostingExtensionDefersFluentConfigurationUntilDiagnosticsAreRequested()
     {
         ServiceCollection services = new();
@@ -1897,6 +1948,39 @@ public sealed class FluentConfigurationTests : IDisposable
 
         PropertyBag bag = Assert.Single(response.PropertyBags.Where(item => item.Name == "Sample"));
         Assert.NotNull(bag.GetProperty(nameof(ReplacementSample.First), null));
+    }
+
+    [Fact]
+    public void AssemblyConfigurationDiscoversStaticTypeConfigurators()
+    {
+        AssemblyConfigurationSample.WasConfigured = false;
+        DiagnosticConfiguration configuration = new();
+
+        configuration.ConfigureAssemblies(typeof(AssemblyConfigurationSample).Assembly);
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new AssemblyConfigurationSample());
+
+        Assert.True(AssemblyConfigurationSample.WasConfigured);
+        Assert.NotNull(bag.GetProperty(nameof(AssemblyConfigurationSample.Visible), null));
+        Assert.Null(bag.GetProperty(nameof(AssemblyConfigurationSample.Hidden), null));
+    }
+
+    [Fact]
+    public void HostingExtensionDefersAssemblyConfigurationDiscovery()
+    {
+        AssemblyConfigurationSample.WasConfigured = false;
+        ServiceCollection services = new();
+        IConfiguration hostConfiguration = new ConfigurationBuilder().Build();
+
+        services.ConfigureDiagnosticExplorer(
+            hostConfiguration,
+            diagnostics => diagnostics.ConfigureAssemblies(typeof(AssemblyConfigurationSample).Assembly)
+        );
+
+        Assert.False(AssemblyConfigurationSample.WasConfigured);
+        _ = Render(new AssemblyConfigurationSample());
+        Assert.True(AssemblyConfigurationSample.WasConfigured);
     }
 
     [Fact]
@@ -2289,6 +2373,24 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         public string First { get; } = "First";
         public string Second { get; } = "Second";
+    }
+
+    private sealed class AssemblyConfigurationSample
+    {
+        public static bool WasConfigured { get; set; }
+
+        internal static void ConfigureDiagnostics(IDiagConfigurator config)
+        {
+            WasConfigured = true;
+            config.Configure<AssemblyConfigurationSample>(type =>
+            {
+                type.ExcludeAll();
+                type.Include(sample => sample.Visible);
+            });
+        }
+
+        public string Visible { get; } = "Visible";
+        public string Hidden { get; } = "Hidden";
     }
 
     private sealed class DefaultFormatSample

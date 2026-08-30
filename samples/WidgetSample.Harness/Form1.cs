@@ -157,6 +157,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
     private ICollection<Widget> GetWidgets() => _widgets.ToArray();
 
+    // Invoked by Diagnostic Explorer assembly configuration discovery.
     internal static void ConfigureDiagnostics(IDiagConfigurator config)
     {
         config.Configure<Form1>(options =>

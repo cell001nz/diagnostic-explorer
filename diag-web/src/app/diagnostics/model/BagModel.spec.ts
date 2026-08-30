@@ -7,6 +7,7 @@ function createSubBag(name: string | null): SubBag {
         name,
         operationSet: '',
         canDrillDown: false,
+        isExpanded: false,
         properties: []
     };
 }
@@ -26,5 +27,18 @@ describe('BagModel', () => {
         const model = new BagModel({} as CategoryModel, createBag([createSubBag('Connection'), createSubBag(null), createSubBag('Advanced')]));
 
         expect(model.orderedSubBags().map((subBag) => subBag.name())).toEqual([null, 'Connection', 'Advanced']);
+    });
+
+    it('toggles an expanded section on the first click when first-level expansion is disabled', () => {
+        const section = createSubBag('Connection');
+        section.isExpanded = true;
+        const model = new BagModel({} as CategoryModel, createBag([section]));
+        const propertySection = model.propertySections().children[0];
+
+        expect(model.isSectionCollapsed(propertySection, false)).toBeTrue();
+
+        model.toggleSection(propertySection, false);
+
+        expect(model.isSectionCollapsed(propertySection, false)).toBeFalse();
     });
 });

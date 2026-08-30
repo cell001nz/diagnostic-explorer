@@ -56,10 +56,10 @@ export class BagModel {
         return !(this.#sectionExpansionOverrides().get(section.path) ?? defaultExpanded);
     }
 
-    toggleSection(section: PropertySectionModel): void {
+    toggleSection(section: PropertySectionModel, firstLevelExpanded = true): void {
         this.#sectionExpansionOverrides.update((overrides) => {
             const updated = new Map(overrides);
-            updated.set(section.path, this.isSectionCollapsed(section));
+            updated.set(section.path, this.isSectionCollapsed(section, firstLevelExpanded));
             return updated;
         });
     }

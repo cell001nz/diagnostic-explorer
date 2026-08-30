@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
@@ -62,6 +63,11 @@ internal sealed class DeferredDiagnosticConfigurator : IDiagConfigurator
     public void DefaultFormat<T>(string formatString)
     {
         _deferred.Add(configure => configure.DefaultFormat<T>(formatString));
+    }
+
+    public void ConfigureAssemblies(params Assembly[] assemblies)
+    {
+        _deferred.Add(configure => configure.ConfigureAssemblies(assemblies));
     }
 
     public void Configure<T>(Action<ITypeConfigurator<T>> configure)

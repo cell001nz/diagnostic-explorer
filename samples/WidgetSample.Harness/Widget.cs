@@ -60,6 +60,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
 
     #region ConfigureDiagnostics
 
+    // Invoked by Diagnostic Explorer assembly configuration discovery.
     internal static void ConfigureDiagnostics(IDiagConfigurator config)
     {
         config.Configure<Widget>(options =>

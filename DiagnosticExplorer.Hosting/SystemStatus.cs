@@ -31,17 +31,22 @@ namespace DiagnosticExplorer;
 [Serializable]
 internal class SystemStatus
 {
-    public static SystemStatus Instance { get; set; } = new();
+    public static SystemStatus Instance { get; private set; }
 
     public SystemStatus()
+        : this(() => new RateCounter(5)) { }
+
+    internal SystemStatus(Func<RateCounter> createRateCounter)
     {
-        DiagnosticManager.Register(this, "Environment", "System");
+        if (createRateCounter == null)
+            throw new ArgumentNullException(nameof(createRateCounter));
 
         Pid = Process.GetCurrentProcess().Id;
         User = $"{Environment.UserDomainName}\\{Environment.UserName}";
         HostMachine = Environment.MachineName;
         ProcessorCount = Environment.ProcessorCount;
-        DiagnosticRequests = new RateCounter(5);
+        DiagnosticRequests = createRateCounter();
+        DiagnosticManager.Register(this, "Environment", "System");
     }
 
     public static void Register()

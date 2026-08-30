@@ -18,8 +18,21 @@ namespace DiagnosticExplorer
                 throw new ArgumentNullException(nameof(configureDiagnostics));
 
             DiagnosticConfiguration diagnosticConfiguration = new();
-            configureDiagnostics(diagnosticConfiguration);
-            return services.AddDiagnosticExplorer(diagnosticConfiguration);
+            DeferredDiagnosticConfigurator stagedConfiguration = new(diagnosticConfiguration);
+            try
+            {
+                configureDiagnostics(stagedConfiguration);
+                services.AddDiagnosticExplorer(diagnosticConfiguration);
+                if (DiagnosticManager.Enabled)
+                    DiagnosticManager.ConfigureOnDemand(diagnosticConfiguration, stagedConfiguration.ApplyDeferredConfiguration);
+            }
+            catch (Exception exception)
+            {
+                DiagnosticManager.Enabled = false;
+                Trace.TraceError($"Diagnostic Explorer configuration failed and has been disabled: {exception}");
+            }
+
+            return services;
         }
 
         public static IServiceCollection ConfigureDiagnosticExplorer(

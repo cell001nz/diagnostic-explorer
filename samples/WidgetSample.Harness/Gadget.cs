@@ -109,7 +109,8 @@ public partial class Gadget : INotifyPropertyChanged
         }
     }
 
-    public static void ConfigureGadget(IDiagConfigurator config)
+    // Invoked by Diagnostic Explorer assembly configuration discovery.
+    internal static void ConfigureDiagnostics(IDiagConfigurator config)
     {
         config.Configure<Gadget>(options =>
         {

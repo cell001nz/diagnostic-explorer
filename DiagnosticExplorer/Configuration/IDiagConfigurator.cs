@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 using DiagnosticExplorer.Logging;
 
 namespace DiagnosticExplorer;
@@ -14,6 +15,7 @@ public interface IDiagConfigurator
     void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
     void ConfigureLogEventRetention(Action<LogEventRetentionOptions> configure);
     void DefaultFormat<T>(string formatString);
+    void ConfigureAssemblies(params Assembly[] assemblies);
     void Configure<T>(Action<ITypeConfigurator<T>> configure);
     void ConfigureDrillDown<T>(Action<ITypeConfigurator<T>> configure);
 }

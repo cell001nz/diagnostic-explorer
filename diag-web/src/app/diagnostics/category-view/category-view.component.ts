@@ -80,7 +80,7 @@ export class CategoryViewComponent {
     }
 
     toggleSection(bag: BagModel, section: PropertySectionModel): void {
-        bag.toggleSection(section);
+        bag.toggleSection(section, this.firstLevelExpanded());
         this.sectionToggled.emit();
     }
 
