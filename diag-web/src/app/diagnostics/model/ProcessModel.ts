@@ -50,7 +50,11 @@ export class ProcessModel implements ObservableDisposable {
         const addedEvents = this.eventStore?.append(events) ?? [];
         this.reconcileEventViews();
         for (const category of this.categories()) {
-            for (const sink of category.eventSinks()) sink.recordAddedEvents(addedEvents);
+            const categoryEvents = new Set<EventModel>();
+            for (const sink of category.eventSinks()) {
+                for (const event of sink.recordAddedEvents(addedEvents)) categoryEvents.add(event);
+            }
+            category.recordEventSeverity([...categoryEvents]);
         }
     }
 
@@ -160,7 +164,11 @@ export class ProcessModel implements ObservableDisposable {
         if (!store) return;
 
         const addDestination = (category: string, name: string): void => {
-            this.getCat(category).getSink(name, () => store.eventsForDestination(category, name));
+            this.getCat(category).getSink(
+                name,
+                () => store.eventsForDestination(category, name),
+                (event) => store.eventMatchesDestination(event, category, name)
+            );
         };
 
         if (this.includeGlobalEventViews) {
@@ -178,7 +186,8 @@ export class ProcessModel implements ObservableDisposable {
 
         for (const view of this.drillDownEventViews) {
             const sinkName = !this.includeGlobalEventViews && duplicateDrillDownViewNames.has(view.name) ? `${view.category}: ${view.name}` : view.name;
-            this.getCat(drillDownEventCategory ?? view.category).getSink(sinkName, () => store.events().filter((event) => view.matchers.some((matcher) => this.matchesDrillDownEvent(event, matcher))));
+            const matchesView = (event: EventModel): boolean => view.matchers.some((matcher) => this.matchesDrillDownEvent(event, matcher));
+            this.getCat(drillDownEventCategory ?? view.category).getSink(sinkName, () => store.events().filter(matchesView), matchesView);
         }
     }
 

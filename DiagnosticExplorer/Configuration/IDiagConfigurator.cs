@@ -37,7 +37,7 @@ public interface ITypeConfigurator<T>
 {
     ITypeConfigurator<T> ExcludeAll();
     ITypeConfigurator<T> IncludeAll();
-    IDisposable CreateCategoryScope(string category);
+    ICategoryScope CreateCategoryScope(string category);
     ITypeConfigurator<T> Include<TProperty>(Expression<Func<T, TProperty>> property);
     ITypeConfigurator<T> Exclude<TProperty>(Expression<Func<T, TProperty>> property);
     IPropertyConfigurator<T, TProperty> Property<TProperty>(Expression<Func<T, TProperty>> property);
@@ -45,6 +45,11 @@ public interface ITypeConfigurator<T>
     ICustomPropertyConfigurator<T> Custom(string name, Action<ICustomObjectConfigurator<T>> configure);
     ITypeConfigurator<T> Route(string loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
     ITypeConfigurator<T> Route(Func<T, string> loggerName, LoggerNameMatchMode matchMode, Action<DrillDownEventRoute> configure);
+}
+
+public interface ICategoryScope : IDisposable
+{
+    ICategoryScope Expanded(bool expanded = true);
 }
 
 public interface IPropertyConfigurator

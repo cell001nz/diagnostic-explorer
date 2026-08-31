@@ -1,13 +1,13 @@
-﻿import {EventResponse, PropertyBag, SystemEvent} from '@domain/DiagResponse';
-import {customMerge} from '@util/merge';
-import {EventSinkModel} from './EventSinkModel';
-import {EventModel} from './EventModel';
-import {BagModel} from './BagModel';
-import {ProcessModel} from './ProcessModel';
+﻿import { EventResponse, PropertyBag, SystemEvent } from '@domain/DiagResponse';
+import { customMerge } from '@util/merge';
+import { EventSinkModel } from './EventSinkModel';
+import { EventModel } from './EventModel';
+import { BagModel } from './BagModel';
+import { ProcessModel } from './ProcessModel';
 import * as _ from 'lodash-es';
-import {Level} from './Level';
-import {strEqCI} from '@util/stringUtil';
-import {Signal, signal, WritableSignal} from "@angular/core";
+import { Level } from './Level';
+import { strEqCI } from '@util/stringUtil';
+import { Signal, signal, WritableSignal } from '@angular/core';
 
 export class CategoryModel {
     name = signal('');
@@ -24,54 +24,59 @@ export class CategoryModel {
     constructor(realtimeModel: ProcessModel, name: string, props: PropertyBag[] = []) {
         this.realtimeModel = realtimeModel;
         this.name.set(name);
-        if (props)
-            this.update(props);
+        if (props) this.update(props);
     }
 
     update(props: PropertyBag[]) {
         // this.propData.set(props);
-        this.bags.set(customMerge(props,
-            this.bags(),
-            s => s.name,
-            t => t.name(),
-            s => new BagModel(this, s),
-            (s, t) => t.update(s)));
+        this.bags.set(
+            customMerge(
+                props,
+                this.bags(),
+                (s) => s.name,
+                (t) => t.name(),
+                (s) => new BagModel(this, s),
+                (s, t) => t.update(s)
+            )
+        );
     }
 
-    getSink(name: string, eventProvider: () => EventModel[] = () => []): EventSinkModel {
-        let sink = this.eventSinks().find(c => strEqCI(c.name, name));
+    getSink(name: string, eventProvider: () => EventModel[] = () => [], eventMatcher?: (event: EventModel) => boolean): EventSinkModel {
+        let sink = this.eventSinks().find((c) => strEqCI(c.name, name));
         if (!sink) {
-            sink = new EventSinkModel(this, name, eventProvider);
-            this.eventSinks.update(sinks => [...sinks, sink!]);
+            sink = new EventSinkModel(this, name, eventProvider, eventMatcher);
+            this.eventSinks.update((sinks) => [...sinks, sink!]);
         }
 
         return sink;
     }
 
     expandCollapse(): void {
-        console.log('expandCollapse', this.name())
+        console.log('expandCollapse', this.name());
         const expandable: { isCollapsed: WritableSignal<boolean> }[] = [];
         expandable.push(...this.bags());
         expandable.push(...this.eventSinks());
 
-        const allExpanded = expandable.every(item => !item.isCollapsed());
-        expandable.forEach(exp => exp.isCollapsed.set(allExpanded));
+        const allExpanded = expandable.every((item) => !item.isCollapsed());
+        expandable.forEach((exp) => exp.isCollapsed.set(allExpanded));
     }
 
     addEvents(evts: SystemEvent[]) {
-        const maxLevel = _.maxBy(evts, evt => evt.level)?.level ?? 0;
+        this.recordEventSeverity(evts);
+
+        const grouped = _.groupBy(evts, (evt) => evt.sinkName);
+        for (const sinkName in grouped) this.getSink(sinkName).addEvents(grouped[sinkName]);
+    }
+
+    recordEventSeverity(evts: readonly { level: number }[]): void {
+        const maxLevel = _.maxBy(evts, (evt) => evt.level)?.level ?? 0;
 
         if (maxLevel >= this.worstSev) {
             this.worstSev = maxLevel;
             this.worstSevDate = new Date();
             this.labelClass.set(this.worstSev === 0 ? '' : 'event-level-' + Level.LevelToString(this.worstSev).toLocaleLowerCase());
-            if (this.worstSev > 0)
-                this.pulseId.update(id => id + 1);
+            if (this.worstSev > 0) this.pulseId.update((id) => id + 1);
         }
-
-        const grouped = _.groupBy(evts, evt => evt.sinkName);
-        for (const sinkName in grouped)
-            this.getSink(sinkName).addEvents(grouped[sinkName]);
     }
 
     clearEvents() {
@@ -79,7 +84,6 @@ export class CategoryModel {
             sink.clearEvents();
         }
     }
-
 
     checkEventSeverityLevels() {
         if (this.worstSev > 0) {

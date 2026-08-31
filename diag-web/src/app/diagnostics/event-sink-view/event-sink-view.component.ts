@@ -30,6 +30,10 @@ export class EventSinkViewComponent implements OnDestroy {
         return Level.LevelToString(value);
     }
 
+    truncateEventMessage(message: string): string {
+        return message.length > 200 ? `${message.slice(0, 200)}...` : message;
+    }
+
     onFilterTextChange(value: string): void {
         this.sink().setFilterText(value);
     }

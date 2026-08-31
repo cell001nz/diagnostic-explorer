@@ -46,8 +46,7 @@
                         <p-tablist>
                             @for (category of processModel().categories(); track category.name()) {
                                 <p-tab [value]="category.name()">
-                                    <span class="alert-pill"
-                                          [class]="category.labelClass()"
+                                    <span [class]="'alert-pill ' + category.labelClass()"
                                           [class.pill-pulse-odd]="category.pulseId() % 2 === 1"
                                           [class.pill-pulse-even]="category.pulseId() % 2 === 0 && category.pulseId() > 0"></span>
                                     {{ category.name() }}

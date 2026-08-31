@@ -516,6 +516,8 @@ internal sealed class PropertyConfiguration
     public Func<object, string> NameFormatter { get; set; }
     public ConfiguredValue<string> Category { get; set; }
     public Func<object, string> CategoryFormatter { get; set; }
+    public ConfiguredValue<bool> CategoryInitiallyExpanded { get; set; }
+    public ConfiguredValue<string> CategoryExpansionScope { get; set; }
     public ConfiguredValue<string> Description { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
@@ -575,6 +577,8 @@ internal sealed class PropertyConfiguration
         NameFormatter = source.NameFormatter ?? NameFormatter;
         Category = source.Category.Or(Category);
         CategoryFormatter = source.CategoryFormatter ?? CategoryFormatter;
+        CategoryInitiallyExpanded = source.CategoryInitiallyExpanded.Or(CategoryInitiallyExpanded);
+        CategoryExpansionScope = source.CategoryExpansionScope.Or(CategoryExpansionScope);
         Description = source.Description.Or(Description);
         DescriptionFormatter = source.DescriptionFormatter ?? DescriptionFormatter;
         FormatString = source.FormatString.Or(FormatString);
@@ -639,6 +643,8 @@ internal sealed class CustomPropertyConfiguration
     public Func<object, object> Value { get; }
     public ConfiguredValue<string> Category { get; set; }
     public Func<object, string> CategoryFormatter { get; set; }
+    public ConfiguredValue<bool> CategoryInitiallyExpanded { get; set; }
+    public ConfiguredValue<string> CategoryExpansionScope { get; set; }
     public ConfiguredValue<string> Description { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
@@ -657,6 +663,8 @@ internal sealed class CustomPropertyConfiguration
         {
             Category = Category,
             CategoryFormatter = CategoryFormatter,
+            CategoryInitiallyExpanded = CategoryInitiallyExpanded,
+            CategoryExpansionScope = CategoryExpansionScope,
             Description = Description,
             DescriptionFormatter = DescriptionFormatter,
             ValueFormatter = ValueFormatter,
@@ -678,6 +686,8 @@ internal sealed class CustomPropertyConfiguration
         {
             Category = Category,
             CategoryFormatter = CategoryFormatter == null ? null : _ => CategoryFormatter(source),
+            CategoryInitiallyExpanded = CategoryInitiallyExpanded,
+            CategoryExpansionScope = CategoryExpansionScope,
             Description = Description,
             DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source),
             ValueFormatter = ValueFormatter,
@@ -763,7 +773,7 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return this;
     }
 
-    public IDisposable CreateCategoryScope(string category)
+    public ICategoryScope CreateCategoryScope(string category)
     {
         if (string.IsNullOrWhiteSpace(category))
             throw new ArgumentException("A category is required.", nameof(category));
@@ -860,14 +870,38 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
     {
         CategoryScope scope = _categoryScope.Value;
         if (scope != null)
+        {
             configuration.Category = new ConfiguredValue<string>(scope.Category);
+            ApplyCategoryExpansion(configuration, scope);
+        }
     }
 
     private void ApplyCategoryScope(CustomPropertyConfiguration configuration)
     {
         CategoryScope scope = _categoryScope.Value;
         if (scope != null)
+        {
             configuration.Category = new ConfiguredValue<string>(scope.Category);
+            ApplyCategoryExpansion(configuration, scope);
+        }
+    }
+
+    private static void ApplyCategoryExpansion(PropertyConfiguration configuration, CategoryScope scope)
+    {
+        if (!scope.InitiallyExpanded.HasValue)
+            return;
+
+        configuration.CategoryInitiallyExpanded = new ConfiguredValue<bool>(scope.InitiallyExpanded.Value);
+        configuration.CategoryExpansionScope = new ConfiguredValue<string>(scope.Category);
+    }
+
+    private static void ApplyCategoryExpansion(CustomPropertyConfiguration configuration, CategoryScope scope)
+    {
+        if (!scope.InitiallyExpanded.HasValue)
+            return;
+
+        configuration.CategoryInitiallyExpanded = new ConfiguredValue<bool>(scope.InitiallyExpanded.Value);
+        configuration.CategoryExpansionScope = new ConfiguredValue<string>(scope.Category);
     }
 
     private ITypeConfigurator<T> AddEventRoute(DrillDownEventRouteTemplate route)
@@ -889,7 +923,7 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         return route;
     }
 
-    private sealed class CategoryScope : IDisposable
+    private sealed class CategoryScope : ICategoryScope
     {
         private readonly System.Threading.AsyncLocal<CategoryScope> _scope;
         private readonly CategoryScope _previous;
@@ -903,6 +937,13 @@ internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
         }
 
         public string Category { get; }
+        public bool? InitiallyExpanded { get; private set; }
+
+        public ICategoryScope Expanded(bool expanded = true)
+        {
+            InitiallyExpanded = expanded;
+            return this;
+        }
 
         public void Dispose()
         {

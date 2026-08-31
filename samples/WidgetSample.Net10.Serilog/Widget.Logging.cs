@@ -8,8 +8,8 @@ public partial class Widget
     {
         _id = id;
         Randomise();
-        _log = logger.ForContext("SourceContext", $"{typeof(Widget).FullName}.{FullName}");
+        Log = logger.ForContext("SourceContext", $"{typeof(Widget).FullName}.{FullName}");
     }
 
-    internal void LogAdded() => _log.Information("Added widget {WidgetId}", Id);
+    internal void LogAdded() => Log.Information("Added widget {WidgetId}", Id);
 }

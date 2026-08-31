@@ -168,3 +168,31 @@ tbody tr {
   }
 }
 
+.sink-pause-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  padding: 0;
+  flex-shrink: 0;
+
+  &:hover {
+    color: #e5e7eb;
+    background: #374151;
+  }
+
+  &--active {
+    color: #fbbf24;
+    border-color: #d97706;
+    background: rgba(217, 119, 6, 0.15);
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.65);
+  }
+}
+

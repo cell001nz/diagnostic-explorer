@@ -2,7 +2,7 @@
 import { CategoryModel } from './CategoryModel';
 import { EventModel } from './EventModel';
 import { FilterCriteria } from './FilterCriteria';
-import { computed, Signal, signal } from '@angular/core';
+import { computed, Signal, signal, WritableSignal } from '@angular/core';
 import { Level } from './Level';
 
 import pluralize from 'pluralize-esm';
@@ -18,6 +18,8 @@ export class EventSinkModel {
     events: Signal<EventModel[]>;
     filteredEvents: Signal<EventModel[]>;
     isCollapsed = signal(false);
+    isPaused = signal(false);
+    queuedEventCount = signal(0);
 
     filterVisible = false;
     watchEnabled = false;
@@ -56,11 +58,14 @@ export class EventSinkModel {
     constructor(
         readonly cat: CategoryModel,
         name: string,
-        private readonly eventProvider: () => EventModel[] = () => []
+        private readonly eventProvider: () => EventModel[] = () => [],
+        eventMatcher?: (event: EventModel) => boolean
     ) {
         this.watchEnabled = true;
         this.name = name;
-        this.events = computed(() => this.eventProvider());
+        this.pausedEvents = signal(this.eventProvider());
+        this.events = computed(() => (this.isPaused() ? this.pausedEvents() : this.eventProvider()));
+        this.eventMatcher = eventMatcher ?? ((event) => this.events().includes(event));
         this.filteredEvents = computed(() => {
             const events = this.events();
             const text = this.filterText().trim().toLowerCase();
@@ -77,16 +82,30 @@ export class EventSinkModel {
         this.isCollapsed.update((v) => !v);
     }
 
+    togglePaused(): void {
+        if (this.isPaused()) {
+            this.isPaused.set(false);
+            this.queuedEventCount.set(0);
+            return;
+        }
+
+        this.pausedEvents.set(this.eventProvider());
+        this.isPaused.set(true);
+    }
+
     public addEvents(evts: SystemEvent[]): void {
         void evts;
     }
 
     private readonly eventRateSamples: EventRateSample[] = [];
+    private readonly eventMatcher: (event: EventModel) => boolean;
+    private readonly pausedEvents: WritableSignal<EventModel[]>;
 
-    recordAddedEvents(events: readonly EventModel[], timestamp = Date.now()): void {
-        const displayedEvents = new Set(this.events());
-        const addedCount = events.filter((event) => displayedEvents.has(event)).length;
-        if (addedCount > 0) this.eventRateSamples.push({ timestamp, count: addedCount });
+    recordAddedEvents(events: readonly EventModel[], timestamp = Date.now()): EventModel[] {
+        const matchingEvents = events.filter(this.eventMatcher);
+        if (matchingEvents.length > 0) this.eventRateSamples.push({ timestamp, count: matchingEvents.length });
+        if (matchingEvents.length > 0 && this.isPaused()) this.queuedEventCount.update((count) => count + matchingEvents.length);
+        return matchingEvents;
     }
 
     getEventsPerSecond(timestamp = Date.now()): number {

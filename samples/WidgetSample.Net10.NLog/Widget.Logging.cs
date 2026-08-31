@@ -9,8 +9,8 @@ public partial class Widget
     {
         _id = id;
         Randomise();
-        _log = LogManager.GetLogger($"{typeof(Widget).FullName}.{FullName}");
+        Log = LogManager.GetLogger($"{typeof(Widget).FullName}.{FullName}");
     }
 
-    internal void LogAdded() => _log.Info("Added widget {WidgetId}", Id);
+    internal void LogAdded() => Log.Info("Added widget {WidgetId}", Id);
 }

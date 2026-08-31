@@ -48,6 +48,7 @@ internal static class DiagnosticsConfiguration
         routes
             .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
             .Route(typeof(Widget).FullName, route => route.AtLeast(LogLevel.Information).To(RouteValue.LoggerSuffix, "Widget Events2"))
+            .Route(typeof(Widget).FullName, route => route.AtLeast(LogLevel.Information).To("Form 1", "Widget Events"))
             .Route(typeof(Gadget).FullName, route => route.AtLeast(LogLevel.Information).To("Form 1", "Gadget Events"))
             .Route(typeof(Form1).FullName, route => route.AtLeast(LogLevel.Trace).To("Form 1", "Form1 Events Only"))
             .Route("*", route => route.To("System", "Events"));

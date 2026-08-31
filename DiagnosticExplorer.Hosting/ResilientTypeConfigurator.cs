@@ -19,8 +19,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
     public ITypeConfigurator<T> IncludeAll() => Try(() => _inner.IncludeAll(), this, "IncludeAll");
 
-    public IDisposable CreateCategoryScope(string category) =>
-        Try(() => _inner.CreateCategoryScope(category), EmptyScope.Instance, "CreateCategoryScope");
+    public ICategoryScope CreateCategoryScope(string category) =>
+        new ResilientCategoryScope(this, Try(() => _inner.CreateCategoryScope(category), EmptyScope.Instance, "CreateCategoryScope"));
 
     public ITypeConfigurator<T> Include<TProperty>(Expression<Func<T, TProperty>> property) => Try(() => _inner.Include(property), this, "Include");
 
@@ -58,11 +58,40 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         }
     }
 
-    private sealed class EmptyScope : IDisposable
+    private sealed class EmptyScope : ICategoryScope
     {
         public static readonly EmptyScope Instance = new();
 
+        public ICategoryScope Expanded(bool expanded = true) => this;
+
         public void Dispose() { }
+    }
+
+    private sealed class ResilientCategoryScope : ICategoryScope
+    {
+        private readonly ResilientTypeConfigurator<T> _owner;
+        private readonly ICategoryScope _inner;
+
+        public ResilientCategoryScope(ResilientTypeConfigurator<T> owner, ICategoryScope inner)
+        {
+            _owner = owner;
+            _inner = inner;
+        }
+
+        public ICategoryScope Expanded(bool expanded = true) => _owner.Try(() => _inner.Expanded(expanded), this, "CreateCategoryScope.Expanded");
+
+        public void Dispose()
+        {
+            _owner.Try(
+                () =>
+                {
+                    _inner.Dispose();
+                    return true;
+                },
+                false,
+                "CreateCategoryScope.Dispose"
+            );
+        }
     }
 
     private sealed class NoOpPropertyConfigurator<TProperty> : IPropertyConfigurator<T, TProperty>

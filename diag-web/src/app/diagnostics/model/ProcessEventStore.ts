@@ -14,11 +14,13 @@ export class ProcessEventStore {
     private readonly records = new Map<string, EventModel>();
     private readonly destinationKeys = new Map<string, readonly string[]>();
     private readonly destinationLabels = new Map<string, EventDestination>();
+    private readonly destinationEvents = new Map<string, EventModel[]>();
     readonly events = signal<EventModel[]>([]);
     readonly routing = signal<LogStreamRoutingConfiguration>({ matchMode: 0, routes: [] });
     streamId = '';
     private maxEvents = ProcessEventStore.defaultMaxEvents;
     private maxAgeMinutes = ProcessEventStore.defaultMaxAgeMinutes;
+    private nextPruneAt = 0;
 
     static forProcess(processId: string): ProcessEventStore {
         let store = this.stores.get(processId);
@@ -46,6 +48,7 @@ export class ProcessEventStore {
         this.records.clear();
         this.destinationKeys.clear();
         this.destinationLabels.clear();
+        this.destinationEvents.clear();
         this.events.set([]);
         this.routing.set({ matchMode: 0, routes: [] });
     }
@@ -69,20 +72,37 @@ export class ProcessEventStore {
     append(events: readonly LogStreamEvent[]): EventModel[] {
         if (!this.streamId) return [];
 
-        const addedEvents: EventModel[] = [];
+        const receivedEvents: EventModel[] = [];
+        let orderedEvents: EventModel[] | undefined;
         for (const event of events ?? []) {
             if (event.streamId !== this.streamId) continue;
 
             const addedEvent = this.insert(event);
-            if (addedEvent) addedEvents.push(addedEvent);
+            const storedEvent = addedEvent ?? this.records.get(`${event.streamId}\u001f${event.sequence}`);
+            if (storedEvent) receivedEvents.push(storedEvent);
+            if (!addedEvent) continue;
+
+            orderedEvents ??= [...this.events()];
+            this.insertBySequence(orderedEvents, addedEvent);
+            this.routeEvent(addedEvent);
         }
-        this.refresh();
-        return addedEvents;
+        if (orderedEvents) {
+            this.trimToMaxEvents(orderedEvents);
+            this.events.set(orderedEvents);
+        }
+        if (Date.now() >= this.nextPruneAt) this.prune(Date.now());
+        return receivedEvents;
     }
 
     eventsForDestination(category: string, name: string): EventModel[] {
         const destinationKey = ProcessEventStore.destinationKey(category, name);
-        return this.events().filter((event) => this.destinationKeys.get(this.eventKey(event))?.includes(destinationKey));
+        this.events();
+        return this.destinationEvents.get(destinationKey) ?? [];
+    }
+
+    eventMatchesDestination(event: EventModel, category: string, name: string): boolean {
+        const destinationKey = ProcessEventStore.destinationKey(category, name);
+        return this.destinationKeys.get(this.eventKey(event))?.includes(destinationKey) ?? false;
     }
 
     configuredDestinations(): EventDestination[] {
@@ -97,15 +117,7 @@ export class ProcessEventStore {
     }
 
     resolvedDestinations(): EventDestination[] {
-        this.events();
-        const destinations = new Map<string, EventDestination>();
-        for (const event of this.records.values()) {
-            for (const destinationKey of this.destinationKeys.get(this.eventKey(event)) ?? []) {
-                const destination = this.destinationLabels.get(destinationKey);
-                if (destination) this.addDestination(destinations, destination.category, destination.name);
-            }
-        }
-        return [...destinations.values()];
+        return [...this.destinationLabels.values()];
     }
 
     static destinationKey(category: string, name: string): string {
@@ -135,8 +147,12 @@ export class ProcessEventStore {
             }
         }
 
-        for (const event of ordered) this.destinationKeys.set(this.eventKey(event), this.resolveDestinations(event));
+        this.destinationKeys.clear();
+        this.destinationLabels.clear();
+        this.destinationEvents.clear();
+        for (const event of ordered) this.routeEvent(event);
         this.events.set(ordered);
+        this.nextPruneAt = now + 60_000;
     }
 
     private applyRetention(initialization: LogStreamInitialization): void {
@@ -149,16 +165,67 @@ export class ProcessEventStore {
 
     private prune(now: number): void {
         const minimumDate = now - this.maxAgeMinutes * 60 * 1000;
-        let removed = false;
-        for (const [key, event] of this.records) {
-            if (new Date(event.date).valueOf() >= minimumDate) continue;
-
-            this.records.delete(key);
-            this.destinationKeys.delete(key);
-            removed = true;
+        const retained = this.events().filter((event) => new Date(event.date).valueOf() >= minimumDate);
+        if (retained.length === this.events().length) {
+            this.nextPruneAt = now + 60_000;
+            return;
         }
 
-        if (removed) this.refresh(now);
+        const retainedEvents = new Set(retained);
+        for (const event of this.events()) {
+            if (!retainedEvents.has(event)) this.removeEvent(event);
+        }
+        this.events.set(retained);
+        this.nextPruneAt = now + 60_000;
+    }
+
+    private trimToMaxEvents(events: EventModel[]): void {
+        while (events.length > this.maxEvents) {
+            const removed = events.pop();
+            if (removed) this.removeEvent(removed);
+        }
+    }
+
+    private routeEvent(event: EventModel): void {
+        const eventKey = this.eventKey(event);
+        const destinationKeys = this.resolveDestinations(event);
+        this.destinationKeys.set(eventKey, destinationKeys);
+
+        for (const destinationKey of destinationKeys) {
+            const destinationEvents = [...(this.destinationEvents.get(destinationKey) ?? [])];
+            this.insertBySequence(destinationEvents, event);
+            this.destinationEvents.set(destinationKey, destinationEvents);
+        }
+    }
+
+    private removeEvent(event: EventModel): void {
+        const eventKey = this.eventKey(event);
+        for (const destinationKey of this.destinationKeys.get(eventKey) ?? []) {
+            const destinationEvents = this.destinationEvents.get(destinationKey);
+            if (!destinationEvents) continue;
+
+            const retainedEvents = destinationEvents.filter((existingEvent) => existingEvent !== event);
+            if (retainedEvents.length === 0) {
+                this.destinationEvents.delete(destinationKey);
+                this.destinationLabels.delete(destinationKey);
+            } else {
+                this.destinationEvents.set(destinationKey, retainedEvents);
+            }
+        }
+
+        this.records.delete(eventKey);
+        this.destinationKeys.delete(eventKey);
+    }
+
+    private insertBySequence(events: EventModel[], event: EventModel): void {
+        let low = 0;
+        let high = events.length;
+        while (low < high) {
+            const middle = (low + high) >>> 1;
+            if (events[middle].sequence > event.sequence) low = middle + 1;
+            else high = middle;
+        }
+        events.splice(low, 0, event);
     }
 
     private resolveDestinations(event: EventModel): readonly string[] {

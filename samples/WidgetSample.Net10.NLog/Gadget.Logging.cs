@@ -4,14 +4,14 @@ namespace WidgetSample.Harness;
 
 public partial class Gadget
 {
-    private readonly Logger _log;
+    public Logger Log { get; private set; }
 
     internal Gadget(int id)
     {
         Id = id;
         Randomise();
-        _log = LogManager.GetLogger($"{typeof(Gadget).FullName}.{FullName}");
+        Log = LogManager.GetLogger($"{typeof(Gadget).FullName}.{FullName}");
     }
 
-    internal void LogAdded() => _log.Info("Added gadget {GadgetId}", Id);
+    internal void LogAdded() => Log.Info("Added gadget {GadgetId}", Id);
 }

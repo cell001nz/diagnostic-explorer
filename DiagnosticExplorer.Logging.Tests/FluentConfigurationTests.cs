@@ -403,6 +403,24 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void CategoryScopeCanExpandItsSubBagByDefault()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            using (type.CreateCategoryScope("Scoped").Expanded())
+                type.Property(sample => sample.First);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Category category = Render(new ReplacementSample()).Categories.FindByName("Scoped");
+
+        Assert.True(category.IsExpanded);
+        Assert.False(category.IsExpandedProperty);
+    }
+
+    [Fact]
     public void NamedPropertyUsesDelegateAndFluentMetadata()
     {
         DiagnosticConfiguration configuration = new();

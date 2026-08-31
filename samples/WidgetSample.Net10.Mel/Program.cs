@@ -26,6 +26,7 @@ internal static class Program
                     );
                     services.AddLogging(builder =>
                     {
+                        builder.ClearProviders();
                         builder.SetMinimumLevel(LogLevel.Trace);
                         builder.AddDiagnosticExplorer();
                     });
