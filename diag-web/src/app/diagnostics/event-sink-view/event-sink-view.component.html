@@ -11,6 +11,13 @@
 
             <!-- Flyout filter panel (inline, one row) -->
             <div class="sink-filter-flyout" [class.sink-filter-flyout--open]="sink().filtersVisible()">
+                <button class="sink-pause-toggle"
+                        [title]="sink().isPaused() ? 'Resume events' : 'Pause events'"
+                        [attr.aria-label]="sink().isPaused() ? 'Resume events' : 'Pause events'"
+                        (click)="sink().togglePaused(); $event.stopPropagation()"
+                        [class.sink-pause-toggle--active]="sink().isPaused()">
+                    <i class="pi pi-pause"></i>
+                </button>
                 @if (sink().filtersVisible()) {
                     <div class="sink-filter-controls" (click)="$event.stopPropagation()">
                         <!-- Text filter -->
@@ -44,9 +51,15 @@
         </div>
     </ng-template>
 
-    <div class="h-[300px] overflow-y-auto border border-gray-700 rounded"
+    <div class="h-[300px] overflow-x-hidden overflow-y-auto border border-gray-700 rounded"
          (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
-        <table class="w-full border-collapse text-sm">
+        <table class="w-full table-fixed border-collapse text-sm">
+            <colgroup>
+                <col class="w-20" />
+                <col class="w-44" />
+                <col class="w-20" />
+                <col />
+            </colgroup>
             <thead class="sticky top-0 bg-[#1a1c20] z-10">
                 <tr>
                     <th class="p-2 text-left w-20">Id</th>
@@ -64,7 +77,7 @@
                         <td class="p-2">{{ event.id }}</td>
                         <td class="p-2 whitespace-nowrap">{{ event.date | date:'yyyy-MM-dd HH:mm:ss' }}</td>
                         <td class="p-2">{{ event.level | levelToString }}</td>
-                        <td class="p-2">{{ event.message }}</td>
+                        <td class="overflow-hidden p-2 text-ellipsis whitespace-nowrap">{{ truncateEventMessage(event.message) }}</td>
                     </tr>
                 } @empty {
                     <tr>

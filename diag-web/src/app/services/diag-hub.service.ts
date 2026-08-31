@@ -29,6 +29,8 @@ export class DiagHubService implements OnDestroy {
     retroSearchError$ = new Subject<{ searchId: number; error: string; detail: string }>();
     tabId = '';
     #selectedProcessId?: string;
+    readonly #pendingLogStreamEvents = new Map<string, LogStreamEvent[]>();
+    #logStreamFrame?: number;
 
     constructor() {
         this.initTabId();
@@ -45,11 +47,7 @@ export class DiagHubService implements OnDestroy {
                 let hub = new signalR.HubConnectionBuilder().withUrl('/web-hub').withAutomaticReconnect().build();
 
                 await hub.start();
-                const register = (name: string, callback: (...args: any[]) => void): void =>
-                    hub.on(name, (...args: any[]) => {
-                        if (name === 'ShowDiagnostics') console.log(`Server message: ${name}`, ...args);
-                        callback(...args);
-                    });
+                const register = (name: string, callback: (...args: any[]) => void): void => hub.on(name, callback);
 
                 register('say', () => {});
                 register('SetProcesses', (processes: DiagProcess[]) => {
@@ -65,7 +63,7 @@ export class DiagHubService implements OnDestroy {
                     this.logStreamInitialized$.next({ processId, initialization });
                 });
                 register('StreamLogEvents', (processId: string, events: LogStreamEvent[]) => {
-                    this.logStreamEvents$.next({ processId, events });
+                    this.queueLogStreamEvents(processId, events);
                 });
                 register('ProcessSearchResults', (result: RetroSearchResult) => {
                     this.retroResults$.next(result);
@@ -106,7 +104,27 @@ export class DiagHubService implements OnDestroy {
     }
 
     ngOnDestroy() {
+        if (this.#logStreamFrame != null) cancelAnimationFrame(this.#logStreamFrame);
+        this.#pendingLogStreamEvents.clear();
         sessionStorage.setItem(TAB_ID_KEY, this.tabId);
+    }
+
+    private queueLogStreamEvents(processId: string, events: LogStreamEvent[]): void {
+        if (!events?.length) return;
+
+        const pending = this.#pendingLogStreamEvents.get(processId) ?? [];
+        pending.push(...events);
+        this.#pendingLogStreamEvents.set(processId, pending);
+        if (this.#logStreamFrame != null) return;
+
+        this.#logStreamFrame = requestAnimationFrame(() => {
+            this.#logStreamFrame = undefined;
+            const pendingByProcess = [...this.#pendingLogStreamEvents];
+            this.#pendingLogStreamEvents.clear();
+            for (const [pendingProcessId, pendingEvents] of pendingByProcess) {
+                this.logStreamEvents$.next({ processId: pendingProcessId, events: pendingEvents });
+            }
+        });
     }
 
     async subscribeProcess(processId: string) {

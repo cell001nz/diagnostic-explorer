@@ -41,6 +41,7 @@ public sealed class WidgetConfig
         {
             options.IncludeAll();
             options.Exclude(obj => obj.Connection);
+            options.Property(obj => obj.Connection).Expand(true);
             options
                 .Property(configuration => configuration.Items)
                 .ListItems()

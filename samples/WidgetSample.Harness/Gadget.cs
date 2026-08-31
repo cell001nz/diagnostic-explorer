@@ -53,7 +53,7 @@ public partial class Gadget : INotifyPropertyChanged
     public void RefreshValues()
     {
         Configuration.RefreshValues(0.2m);
-        _log.Info($"{FullName} Refreshed values " + JsonSerializer.Serialize(Configuration, new JsonSerializerOptions { WriteIndented = true }));
+        Log.Info("{FullName} Refreshed values {@Configuration}", FullName, Configuration);
     }
 
     private void OnPropertyChanged(string propertyName)

@@ -2,14 +2,14 @@ namespace WidgetSample.Harness;
 
 public partial class Gadget
 {
-    private readonly global::Serilog.ILogger _log;
+    public global::Serilog.ILogger Log { get; private set; }
 
     internal Gadget(int id, global::Serilog.ILogger logger)
     {
         Id = id;
         Randomise();
-        _log = logger.ForContext("SourceContext", $"{typeof(Gadget).FullName}.{FullName}");
+        Log = logger.ForContext("SourceContext", $"{typeof(Gadget).FullName}.{FullName}");
     }
 
-    internal void LogAdded() => _log.Information("Added gadget {GadgetId}", Id);
+    internal void LogAdded() => Log.Information("Added gadget {GadgetId}", Id);
 }

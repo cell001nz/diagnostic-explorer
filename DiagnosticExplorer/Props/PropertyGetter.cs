@@ -39,6 +39,8 @@ internal class PropertyGetter
     public const int MaxConcatItems = 100;
     private Func<object, string> _nameFormatter;
     private Func<object, string> _categoryFormatter;
+    private ConfiguredValue<bool> _categoryInitiallyExpanded;
+    private ConfiguredValue<string> _categoryExpansionScope;
     private Func<object, string> _descriptionFormatter;
     private Func<object, string> _valueFormatter;
     private IReadOnlyList<PropertyAlertConfiguration> _alerts;
@@ -110,6 +112,8 @@ internal class PropertyGetter
             if (configuration.Category.IsSet)
                 Category = configuration.Category.Value;
             _categoryFormatter = configuration.CategoryFormatter;
+            _categoryInitiallyExpanded = configuration.CategoryInitiallyExpanded;
+            _categoryExpansionScope = configuration.CategoryExpansionScope;
             if (configuration.Description.IsSet)
                 Description = configuration.Description.Value;
             _descriptionFormatter = configuration.DescriptionFormatter;
@@ -199,6 +203,14 @@ internal class PropertyGetter
 
         string prependToCategory = PrependToCategory(catPrepend, obj);
         bag.AddProperty(p, prependToCategory);
+        if (_categoryInitiallyExpanded.IsSet && _categoryExpansionScope.IsSet && string.Equals(
+                CategoryExtensions.NormalizeName(prependToCategory),
+                CategoryExtensions.NormalizeName(_categoryExpansionScope.Value),
+                StringComparison.OrdinalIgnoreCase
+            ))
+        {
+            bag.FindOrCreateCategory(prependToCategory).IsExpanded = _categoryInitiallyExpanded.Value;
+        }
     }
 
     protected string PrependToCategory(string prepend, object obj)
@@ -373,6 +385,8 @@ internal class PropertyGetter
         Name = configuration.Name;
         Category = configuration.Category.IsSet ? configuration.Category.Value : null;
         Description = configuration.Description.IsSet ? configuration.Description.Value : null;
+        _categoryInitiallyExpanded = configuration.CategoryInitiallyExpanded;
+        _categoryExpansionScope = configuration.CategoryExpansionScope;
         _valueFormatter = configuration.ValueFormatter;
         _alerts = configuration.Alerts;
         ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly, configuration.DrillDownText);

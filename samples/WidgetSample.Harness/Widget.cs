@@ -38,7 +38,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     private static readonly Random _rand = new Random();
     private static readonly string[] _names = ["Widget X", "Widget Y", "Widget Z", "Widget W"];
     private readonly int _id;
-    private readonly SampleLogger _log;
+    public SampleLogger Log { get; private set; }
     private DateTime _dateCreated;
     private string _name;
     private Point _size;
@@ -52,9 +52,12 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     private string _privateString = "234";
 
     private decimal _myDecimal = 123.234m;
+    private static readonly Random SharedRandom = new Random();
 
     public string FullName => $"{Name}({_id})";
-
+    public int Thing1 { get; } = SharedRandom.Next();
+    public int Thing2 { get; } = SharedRandom.Next();
+    public int Thing3 { get; } = SharedRandom.Next();
     public WidgetConfig PrimaryConfig { get; } = new();
     public WidgetConfig SecondaryConfig { get; } = new();
 
@@ -68,6 +71,14 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
             options.IncludeAll();
             options.Exclude(widget => widget.IgnoredProperty);
             options.Property(widget => widget.Name).AllowSet();
+
+            using (options.CreateCategoryScope("Things").Expanded())
+            {
+                options.Property(widget => widget.Thing1);
+                options.Property(widget => widget.Thing2);
+                options.Property(widget => widget.Thing3);
+            }
+
             options.Property(widget => widget._dateCreated).ShowElapsed();
             options.Property(widget => widget.PrimaryConfig).Expand(true).WithLabel("Widget Config").WithExpandedHover();
             options.Property(widget => widget.SecondaryConfig).Expand().WithDrillDownOnly().WithExpandedHover();
@@ -117,7 +128,7 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     public void RefreshValues()
     {
         PrimaryConfig.RefreshValues(0.2m);
-        _log.Info("{FullName} Refreshed values {@PrimaryConfig}", FullName, PrimaryConfig);
+        Log.Info("{FullName} Refreshed values {@PrimaryConfig}", FullName, PrimaryConfig);
     }
 
     [DiagnosticMethod]

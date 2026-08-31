@@ -22,10 +22,9 @@
                <p-tablist>
                  @for (cat of processModel().categories(); track cat.name()) {
                     <p-tab [value]="cat.name()">
-                        <span class="alert-pill"
-                              [class]="cat.labelClass()"
-                              [class.pill-pulse-odd]="cat.pulseId() % 2 === 1"
-                              [class.pill-pulse-even]="cat.pulseId() % 2 === 0 && cat.pulseId() > 0"></span>
+                                <span [class]="'alert-pill ' + cat.labelClass()"
+                                        [class.pill-pulse-odd]="cat.pulseId() % 2 === 1"
+                                        [class.pill-pulse-even]="cat.pulseId() % 2 === 0 && cat.pulseId() > 0"></span>
                         {{ cat.name() }}
                     </p-tab>
                  }

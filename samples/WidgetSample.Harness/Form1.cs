@@ -80,7 +80,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
         UpdateList = new List<int> { 1, 2, 4, 5 };
 
         //			SendInitial();
-        _evtTimer = new Timer(SendEvents, null, 1000, 1000);
+        _evtTimer = new Timer(SendEvents, null, 500, 500);
         _counterTimer = new Timer(IncrementCount, null, 400, 400);
         _listTestTimer = new Timer(MungeNumbersList, null, 100, 100);
         _configTimer = new Timer(RefreshWidgetsAndGadgets, null, 750, 1000);
@@ -417,18 +417,24 @@ public partial class Form1 : Form, INotifyPropertyChanged
             );
 
         if (chkWidgets.Checked)
-            _ = RunScopedTraceExampleAsync(
-                message => _widgetLog.Info(message),
-                exception => _widgetLog.Error(exception),
-                $"Widget Trace Scope {_evtCount1++}"
-            );
+        {
+            foreach (var w in _widgets)
+                _ = RunScopedTraceExampleAsync(
+                    message => w.Log.Info(message),
+                    exception => w.Log.Error(exception),
+                    $"Widget Trace Scope {_evtCount1++}"
+                );
+        }
 
         if (chkGadgets.Checked)
-            _ = RunScopedTraceExampleAsync(
-                message => _gadgetLog.Info(message),
-                exception => _gadgetLog.Error(exception),
-                $"Gadget Trace Scope {_evtCount1++}"
-            );
+        {
+            foreach (var g in _gadgets)
+                _ = RunScopedTraceExampleAsync(
+                    message => g.Log.Info(message),
+                    exception => g.Log.Error(exception),
+                    $"Gadget Trace Scope {_evtCount1++}"
+                );
+        }
     }
 
     private void SendInitial()
