@@ -119,13 +119,15 @@ export class CategoryModel {
 
     checkEventSeverityLevels(timestamp = Date.now()) {
         const activeLevels = new Set(this.activeEventLevels());
+        let changed = false;
         for (const [level, lastSeen] of this.eventLevelActivity) {
             if (timestamp - lastSeen <= CategoryModel.eventLevelIndicatorDurationMilliseconds) continue;
 
             this.eventLevelActivity.delete(level);
             activeLevels.delete(level);
+            changed = true;
         }
 
-        this.activeEventLevels.set(activeLevels);
+        if (changed) this.activeEventLevels.set(activeLevels);
     }
 }

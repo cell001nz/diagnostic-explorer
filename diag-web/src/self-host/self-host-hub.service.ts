@@ -52,6 +52,8 @@ export class SelfHostDiagHubService {
     #connection?: Promise<SelfHostConnection>;
     #hubProxyLoad?: Promise<void>;
     #reconnectTimer?: ReturnType<typeof setTimeout>;
+    readonly #pendingLogStreamEvents = new Map<string, LogStreamEvent[]>();
+    #logStreamFrame?: number;
     #stopRequested = false;
 
     async openHubConnection(): Promise<void> {
@@ -89,6 +91,9 @@ export class SelfHostDiagHubService {
 
     async stop(): Promise<void> {
         this.#stopRequested = true;
+        if (this.#logStreamFrame != null) cancelAnimationFrame(this.#logStreamFrame);
+        this.#logStreamFrame = undefined;
+        this.#pendingLogStreamEvents.clear();
         if (this.#reconnectTimer != null) {
             clearTimeout(this.#reconnectTimer);
             this.#reconnectTimer = undefined;
@@ -206,7 +211,25 @@ export class SelfHostDiagHubService {
             this.logStreamInitialized$.next({ processId, initialization });
         });
         register('StreamLogEvents', (processId: string, events: LogStreamEvent[]) => {
-            this.logStreamEvents$.next({ processId, events });
+            this.queueLogStreamEvents(processId, events);
+        });
+    }
+
+    private queueLogStreamEvents(processId: string, events: LogStreamEvent[]): void {
+        if (!events?.length) return;
+
+        const pending = this.#pendingLogStreamEvents.get(processId) ?? [];
+        pending.push(...events);
+        this.#pendingLogStreamEvents.set(processId, pending);
+        if (this.#logStreamFrame != null) return;
+
+        this.#logStreamFrame = requestAnimationFrame(() => {
+            this.#logStreamFrame = undefined;
+            const pendingByProcess = [...this.#pendingLogStreamEvents];
+            this.#pendingLogStreamEvents.clear();
+            for (const [pendingProcessId, pendingEvents] of pendingByProcess) {
+                this.logStreamEvents$.next({ processId: pendingProcessId, events: pendingEvents });
+            }
         });
     }
 

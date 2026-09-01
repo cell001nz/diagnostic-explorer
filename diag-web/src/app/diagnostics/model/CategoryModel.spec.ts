@@ -23,6 +23,16 @@ describe('CategoryModel', () => {
         expect(category.isEventLevelActive('warn')).toBeFalse();
     });
 
+    it('does not publish activity when no level has expired', () => {
+        const category = new CategoryModel({} as ProcessModel, 'Widgets');
+
+        category.recordEventSeverity([{ level: 3 }], 1_000);
+        const activeLevels = category.activeEventLevels();
+        category.checkEventSeverityLevels(5_999);
+
+        expect(category.activeEventLevels()).toBe(activeLevels);
+    });
+
     it('refreshes activity for a level that receives another event', () => {
         const category = new CategoryModel({} as ProcessModel, 'Widgets');
 
