@@ -8,6 +8,17 @@ namespace DiagnosticExplorer.Logging.Tests;
 public class EventSinkRouterTests
 {
     [Fact]
+    public void MinimumOnlyRouteAcceptsItsLevelAndAllMoreSevereLevels()
+    {
+        EventSinkRouter router = new(new EventSinkRouteOptions { Routes = { CreateRoute("Widgets", "Warnings").AtLeast(LogLevel.Warning) } });
+
+        Assert.False(router.IsEnabled("Widgets", LogLevel.Information));
+        Assert.True(router.IsEnabled("Widgets", LogLevel.Warning));
+        Assert.True(router.IsEnabled("Widgets", LogLevel.Error));
+        Assert.True(router.IsEnabled("Widgets", LogLevel.Critical));
+    }
+
+    [Fact]
     public void AllMatchesFansOutToNamespaceAndSeverityDestinations()
     {
         LogEventStore store = new();
@@ -143,29 +154,6 @@ public class EventSinkRouterTests
         finally
         {
             DiagnosticManager.Enabled = wasEnabled;
-        }
-    }
-
-    [Fact]
-    public void DisabledDiagnosticsDoesNotRegisterObjects()
-    {
-        bool wasEnabled = DiagnosticManager.Enabled;
-        object diagnosticObject = new();
-        try
-        {
-            DiagnosticManager.Enabled = false;
-
-            DiagnosticManager.Register(diagnosticObject, "Ignored", "Application");
-
-            Assert.DoesNotContain(
-                DiagnosticManager.GetRegisteredObjects(),
-                registeredObject => ReferenceEquals(registeredObject.Object, diagnosticObject)
-            );
-        }
-        finally
-        {
-            DiagnosticManager.Enabled = wasEnabled;
-            DiagnosticManager.Unregister(diagnosticObject);
         }
     }
 

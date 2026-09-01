@@ -85,6 +85,8 @@ internal class ExtendedPropertyGetter : PropertyGetter
             {
                 cat.IsExpanded = _initiallyExpanded;
                 cat.IsExpandedProperty = true;
+                cat.Statuses = GetStatuses(obj);
+                cat.StatusIconSize = StatusIconSize;
                 cat.ValueObject = val;
                 cat.CanDrillDown = DrillDownEnabled && DiagnosticManager.IsDrillDownValue(val);
                 cat.DrillDownObject = cat.CanDrillDown ? val : null;

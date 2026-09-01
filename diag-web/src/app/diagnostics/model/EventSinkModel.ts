@@ -30,12 +30,17 @@ export class EventSinkModel {
     filtersVisible = signal(false);
     /** Text filter applied to event messages */
     filterText = signal('');
-    /** Minimum level to show (0 = Trace … 6 = None) */
-    minLevel = signal(0);
+    /** Inclusive event-level range to show. */
+    levelRange = signal<[number, number]>([Level.Trace, Level.Critical]);
 
-    /** Convenience: the label for the current minLevel value */
-    get minLevelLabel(): string {
-        return Level.LevelToString(this.minLevel());
+    get normalizedLevelRange(): [number, number] {
+        const [firstLevel, secondLevel] = this.levelRange();
+        return [Math.min(firstLevel, secondLevel), Math.max(firstLevel, secondLevel)];
+    }
+
+    get hasLevelFilter(): boolean {
+        const [minLevel, maxLevel] = this.normalizedLevelRange;
+        return minLevel !== Level.Trace || maxLevel !== Level.Critical;
     }
 
     toggleFilters(): void {
@@ -43,7 +48,7 @@ export class EventSinkModel {
         this.filtersVisible.update((v) => !v);
         if (closing) {
             this.filterText.set('');
-            this.minLevel.set(0);
+            this.levelRange.set([Level.Trace, Level.Critical]);
         }
     }
 
@@ -51,8 +56,11 @@ export class EventSinkModel {
         this.filterText.set(text);
     }
 
-    setMinLevel(level: number): void {
-        this.minLevel.set(level);
+    setLevelRange(range: readonly number[]): void {
+        if (range.length !== 2) return;
+
+        const [firstLevel, secondLevel] = range;
+        this.levelRange.set([Math.min(firstLevel, secondLevel), Math.max(firstLevel, secondLevel)]);
     }
 
     constructor(
@@ -66,11 +74,12 @@ export class EventSinkModel {
         this.pausedEvents = signal(this.eventProvider());
         this.events = computed(() => (this.isPaused() ? this.pausedEvents() : this.eventProvider()));
         this.eventMatcher = eventMatcher ?? ((event) => this.events().includes(event));
+        this.assignEventNumbers(this.events());
         this.filteredEvents = computed(() => {
             const events = this.events();
             const text = this.filterText().trim().toLowerCase();
-            const minLevel = this.minLevel();
-            return events.filter((event) => (minLevel === 0 || event.level >= minLevel) && (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text)));
+            const [minLevel, maxLevel] = this.normalizedLevelRange;
+            return events.filter((event) => event.level >= minLevel && event.level <= maxLevel && (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text)));
         });
     }
 
@@ -98,11 +107,14 @@ export class EventSinkModel {
     }
 
     private readonly eventRateSamples: EventRateSample[] = [];
+    private readonly eventNumbers = new Map<EventModel, number>();
     private readonly eventMatcher: (event: EventModel) => boolean;
     private readonly pausedEvents: WritableSignal<EventModel[]>;
+    private nextEventNumber = 1;
 
     recordAddedEvents(events: readonly EventModel[], timestamp = Date.now()): EventModel[] {
         const matchingEvents = events.filter(this.eventMatcher);
+        this.assignEventNumbers(matchingEvents);
         if (matchingEvents.length > 0) this.eventRateSamples.push({ timestamp, count: matchingEvents.length });
         if (matchingEvents.length > 0 && this.isPaused()) this.queuedEventCount.update((count) => count + matchingEvents.length);
         return matchingEvents;
@@ -119,6 +131,17 @@ export class EventSinkModel {
 
     public clearEvents(): void {
         // Event arrays are projections over the owning ProcessEventStore.
+    }
+
+    getEventNumber(event: EventModel): number {
+        this.assignEventNumbers([event]);
+        return this.eventNumbers.get(event)!;
+    }
+
+    private assignEventNumbers(events: readonly EventModel[]): void {
+        for (const event of [...events].sort((left, right) => left.sequence - right.sequence || left.id - right.id)) {
+            if (!this.eventNumbers.has(event)) this.eventNumbers.set(event, this.nextEventNumber++);
+        }
     }
 
     private onCriteriaChanged(): void {

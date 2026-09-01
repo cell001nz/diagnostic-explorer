@@ -145,20 +145,56 @@ inside an object's property bag. Leave properties uncategorized when they are
 the immediate summary. Never use a `General` section: null, empty, and
 `General` section names intentionally render with no heading.
 
+## Add property statuses
+
+Use `Status(...)` when a property has one or more current states that need an
+icon in the viewer. A property can have several active statuses. Statuses use
+the fixed `StatusCode` values `Active`, `Inactive`, `Pending`, `Success`,
+`Warning`, `Error`, `Alert`, `Danger`, `Running`, `Stopped`, and `Disabled`,
+and `Paused`, so the viewer can render a consistent icon for each.
+The optional text is available as the icon tooltip and can be generated from
+the owning object.
+
+```csharp
+options.Property(worker => worker.Endpoint)
+    .Status(StatusCode.Active, worker => worker.IsConnected, "Connected")
+    .Status(StatusCode.Pending, worker => worker.IsRetrying, worker => $"Retry {worker.RetryCount}");
+```
+
+When a property uses `Expand()`, its statuses render beside the generated
+category heading rather than in a separate property row.
+
+Use `WithText(...)` to replace the displayed property value while retaining the
+underlying value for drilldowns and hover details. An empty string leaves a
+status-only row; an owner callback can display a related value instead.
+
+```csharp
+options.Property(worker => worker.QueueDepth)
+    .WithText("")
+    .Status(StatusCode.Running, worker => worker.IsProcessing);
+
+options.Property(worker => worker.QueueDepth)
+    .WithText(worker => $"{worker.ActiveJobCount} active jobs");
+```
+
+Status icons are small by default. Use `WithIconSize(StatusIconSize.Medium)` or
+`WithIconSize(StatusIconSize.Large)` when they should carry more visual weight.
+
 ## Choose the right detail technique
 
 Use each technique for its intended scope:
 
-| Need                                                   | Configuration                          | Result                                                                                    |
-| ------------------------------------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| A small nested object belongs in the main display      | `Expand()`                             | An expandable property section; first-level sections start expanded unless passed`false`. |
-| Details are useful but should not occupy the main view | `WithExpandedHover()` after `Expand()` | The expanded object is available on hover.                                                |
-| A complex object or item needs its own view            | `WithDrillDown()`                      | The normal rendered value stays visible and opens drilldown.                              |
-| The row should be only an action to inspect details    | `WithDrillDownOnly()`                  | The viewer shows`[show more]` rather than a regular value.                                |
-| The action needs domain-specific wording               | `WithDrillDownOnly("View connection")` | The supplied text replaces`[show more]`.                                                  |
-| A calculated or private value is useful                | `Property("Name", instance => value)`  | A named diagnostic-only property.                                                         |
-| Derived values need an inline group                    | `Custom(...).Expand()`                 | An expandable main-view section containing the projected members.                         |
-| A serialized value is useful occasionally              | `AsJson(...).WithJsonHover()`          | JSON is fetched only on hover.                                                            |
+| Need                                                   | Configuration                                      | Result                                                                                    |
+| ------------------------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| A small nested object belongs in the main display      | `Expand()`                                         | An expandable property section; first-level sections start expanded unless passed`false`. |
+| Details are useful but should not occupy the main view | `WithExpandedHover()` after `Expand()`             | The expanded object is available on hover.                                                |
+| A complex object or item needs its own view            | `WithDrillDown()`                                  | The normal rendered value stays visible and opens drilldown.                              |
+| The row should be only an action to inspect details    | `WithDrillDownOnly()`                              | The viewer shows`[show more]` rather than a regular value.                                |
+| The action needs domain-specific wording               | `WithDrillDownOnly("View connection")`             | The supplied text replaces`[show more]`.                                                  |
+| The action text depends on the owning object           | `WithDrillDownOnly(worker => $"View {worker.Id}")` | The callback supplies the text for that object.                                           |
+| A calculated or private value is useful                | `Property("Name", instance => value)`              | A named diagnostic-only property.                                                         |
+| Derived values need an inline group                    | `Custom(...).Expand()`                             | An expandable main-view section containing the projected members.                         |
+| A serialized value is useful occasionally              | `AsJson(...).WithJsonHover()`                      | JSON is fetched only on hover.                                                            |
 
 Add `ConfigureDrillDown<T>(...)` when the drilldown needs a smaller or different
 profile than the main view. Otherwise, the normal profile is reused.

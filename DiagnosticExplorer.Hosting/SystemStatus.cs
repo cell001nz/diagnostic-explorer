@@ -31,22 +31,42 @@ namespace DiagnosticExplorer;
 [Serializable]
 internal class SystemStatus
 {
+    private readonly Process _process;
+
     public static SystemStatus Instance { get; private set; }
 
     public SystemStatus()
-        : this(() => new RateCounter(5)) { }
-
-    internal SystemStatus(Func<RateCounter> createRateCounter)
     {
-        if (createRateCounter == null)
-            throw new ArgumentNullException(nameof(createRateCounter));
+        _process = BestEffort(Process.GetCurrentProcess);
+        Pid = ReadProcess(process => process.Id);
+        User = BestEffort(() => $"{Environment.UserDomainName}\\{Environment.UserName}");
+        HostMachine = BestEffort(() => Environment.MachineName);
+        ProcessorCount = BestEffort(() => Environment.ProcessorCount);
+        DiagnosticRequests = BestEffort(() => new RateCounter(5));
+    }
 
-        Pid = Process.GetCurrentProcess().Id;
-        User = $"{Environment.UserDomainName}\\{Environment.UserName}";
-        HostMachine = Environment.MachineName;
-        ProcessorCount = Environment.ProcessorCount;
-        DiagnosticRequests = createRateCounter();
-        DiagnosticManager.Register(this, "Environment", "System");
+    private static T BestEffort<T>(Func<T> getValue)
+    {
+        try
+        {
+            return getValue();
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    private T ReadProcess<T>(Func<Process, T> getValue)
+    {
+        if (_process == null)
+            return default;
+
+        return BestEffort(() =>
+        {
+            _process.Refresh();
+            return getValue(_process);
+        });
     }
 
     public static void Register()
@@ -60,19 +80,19 @@ internal class SystemStatus
     [DiagnosticProperty(Category = "CPU")]
     public int Threads
     {
-        get { return Process.GetCurrentProcess().Threads.Count; }
+        get { return ReadProcess(process => process.Threads.Count); }
     }
 
     [DiagnosticProperty(Category = "CPU", FormatString = "{0:N2}")]
     public double VirtualMemory
     {
-        get { return Process.GetCurrentProcess().PagedMemorySize64 / (1024F * 1024F); }
+        get { return ReadProcess(process => process.PagedMemorySize64 / (1024F * 1024F)); }
     }
 
     [DiagnosticProperty(Category = "CPU", FormatString = "{0:N2}")]
     public double Memory
     {
-        get { return Process.GetCurrentProcess().WorkingSet64 / (1024F * 1024F); }
+        get { return ReadProcess(process => process.WorkingSet64 / (1024F * 1024F)); }
     }
 
     public int Pid { get; set; }
@@ -81,7 +101,7 @@ internal class SystemStatus
 
     public string BaseDirectory
     {
-        get { return AppDomain.CurrentDomain.BaseDirectory; }
+        get { return BestEffort(() => AppDomain.CurrentDomain.BaseDirectory); }
     }
 
     public RateCounter DiagnosticRequests { get; }
@@ -90,13 +110,13 @@ internal class SystemStatus
 
     public TimeSpan UpTime
     {
-        get { return DateTime.Now - Process.GetCurrentProcess().StartTime; }
+        get { return ReadProcess(process => DateTime.Now - process.StartTime); }
     }
 
     [DiagnosticProperty(FormatString = "{0:d MMM yyyy HH:mm:ss}")]
     public DateTime SystemTime
     {
-        get { return DateTime.Now; }
+        get { return BestEffort(() => DateTime.Now); }
     }
 
     public void RegisterDiagnosticRequest()

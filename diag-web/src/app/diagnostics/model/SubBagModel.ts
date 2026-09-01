@@ -1,8 +1,9 @@
 import { PropModel } from './PropModel';
-import { OperationSet, SubBag } from '@domain/DiagResponse';
+import { OperationSet, PropertyStatus, SubBag } from '@domain/DiagResponse';
 import { customMerge } from '@util/merge';
 import { BagModel } from './BagModel';
 import { computed, signal } from '@angular/core';
+import { getStatusIconClass, getStatusIconSize, StatusIconSize } from './StatusVisual';
 
 export class SubBagModel {
     bag: BagModel;
@@ -13,6 +14,8 @@ export class SubBagModel {
     readonly displayName = computed(() => this.name()?.split('.').at(-1) ?? '');
     readonly operationSet = signal('');
     readonly canDrillDown = signal(false);
+    readonly statuses = signal<PropertyStatus[]>([]);
+    readonly statusIconSize = signal<StatusIconSize>('small');
 
     properties = signal<PropModel[]>([]);
     alertSeverity = computed(() => Math.max(0, ...this.properties().map((property) => property.alertSeverity())));
@@ -45,6 +48,8 @@ export class SubBagModel {
         this.isExpanded.set(propCat.isExpanded);
         this.isExpandedProperty.set(propCat.isExpandedProperty ?? false);
         this.canDrillDown.set(propCat.canDrillDown);
+        this.statuses.set(propCat.statuses ?? []);
+        this.statusIconSize.set(getStatusIconSize(propCat.statusIconSize));
         this.properties.set(
             customMerge(
                 propCat.properties,
@@ -55,5 +60,9 @@ export class SubBagModel {
                 (s, t) => t.update(s)
             )
         );
+    }
+
+    statusIcon(status: PropertyStatus): string {
+        return getStatusIconClass(status);
     }
 }

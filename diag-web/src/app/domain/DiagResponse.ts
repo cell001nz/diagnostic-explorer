@@ -55,6 +55,8 @@ export interface SubBag {
     canDrillDown: boolean;
     isExpanded: boolean;
     isExpandedProperty?: boolean;
+    statuses?: PropertyStatus[];
+    statusIconSize?: number | 'Small' | 'Medium' | 'Large';
     properties: Property[];
 }
 
@@ -72,12 +74,19 @@ export interface Property {
     canExpandedHover?: boolean;
     noTruncate?: boolean;
     alerts: PropertyAlert[];
+    statuses?: PropertyStatus[];
+    statusIconSize?: number | 'Small' | 'Medium' | 'Large';
 }
 
 export interface PropertyAlert {
     severity: number | 'None' | 'Warning' | 'Error';
     message: string;
     category: string;
+}
+
+export interface PropertyStatus {
+    status: number | 'Active' | 'Inactive' | 'Pending' | 'Success' | 'Warning' | 'Error' | 'Alert' | 'Danger' | 'Running' | 'Stopped' | 'Disabled' | 'Paused';
+    text: string;
 }
 
 export interface EventResponse {

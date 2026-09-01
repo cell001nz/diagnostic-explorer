@@ -32,8 +32,7 @@ using DiagnosticExplorer.Logging;
 
 namespace WidgetSample.Harness;
 
-//Widget uses the DiagnosticManager.RegisterAsync method of registering itself with diagnostics
-public partial class Widget : IDisposable, INotifyPropertyChanged
+public partial class Widget : INotifyPropertyChanged
 {
     private static readonly Random _rand = new Random();
     private static readonly string[] _names = ["Widget X", "Widget Y", "Widget Z", "Widget W"];
@@ -55,9 +54,10 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     private static readonly Random SharedRandom = new Random();
 
     public string FullName => $"{Name}({_id})";
-    public int Thing1 { get; } = SharedRandom.Next();
-    public int Thing2 { get; } = SharedRandom.Next();
-    public int Thing3 { get; } = SharedRandom.Next();
+    public int Thing1 { get; private set; } = SharedRandom.Next(1, 101);
+    public int Thing2 { get; private set; } = SharedRandom.Next(1, 101);
+    public int Thing3 { get; private set; } = SharedRandom.Next(1, 101);
+    public int Thing4 { get; private set; } = SharedRandom.Next(1, 101);
     public WidgetConfig PrimaryConfig { get; } = new();
     public WidgetConfig SecondaryConfig { get; } = new();
 
@@ -74,9 +74,36 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
 
             using (options.CreateCategoryScope("Things").Expanded())
             {
-                options.Property(widget => widget.Thing1);
-                options.Property(widget => widget.Thing2);
-                options.Property(widget => widget.Thing3);
+                options
+                    .Property(widget => widget.Thing1)
+                    .WithText("")
+                    .WithIconSize(StatusIconSize.Small)
+                    .Status(StatusCode.Active, obj => obj.Thing1 > 10, "This is active")
+                    .Status(StatusCode.Inactive, obj => obj.Thing1 > 20, obj => $"Thing 1 is {obj.Thing1}")
+                    .Status(StatusCode.Pending, obj => obj.Thing1 > 30);
+
+                options
+                    .Property(widget => widget.Thing2)
+                    .WithText("")
+                    .WithIconSize(StatusIconSize.Medium)
+                    .Status(StatusCode.Success, obj => obj.Thing2 > 10)
+                    .Status(StatusCode.Warning, obj => obj.Thing2 > 20)
+                    .Status(StatusCode.Error, obj => obj.Thing2 > 30);
+                ;
+                options
+                    .Property(widget => widget.Thing3)
+                    .WithText("")
+                    .WithIconSize(StatusIconSize.Large)
+                    .Status(StatusCode.Alert, obj => obj.Thing3 > 10)
+                    .Status(StatusCode.Danger, obj => obj.Thing3 > 20)
+                    .Status(StatusCode.Running, obj => obj.Thing3 > 30);
+
+                options
+                    .Property(widget => widget.Thing4)
+                    .WithText("")
+                    .Status(StatusCode.Stopped, obj => obj.Thing4 > 10)
+                    .Status(StatusCode.Disabled, obj => obj.Thing4 > 20)
+                    .Status(StatusCode.Paused, obj => obj.Thing4 > 30);
             }
 
             options.Property(widget => widget._dateCreated).ShowElapsed();
@@ -128,6 +155,10 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
     public void RefreshValues()
     {
         PrimaryConfig.RefreshValues(0.2m);
+        Thing1 = SharedRandom.Next(1, 101);
+        Thing2 = SharedRandom.Next(1, 101);
+        Thing3 = SharedRandom.Next(1, 101);
+        Thing4 = SharedRandom.Next(1, 101);
         Log.Info("{FullName} Refreshed values {@PrimaryConfig}", FullName, PrimaryConfig);
     }
 
@@ -177,36 +208,16 @@ public partial class Widget : IDisposable, INotifyPropertyChanged
         }
     }
 
-    #region IDisposable Members
-
-    public void Dispose()
-    {
-        Dispose(true);
-    }
-
-    #endregion
-
     #region INotifyPropertyChanged Members
 
     public event PropertyChangedEventHandler PropertyChanged;
 
     #endregion
 
-    ~Widget()
-    {
-        Dispose(false);
-    }
-
     private void OnPropertyChanged(string propertyName)
     {
         if (PropertyChanged != null)
             PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-    }
-
-    protected void Dispose(bool disposing)
-    {
-        if (disposing)
-            DiagnosticManager.Unregister(this);
     }
 
     public override string ToString()

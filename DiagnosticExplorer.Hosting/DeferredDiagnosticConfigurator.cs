@@ -50,6 +50,11 @@ internal sealed class DeferredDiagnosticConfigurator : IDiagConfigurator
         _configuration.ConfigureHosting(configure);
     }
 
+    public ISystemEnvironmentConfigurator ConfigureSystemEnvironment()
+    {
+        return _configuration.ConfigureSystemEnvironment();
+    }
+
     public void ConfigureEventRouting(Action<EventSinkRouteOptions> configure)
     {
         _configuration.ConfigureEventRouting(configure);

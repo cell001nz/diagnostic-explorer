@@ -170,7 +170,7 @@ internal class CollectionGetter : PropertyGetter
     {
         Property property = CreateOutputProperty(name, FormatValue(count), owner, collection);
         if (count > 0)
-            ApplyDrillDown(property, collection);
+            ApplyDrillDown(property, collection, owner);
         bag.AddProperty(property, PrependToCategory(catPrepend, owner));
     }
 
@@ -259,7 +259,7 @@ internal class CollectionGetter : PropertyGetter
 
             Property prop = new Property(name, val, desc);
             prop.ValueObject = objectValue;
-            ApplyDrillDown(prop, obj);
+            ApplyDrillDown(prop, obj, owner);
             bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend, owner), cat));
         }
 
@@ -276,7 +276,7 @@ internal class CollectionGetter : PropertyGetter
 
         string val = FormatEnumerable(col, _separator, _maxItems, includeCount: false);
         Property property = CreateOutputProperty(GetName(owner), val, owner, collection);
-        ApplyDrillDown(property, collection);
+        ApplyDrillDown(property, collection, owner);
         bag.AddProperty(property, PrependToCategory(catPrepend, owner));
     }
 
@@ -286,6 +286,7 @@ internal class CollectionGetter : PropertyGetter
         {
             ValueObject = valueObject,
             Alerts = GetAlerts(owner),
+            Statuses = GetStatuses(owner),
             SourceObject = owner,
             SourceProperty = PropInfo,
             NoTruncate = NoTruncate,

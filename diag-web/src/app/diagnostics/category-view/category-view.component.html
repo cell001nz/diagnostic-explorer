@@ -49,6 +49,17 @@
                     <i class="pi pi-chevron-down section-toggle-icon" aria-hidden="true"></i>
                 }
                 {{ title }}
+                @if (section.subBag?.statuses().length) {
+                    <span class="property-statuses"
+                          [class.property-statuses-medium]="section.subBag!.statusIconSize() === 'medium'"
+                          [class.property-statuses-large]="section.subBag!.statusIconSize() === 'large'">
+                        @for (status of section.subBag!.statuses(); track $index) {
+                            <span class="property-status" role="img" [pTooltip]="status.text" [showDelay]="0" [attr.aria-label]="status.text">
+                                <i [class]="section.subBag!.statusIcon(status)" aria-hidden="true"></i>
+                            </span>
+                        }
+                    </span>
+                }
                 @if (section.subBag?.canDrillDown()) {
                     <button type="button" class="property-drilldown-icon ml-1"
                             title="Open drilldown" aria-label="Open drilldown"
@@ -60,7 +71,8 @@
                     <i class="bi bi-exclamation-triangle-fill ml-2"
                        [class.text-amber-400]="section.subBag!.alertSeverity() === 1"
                        [class.text-red-400]="section.subBag!.alertSeverity() === 2"
-                       [attr.title]="section.subBag!.alertTooltip()"></i>
+                       [pTooltip]="section.subBag!.alertTooltip()" [showDelay]="0"
+                       [attr.aria-label]="section.subBag!.alertTooltip()"></i>
                 }
                 @if (section.subBag?.operationSet()) {
                     <button type="button" class="diag-icon-link text-yellow-500 ml-1" title="Executable operations" aria-label="Executable operations"
@@ -80,7 +92,8 @@
                         [class.text-stone-500]="!prop.alertSeverity()"
                         [class.text-amber-400]="prop.alertSeverity() === 1"
                         [class.text-red-400]="prop.alertSeverity() === 2"
-                        [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || prop.description() || null"
+                        [pTooltip]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || prop.description() || null"
+                        [showDelay]="0"
                         [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
                         <span class="property-name" [class.cursor-pointer]="prop.canDrillDown()" (click)="prop.canDrillDown() && showDrillDown(prop.getOperationPath(), prop.name())">{{ prop.name() }}</span>
                         @if (prop.canDrillDown()) {
@@ -100,7 +113,19 @@
                             </button>
                         }
                     </app-property-hover>
-                    <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [attr.data-value-kind]="prop.valueKind()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || null">
+                      <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [attr.data-value-kind]="prop.valueKind()"
+                          [pTooltip]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || null" [showDelay]="0">
+                        @if (prop.statuses().length) {
+                            <span class="property-statuses"
+                                  [class.property-statuses-medium]="prop.statusIconSize() === 'medium'"
+                                  [class.property-statuses-large]="prop.statusIconSize() === 'large'">
+                                @for (status of prop.statuses(); track $index) {
+                                    <span class="property-status" role="img" [pTooltip]="status.text" [showDelay]="0" [attr.aria-label]="status.text">
+                                        <i [class]="prop.statusIcon(status)" aria-hidden="true"></i>
+                                    </span>
+                                }
+                            </span>
+                        }
                         <app-property-hover [prop]="prop" [process]="process()" [objectPaths]="category().realtimeModel.objectPaths">
                             @if (prop.canDrillDown() && prop.drillDownText()) {
                                 <button type="button" class="diag-drilldown-value inline-flex items-center gap-1 text-sky-300" [title]="prop.drillDownText()" [attr.aria-label]="prop.drillDownText()" (click)="showDrillDown(prop.getOperationPath(), prop.name())">

@@ -1,4 +1,4 @@
-import { Property, PropertyAlert } from '@domain/DiagResponse';
+import { Property, PropertyAlert, PropertyStatus } from '@domain/DiagResponse';
 import { PropModel } from './PropModel';
 import { SubBagModel } from './SubBagModel';
 
@@ -35,6 +35,17 @@ describe('PropModel', () => {
         const model = new PropModel({} as SubBagModel, createProperty('None'));
 
         expect(model.canDrillDown()).toBeTrue();
+    });
+
+    it('maps named status codes to icons', () => {
+        const property = createProperty('None');
+        const status: PropertyStatus = { status: 'Paused', text: 'Worker paused' };
+        property.statuses = [status];
+
+        const model = new PropModel({} as SubBagModel, property);
+
+        expect(model.statuses()).toEqual([status]);
+        expect(model.statusIcon(status)).toContain('bi-pause-circle-fill');
     });
 
     it('splits values into display lines', () => {

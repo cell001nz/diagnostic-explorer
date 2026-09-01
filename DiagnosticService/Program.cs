@@ -18,10 +18,14 @@ public static class Program
 
         builder.Configuration.AddJsonFile(Expand(Path.Combine("Config", "settings.json")));
 
-        builder.Services.Configure<DiagServiceSettings>(builder.Configuration.GetSection(nameof(DiagServiceSettings)));
-        builder.Services.AddDiagnosticExplorer(builder.Configuration);
-
         var services = builder.Services;
+        services.Configure<DiagServiceSettings>(builder.Configuration.GetSection(nameof(DiagServiceSettings)));
+        services.AddSingleton<RealtimeManager>();
+        services.AddSingleton<RetroManager>();
+        services.ConfigureDiagnosticExplorer(
+            builder.Configuration,
+            diagnostics => diagnostics.RegisterObjects(registrar => registrar.RegisterService<RetroManager>("Retro", "Retro Manager"))
+        );
 
         services.AddCors(opt =>
         {
@@ -35,8 +39,6 @@ public static class Program
         });
         services.AddSignalR();
 
-        services.AddSingleton<RealtimeManager>();
-        services.AddSingleton<RetroManager>();
         services
             .AddSignalR()
             .AddHubOptions<DiagnosticHub>(options =>

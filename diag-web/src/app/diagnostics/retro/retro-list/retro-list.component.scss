@@ -9,10 +9,17 @@
 
 // Event severity level row styles
 .event-row-verbose,
-.event-row-debug,
+.event-row-debug {
+    background-color: rgb(12, 18, 31) !important;
+    color: rgb(142, 184, 244) !important;
+    --row-glow: 90, 140, 210;
+    user-select: none;
+    &:hover { background-color: rgb(18, 28, 46) !important; }
+}
+
 .event-row-info {
     background-color: rgb(8, 18, 21) !important;
-    color: rgb(122, 210, 216);
+    color: rgb(122, 210, 216) !important;
     --row-glow: 76, 170, 180;
     user-select: none;
     &:hover { background-color: rgb(12, 26, 30) !important; }
@@ -44,11 +51,11 @@
 
 .event-row-critical,
 .event-row-fatal {
-    background-color: rgb(28, 7, 7);
-    color: rgb(255, 112, 112);
-    --row-glow: 220, 100, 100;
+    background-color: rgb(14, 2, 5);
+    color: rgb(248, 116, 116);
+    --row-glow: 156, 54, 66;
     user-select: none;
-    &:hover { background-color: rgb(38, 11, 11); }
+    &:hover { background-color: rgb(24, 5, 9); }
 }
 
 // Phosphor glow: restrained left accent + subtle halo, using each row's own hue

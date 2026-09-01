@@ -7,6 +7,7 @@ import { JsonToken, tokenizeJson } from '@app/diagnostics/json-tokenizer';
 interface JsonRange {
     start: number;
     end: number;
+    formatted: string;
 }
 
 @Component({
@@ -49,7 +50,7 @@ export class EventDetailPanelComponent {
                 segments.push({ text: detail.slice(position, jsonRange.start) });
             }
 
-            segments.push({ jsonTokens: tokenizeJson(detail.slice(jsonRange.start, jsonRange.end)) });
+            segments.push({ jsonTokens: tokenizeJson(jsonRange.formatted) });
             position = jsonRange.end;
         }
 
@@ -62,19 +63,39 @@ export class EventDetailPanelComponent {
 
     private findJsonRange(text: string, searchStart: number): JsonRange | undefined {
         for (let start = searchStart; start < text.length; start++) {
-            if (text[start] !== '{' && text[start] !== '[') {
+            const startCharacter = text[start];
+            const end = startCharacter === '{' || startCharacter === '[' ? this.findJsonEnd(text, start) : startCharacter === '"' ? this.findJsonStringEnd(text, start) : undefined;
+            if (end === undefined) {
                 continue;
             }
 
-            const end = this.findJsonEnd(text, start);
-            if (end !== undefined) {
-                const candidate = text.slice(start, end);
-                try {
-                    JSON.parse(candidate);
-                    return { start, end };
-                } catch {
-                    // Continue looking for the next JSON object or array.
-                }
+            const formatted = this.tryFormatJsonDocument(text.slice(start, end));
+            if (formatted !== undefined) return { start, end, formatted };
+        }
+
+        return undefined;
+    }
+
+    private tryFormatJsonDocument(candidate: string): string | undefined {
+        try {
+            const value = JSON.parse(candidate);
+            const document = typeof value === 'string' ? JSON.parse(value) : value;
+            return document !== null && typeof document === 'object' ? JSON.stringify(document, null, 2) : undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
+    private findJsonStringEnd(text: string, start: number): number | undefined {
+        let escaped = false;
+        for (let index = start + 1; index < text.length; index++) {
+            const character = text[index];
+            if (escaped) {
+                escaped = false;
+            } else if (character === '\\') {
+                escaped = true;
+            } else if (character === '"') {
+                return index + 1;
             }
         }
 

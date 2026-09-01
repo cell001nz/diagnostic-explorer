@@ -21,21 +21,32 @@
                 @if (sink().filtersVisible()) {
                     <div class="sink-filter-controls" (click)="$event.stopPropagation()">
                         <!-- Text filter -->
-                        <input pInputText
-                               class="sink-filter-input"
-                               placeholder="Filter…"
-                               [value]="sink().filterText()"
-                               (input)="onFilterTextChange($any($event.target).value)" />
+                        <div class="sink-filter-input-wrap">
+                            <input pInputText
+                                   class="sink-filter-input"
+                                   placeholder="Filter…"
+                                   [value]="sink().filterText()"
+                                   (input)="onFilterTextChange($any($event.target).value)" />
+                            @if (sink().filterText()) {
+                                <button class="sink-filter-clear"
+                                        title="Clear event filter"
+                                        aria-label="Clear event filter"
+                                        (click)="onFilterTextClear(); $event.stopPropagation()">
+                                    <i class="pi pi-times"></i>
+                                </button>
+                            }
+                        </div>
 
                         <!-- Level slider -->
-                        <div class="sink-level-slider-wrap" title="Min level: {{getLevelLabel(sink().minLevel())}}">
-                            <span class="sink-level-label mr-2">{{getLevelLabel(sink().minLevel())}}</span>
+                        <div class="sink-level-slider-wrap" title="Levels: {{getLevelLabel(sink().normalizedLevelRange[0])}} to {{getLevelLabel(sink().normalizedLevelRange[1])}}">
+                            <span class="sink-level-label">{{getLevelLabel(sink().normalizedLevelRange[0])}}</span>
                             <p-slider
-                                class="sink-level-slider mr-4"
-                                [min]="0" [max]="6" [step]="1"
-                                [ngModel]="sink().minLevel()"
-                                (onChange)="onMinLevelChange($any($event).value)"
+                                class="sink-level-slider"
+                                [min]="0" [max]="5" [step]="1" [range]="true"
+                                [ngModel]="[sink().normalizedLevelRange[0], sink().normalizedLevelRange[1]]"
+                                (ngModelChange)="onLevelRangeChange($event)"
                                 (click)="$event.stopPropagation()"></p-slider>
+                            <span class="sink-level-label sink-level-max-label">{{getLevelLabel(sink().normalizedLevelRange[1])}}</span>
                         </div>
                     </div>
                 }
@@ -44,7 +55,7 @@
                 <button class="sink-filter-toggle"
                         title="Filter events"
                         (click)="sink().toggleFilters(); $event.stopPropagation()"
-                        [class.sink-filter-toggle--active]="sink().filtersVisible() || sink().filterText() || sink().minLevel() > 0">
+                        [class.sink-filter-toggle--active]="sink().filtersVisible() || sink().filterText() || sink().hasLevelFilter">
                     <i class="pi pi-filter"></i>
                 </button>
             </div>
@@ -58,13 +69,15 @@
                 <col class="w-20" />
                 <col class="w-44" />
                 <col class="w-20" />
+                <col class="w-48" />
                 <col />
             </colgroup>
             <thead class="sticky top-0 bg-[#1a1c20] z-10">
                 <tr>
-                    <th class="p-2 text-left w-20">Id</th>
+                    <th class="p-2 text-left w-20">#</th>
                     <th class="p-2 text-left w-44 whitespace-nowrap">Date</th>
                     <th class="p-2 text-left w-20">Level</th>
+                    <th class="p-2 text-left w-48">Logger</th>
                     <th class="p-2 text-left">Message</th>
                 </tr>
             </thead>
@@ -74,14 +87,15 @@
                         [class.event-row-selected]="event.isSelected"
                         (mousedown)="onRowMouseDown(event)"
                         (mouseover)="onRowMouseOver(event)">
-                        <td class="p-2">{{ event.id }}</td>
+                        <td class="p-2">{{ sink().getEventNumber(event) }}</td>
                         <td class="p-2 whitespace-nowrap">{{ event.date | date:'yyyy-MM-dd HH:mm:ss' }}</td>
                         <td class="p-2">{{ event.level | levelToString }}</td>
+                        <td class="overflow-hidden p-2 text-ellipsis whitespace-nowrap" [title]="event.loggerCategory">{{ event.loggerCategory }}</td>
                         <td class="overflow-hidden p-2 text-ellipsis whitespace-nowrap">{{ truncateEventMessage(event.message) }}</td>
                     </tr>
                 } @empty {
                     <tr>
-                        <td colspan="4" class="p-4 text-center text-gray-500">No events</td>
+                        <td colspan="5" class="p-4 text-center text-gray-500">No events</td>
                     </tr>
                 }
             </tbody>

@@ -28,9 +28,9 @@
                     <span class="event-detail-value">{{ event().user }}</span>
                 </span>
             }
-            <span class="event-detail-meta-item flex-1">
+            <span class="event-detail-meta-item event-detail-message-item flex-1">
                 <span class="event-detail-label">Message</span>
-                <span class="event-detail-value text-white">{{ event().message }}</span>
+                <span class="event-detail-value event-detail-message text-white" [title]="event().message">{{ event().message }}</span>
             </span>
         </div>
 

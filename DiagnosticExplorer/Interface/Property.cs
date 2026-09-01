@@ -39,6 +39,29 @@ public enum PropertyAlertSeverity
     Error = 2,
 }
 
+public enum StatusCode
+{
+    Active = 1,
+    Inactive = 2,
+    Pending = 3,
+    Success = 4,
+    Warning = 5,
+    Error = 6,
+    Alert = 7,
+    Danger = 8,
+    Running = 9,
+    Stopped = 10,
+    Disabled = 11,
+    Paused = 12,
+}
+
+public enum StatusIconSize
+{
+    Small = 0,
+    Medium = 1,
+    Large = 2,
+}
+
 public enum PropertyValueKind
 {
     Unspecified = 0,
@@ -78,6 +101,24 @@ public class PropertyAlert
 
     [ProtoMember(3)]
     public string Category { get; set; }
+}
+
+[ProtoContract(UseProtoMembersOnly = true)]
+public class PropertyStatus
+{
+    public PropertyStatus() { }
+
+    public PropertyStatus(StatusCode status, string text)
+    {
+        Status = status;
+        Text = text ?? status.ToString();
+    }
+
+    [ProtoMember(1)]
+    public StatusCode Status { get; set; }
+
+    [ProtoMember(2)]
+    public string Text { get; set; }
 }
 
 [ProtoContract(UseProtoMembersOnly = true)]
@@ -136,6 +177,12 @@ public class Property
 
     [ProtoMember(13)]
     public bool NoTruncate { get; set; }
+
+    [ProtoMember(14)]
+    public List<PropertyStatus> Statuses { get; set; } = new();
+
+    [ProtoMember(15)]
+    public StatusIconSize StatusIconSize { get; set; }
 
     internal object SourceObject { get; set; }
 

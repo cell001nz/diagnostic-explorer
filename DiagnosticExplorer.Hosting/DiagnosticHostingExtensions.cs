@@ -21,6 +21,7 @@ namespace DiagnosticExplorer
             DeferredDiagnosticConfigurator stagedConfiguration = new(diagnosticConfiguration);
             try
             {
+                ConfigureRuntimeObjects(diagnosticConfiguration, stagedConfiguration);
                 configureDiagnostics(stagedConfiguration);
                 services.AddDiagnosticExplorer(diagnosticConfiguration);
                 if (DiagnosticManager.Enabled)
@@ -57,6 +58,7 @@ namespace DiagnosticExplorer
             {
                 DiagnosticConfiguration diagnosticConfiguration = new();
                 DeferredDiagnosticConfigurator stagedConfiguration = new(diagnosticConfiguration);
+                ConfigureRuntimeObjects(diagnosticConfiguration, stagedConfiguration);
                 configureDiagnostics(stagedConfiguration);
                 DiagnosticManager.UseConfiguration(diagnosticConfiguration);
                 DiagnosticManager.ConfigureOnDemand(diagnosticConfiguration, stagedConfiguration.ApplyDeferredConfiguration);
@@ -68,6 +70,19 @@ namespace DiagnosticExplorer
             }
 
             return services;
+        }
+
+        private static void ConfigureRuntimeObjects(DiagnosticConfiguration configuration, IDiagConfigurator diagnostics)
+        {
+            diagnostics.RegisterObjects(registrar =>
+            {
+                SystemEnvironmentOptions options = configuration.RuntimeOptions.SystemEnvironment;
+                if (!options.IsEnabled)
+                    return;
+
+                SystemStatus.Register();
+                registrar.Register(SystemStatus.Instance, options.Category, options.Name);
+            });
         }
 
         public static IServiceCollection AddDiagnosticExplorer(

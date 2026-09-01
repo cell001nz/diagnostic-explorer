@@ -53,6 +53,38 @@ $event-grid-min-width: 60rem;
 	margin-right: 0;
 }
 
+.property-statuses {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.25rem;
+	padding-top: 0.15rem;
+}
+
+.property-status {
+	display: inline-flex;
+	align-items: center;
+}
+
+.property-status-icon {
+	font-size: 0.75rem;
+	line-height: 1;
+}
+
+.property-statuses-medium .property-status-icon {
+	font-size: 1rem;
+}
+
+.property-statuses-large .property-status-icon {
+	font-size: 1.25rem;
+}
+
+.property-status-positive { color: #4ade80; }
+.property-status-muted { color: #94a3b8; }
+.property-status-info { color: #7dd3fc; }
+.property-status-warning { color: #fbbf24; }
+.property-status-danger { color: #f87171; }
+
 .property-name {
 	display: block;
 	box-sizing: border-box;

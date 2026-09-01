@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DiagnosticExplorer;
-using log4net.Repository.Hierarchy;
 
 namespace WidgetSample.Harness;
 
@@ -40,8 +39,17 @@ public sealed class WidgetConfig
         config.Configure<WidgetConfig>(options =>
         {
             options.IncludeAll();
-            options.Exclude(obj => obj.Connection);
-            options.Property(obj => obj.Connection).Expand(true);
+            options
+                .Property(obj => obj.Connection)
+                .Expand(true)
+                .Status(StatusCode.Active, obj => obj.Connection.RetryLimit > 1)
+                .Status(StatusCode.Running, obj => obj.Connection.RetryLimit > 2);
+
+            options
+                .Property(obj => obj.RefreshIntervalSeconds)
+                .Warn(obj => obj.RefreshIntervalSeconds > 10)
+                .Error(obj => obj.RefreshIntervalSeconds > 20);
+
             options
                 .Property(configuration => configuration.Items)
                 .ListItems()

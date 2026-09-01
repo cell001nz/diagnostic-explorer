@@ -38,8 +38,12 @@ export class EventSinkViewComponent implements OnDestroy {
         this.sink().setFilterText(value);
     }
 
-    onMinLevelChange(value: number): void {
-        this.sink().setMinLevel(value);
+    onFilterTextClear(): void {
+        this.sink().setFilterText('');
+    }
+
+    onLevelRangeChange(value: number[]): void {
+        this.sink().setLevelRange(value);
     }
 
     selectEvent(event: EventModel): void {

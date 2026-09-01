@@ -32,6 +32,17 @@
   white-space: nowrap;
 }
 
+.event-detail-message-item {
+  min-width: 0;
+}
+
+.event-detail-message {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .event-detail-label {
   font-size: 0.65rem;
   color: var(--text-color-secondary);

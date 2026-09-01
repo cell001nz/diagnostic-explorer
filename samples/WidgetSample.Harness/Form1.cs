@@ -28,6 +28,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing.Text;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -40,6 +41,8 @@ namespace WidgetSample.Harness;
 [DiagnosticClass(AttributedPropertiesOnly = true, DeclaringTypeOnly = true)]
 public partial class Form1 : Form, INotifyPropertyChanged
 {
+    private static readonly Random SharedRandom = new Random();
+
     private static int _evtCount1;
     private static readonly Random _rand = new Random();
     private readonly BindingList<Gadget> _gadgets;
@@ -410,30 +413,18 @@ public partial class Form1 : Form, INotifyPropertyChanged
     private void SendEvents(object o)
     {
         if (chkSystem.Checked)
-            _ = RunScopedTraceExampleAsync(
-                message => _formLog.Info(message),
-                exception => _formLog.Error(exception),
-                $"Form Trace Scope {_evtCount1++}"
-            );
+            LogJson(_formLog.Log, $"Form Trace Scope {_evtCount1++}");
 
         if (chkWidgets.Checked)
         {
             foreach (var w in _widgets)
-                _ = RunScopedTraceExampleAsync(
-                    message => w.Log.Info(message),
-                    exception => w.Log.Error(exception),
-                    $"Widget Trace Scope {_evtCount1++}"
-                );
+                LogJson(w.Log.Log, $"Widget Trace Scope {_evtCount1++}");
         }
 
         if (chkGadgets.Checked)
         {
             foreach (var g in _gadgets)
-                _ = RunScopedTraceExampleAsync(
-                    message => g.Log.Info(message),
-                    exception => g.Log.Error(exception),
-                    $"Gadget Trace Scope {_evtCount1++}"
-                );
+                LogJson(g.Log.Log, $"Gadget Trace Scope {_evtCount1++}");
         }
     }
 
@@ -459,6 +450,81 @@ public partial class Form1 : Form, INotifyPropertyChanged
                 $"Gadget Trace Scope {_evtCount1++}"
             );
         }
+    }
+
+    private void LogJson(Action<SampleLogLevel, string> log, string message)
+    {
+        string json = CreateRandomJsonDocument(message);
+
+        log(GetRandomLogLevel(), $"{message}{Environment.NewLine}{json}");
+    }
+
+    private static string CreateRandomJsonDocument(string message)
+    {
+        int elementCount = SharedRandom.Next(20, 101);
+        Dictionary<string, object> payload = new();
+
+        for (int elementIndex = 0; elementIndex < elementCount; elementIndex++)
+        {
+            Dictionary<string, object> current = payload;
+            int nestingDepth = SharedRandom.Next(1, 5);
+            for (int depth = 0; depth < nestingDepth; depth++)
+            {
+                Dictionary<string, object> nested = new();
+                current[$"section_{elementIndex}_{depth}"] = nested;
+                current = nested;
+            }
+
+            current[$"value_{elementIndex}"] = CreateRandomJsonValue();
+        }
+
+        Dictionary<string, object> document = new()
+        {
+            ["event"] = message,
+            ["generatedAt"] = DateTimeOffset.UtcNow,
+            ["payload"] = payload,
+        };
+
+        return JsonSerializer.Serialize(document);
+    }
+
+    private static object CreateRandomJsonValue()
+    {
+        return SharedRandom.Next(6) switch
+        {
+            0 => SharedRandom.Next(),
+            1 => SharedRandom.NextDouble(),
+            2 => SharedRandom.Next(2) == 0,
+            3 => $"text-{SharedRandom.Next():X8}",
+            4 => DateTimeOffset.UtcNow.AddMinutes(-SharedRandom.Next(10_000)),
+            _ => new object[] { SharedRandom.Next(), $"item-{SharedRandom.Next():X8}", SharedRandom.Next(2) == 0 },
+        };
+    }
+
+    private static SampleLogLevel GetRandomLogLevel()
+    {
+        SampleLogLevel[] levels =
+        {
+            SampleLogLevel.Trace,
+            SampleLogLevel.Debug,
+            SampleLogLevel.Information,
+            SampleLogLevel.Notice,
+            SampleLogLevel.Warning,
+            SampleLogLevel.Error,
+            SampleLogLevel.Critical,
+        };
+
+        int selectedWeight = SharedRandom.Next(levels.Length * (levels.Length + 1) / 2);
+        for (int index = 0; index < levels.Length; index++)
+        {
+            int weight = levels.Length - index;
+            if (selectedWeight < weight)
+                return levels[index];
+
+            selectedWeight -= weight;
+        }
+
+        return levels[levels.Length - 1];
     }
 
     private static Task RunScopedTraceExampleAsync(Action<string> info, Action<Exception> error, string message)

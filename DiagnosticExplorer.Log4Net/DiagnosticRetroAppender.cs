@@ -8,69 +8,54 @@ namespace DiagnosticExplorer.Log4Net;
 
 public class DiagnosticRetroAppender : AppenderSkeleton
 {
-	private string _version;
-	private string _process;
+    private string _version;
+    private string _process;
 
-	private static Action<DiagnosticMsg> _loggingAction;
+    private static Action<DiagnosticMsg> _loggingAction;
 
-	public string Environment { get; set; }
+    public string Environment { get; set; }
 
-	public static void SetLoggingAction(Action<DiagnosticMsg> action)
-	{
-		_loggingAction = action;
-	}
+    public static void SetLoggingAction(Action<DiagnosticMsg> action)
+    {
+        _loggingAction = action;
+    }
 
+    public DiagnosticRetroAppender()
+    {
+        _version = Assembly.GetEntryAssembly()?.GetName().Version.ToString();
+        _process = Process.GetCurrentProcess().ProcessName;
+    }
 
-	public DiagnosticRetroAppender()
-	{
-		_version = Assembly.GetEntryAssembly()?.GetName().Version.ToString();
-		_process = Process.GetCurrentProcess().ProcessName;
-	}
+    protected override void Append(LoggingEvent loggingEvent)
+    {
+        // Debug.WriteLine("DiagnosticRetroAppender.Append");
+        // Debug.WriteLine("DiagnosticRetroAppender.PerformSend");
+        DiagnosticMsg msg = new()
+        {
+            Level = loggingEvent.Level.ToMicrosoftOrdinal(),
+            Date = DateTime.UtcNow,
+            Machine = System.Environment.MachineName,
+            User = System.Environment.UserName,
+            Environment = Environment,
+            Category = loggingEvent.LoggerName,
+            Process = $"{_process} {_version}",
+            Message = GetMessage(loggingEvent),
+        };
 
-	public override void ActivateOptions()
-	{
-		base.ActivateOptions();
+        EventsIn.Register(1);
+        _loggingAction?.Invoke(msg);
+    }
 
-		DiagnosticManager.Register(this, Name, "Log4Net");
-	}
+    [RateProperty(ExposeRate = false, ExposeTotal = true)]
+    public RateCounter EventsIn { get; set; } = new RateCounter(3);
 
-	protected override void Append(LoggingEvent loggingEvent)
-	{
-		// Debug.WriteLine("DiagnosticRetroAppender.Append");
-		// Debug.WriteLine("DiagnosticRetroAppender.PerformSend");
-		DiagnosticMsg msg = new() {
-			Level = loggingEvent.Level.ToMicrosoftOrdinal(),
-			Date = DateTime.UtcNow,
-			Machine = System.Environment.MachineName,
-			User = System.Environment.UserName,
-			Environment = Environment,
-			Category = loggingEvent.LoggerName,
-			Process = $"{_process} {_version}",
-			Message = GetMessage(loggingEvent)
-		};
+    private string GetMessage(LoggingEvent loggingEvent)
+    {
+        string message = RenderLoggingEvent(loggingEvent);
 
-		EventsIn.Register(1);
-		_loggingAction?.Invoke(msg);
-	}
+        if (!ReferenceEquals(loggingEvent.MessageObject, loggingEvent.ExceptionObject))
+            message += System.Environment.NewLine + loggingEvent.ExceptionObject;
 
-
-	[RateProperty(ExposeRate = false, ExposeTotal = true)]
-	public RateCounter EventsIn { get; set; } = new RateCounter(3);
-
-	private string GetMessage(LoggingEvent loggingEvent)
-	{
-		string message = RenderLoggingEvent(loggingEvent);
-
-		if (!ReferenceEquals(loggingEvent.MessageObject, loggingEvent.ExceptionObject))
-			message += System.Environment.NewLine + loggingEvent.ExceptionObject;
-
-		return message;
-	}
-
-	protected override void OnClose()
-	{
-		base.OnClose();
-		DiagnosticManager.Unregister(this);
-	}
-
+        return message;
+    }
 }

@@ -55,6 +55,21 @@ describe('ProcessEventStore', () => {
         expect(store.eventsForDestination('Application', 'Events').map((event) => event.sequence)).toEqual([1]);
     });
 
+    it('routes events at or above a minimum level without requiring a maximum level', () => {
+        const initialization = createInitialization();
+        initialization.routing.routes[0].minLevel = 3;
+        const store = new ProcessEventStore();
+        store.initialize(initialization);
+
+        store.append([
+            { ...createEvent(1), level: 2 },
+            { ...createEvent(2), level: 3 },
+            { ...createEvent(3), level: 5 }
+        ]);
+
+        expect(store.eventsForDestination('Application', 'Events').map((event) => event.sequence)).toEqual([3, 2]);
+    });
+
     it('removes evicted events from their destination index', () => {
         const store = new ProcessEventStore();
         store.initialize(createInitialization(2));

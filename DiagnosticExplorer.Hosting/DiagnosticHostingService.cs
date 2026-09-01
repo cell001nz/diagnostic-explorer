@@ -73,7 +73,6 @@ public class DiagnosticHostingService : IHostedService
         try
         {
             DiagnosticRetroAppender.SetLoggingAction(LogEvent);
-            SystemStatus.Register();
 
             Registration registration = new()
             {

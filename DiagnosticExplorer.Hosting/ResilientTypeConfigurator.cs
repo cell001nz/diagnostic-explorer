@@ -130,6 +130,12 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public IPropertyConfigurator<T, TProperty> Format(Func<TProperty, string> format) => this;
 
+        public IPropertyConfigurator<T, TProperty> WithText(string text) => this;
+
+        public IPropertyConfigurator<T, TProperty> WithText(Func<T, string> text) => this;
+
+        public IPropertyConfigurator<T, TProperty> WithIconSize(StatusIconSize size) => this;
+
         public IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100) => this;
 
         public IPropertyConfigurator<T, TProperty> AsDateOnly() => this;
@@ -140,9 +146,19 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(string text, int? maxItems = null) => this;
 
+        public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(Func<T, string> text, int? maxItems = null) => this;
+
         public IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true) => this;
 
         public IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true) => this;
+
+        public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition) => this;
+
+        public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, string text) => this;
+
+        public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text) => this;
+
+        public IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition) => this;
 
         public IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message) => this;
 
@@ -159,6 +175,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         public IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition, Func<T, string> message) => this;
 
         public IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition, Func<T, string> message, string category) => this;
+
+        public IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition) => this;
     }
 
     private sealed class NoOpCustomPropertyConfigurator : ICustomPropertyConfigurator<T>
@@ -173,6 +191,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public ICustomPropertyConfigurator<T> WithDrillDownOnly(string text, int? maxItems = null) => this;
 
+        public ICustomPropertyConfigurator<T> WithDrillDownOnly(Func<T, string> text, int? maxItems = null) => this;
+
         public ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true) => this;
 
         public ICustomPropertyConfigurator<T> WithExpandedHover(bool enabled = true) => this;
@@ -184,6 +204,14 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         public ICustomPropertyConfigurator<T> Description(string description) => this;
 
         public ICustomPropertyConfigurator<T> Description(Func<T, string> description) => this;
+
+        public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition) => this;
+
+        public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, string text) => this;
+
+        public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text) => this;
+
+        public ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition) => this;
 
         public ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, string message) => this;
 
@@ -200,6 +228,8 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         public ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, Func<T, string> message) => this;
 
         public ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, Func<T, string> message, string category) => this;
+
+        public ICustomPropertyConfigurator<T> Error(Func<T, bool> condition) => this;
     }
 
     private sealed class ResilientCustomObjectConfigurator : ICustomObjectConfigurator<T>

@@ -31,7 +31,6 @@ public class RetroManager : IHostedService
     private readonly ConcurrentDictionary<string, RetroSearchProcess> _searches = new();
     public EventSink RetroEvents { get; } = EventSinkRepo.Default.GetSink("Retro Events", "Retro");
 
-
     public RetroManager(IHostApplicationLifetime lifetime, IOptions<DiagServiceSettings> config)
     {
         Options = config.Value;
@@ -39,30 +38,25 @@ public class RetroManager : IHostedService
         lifetime.ApplicationStopping.Register(() => StopAsync(CancellationToken.None));
     }
 
-  
     public Task StartAsync(CancellationToken cancel)
     {
-        DiagnosticManager.Register(this, "Retro Manager", "Retro");
-
         _writeQueueSize = 0;
 
-        _writeChannel = Channel.CreateBounded<IList<DiagnosticMsg>>(new BoundedChannelOptions(1_000_000)
-        {
-            SingleReader = true, 
-            FullMode = BoundedChannelFullMode.DropWrite,
-        });
-
+        _writeChannel = Channel.CreateBounded<IList<DiagnosticMsg>>(
+            new BoundedChannelOptions(1_000_000) { SingleReader = true, FullMode = BoundedChannelFullMode.DropWrite }
+        );
 
         _logSubject = new Subject<IList<DiagnosticMsg>>();
 
-        _logSubject.SelectMany(list => list)
+        _logSubject
+            .SelectMany(list => list)
             .Buffer(TimeSpan.FromSeconds(1), 50)
             .Where(evts => evts.Count != 0)
-            .Subscribe(evts => {
+            .Subscribe(evts =>
+            {
                 if (_writeChannel.Writer.TryWrite(evts))
                     Interlocked.Add(ref _writeQueueSize, evts.Count);
             });
-
 
         _logger = Options.CreateRetroLogger();
 
@@ -85,9 +79,8 @@ public class RetroManager : IHostedService
             await foreach (var messages in _writeChannel.Reader.ReadAllAsync(cancel))
                 await TryLog(messages, cancel);
         }
-        catch (OperationCanceledException) {}
+        catch (OperationCanceledException) { }
     }
-
 
     public long WriteQueueSize => _writeQueueSize;
     public int ItemsInQueue => _writeChannel.Reader.CanCount ? _writeChannel.Reader.Count : -1;
@@ -100,7 +93,6 @@ public class RetroManager : IHostedService
 
     [RateProperty(ExposeTotal = false, ExposeRate = true)]
     public RateCounter EventsWritten { get; set; } = new(3);
-
 
     private async Task TryLog(IList<DiagnosticMsg> messages, CancellationToken cancel)
     {
@@ -126,7 +118,6 @@ public class RetroManager : IHostedService
         return _logger.GetMessages(query, cancel);
     }
 
-
     public void LogEvents(IList<DiagnosticMsg> messages)
     {
         Subject<IList<DiagnosticMsg>>? logSubject = _logSubject;
@@ -144,8 +135,7 @@ public class RetroManager : IHostedService
         if (_searches.TryRemove(connectionId, out RetroSearchProcess? existingSearch))
             existingSearch.Cancel();
 
-        RetroEvents.Info($"Retro search starting for connection {connectionId}", 
-            JsonSerializer.SerializeToElement(query).ToString());
+        RetroEvents.Info($"Retro search starting for connection {connectionId}", JsonSerializer.SerializeToElement(query).ToString());
 
         RetroSearchProcess search = new(this, connectionId, client, query);
         _searches.TryAdd(connectionId, search);
@@ -153,7 +143,6 @@ public class RetroManager : IHostedService
         search.Start();
         return Task.CompletedTask;
     }
-
 
     public Task<long> RetroDelete(string[] idList)
     {
@@ -164,9 +153,11 @@ public class RetroManager : IHostedService
 
     private void HandleSearchFinished(object? sender, EventArgs e)
     {
-        RetroSearchProcess search = (RetroSearchProcess) sender!;
-        RetroEvents.Info($"Retro search complete for connection {search.ClientId} in {search.SearchTime.TotalSeconds:N2}s", 
-            JsonSerializer.SerializeToElement(search.Query).ToString());
+        RetroSearchProcess search = (RetroSearchProcess)sender!;
+        RetroEvents.Info(
+            $"Retro search complete for connection {search.ClientId} in {search.SearchTime.TotalSeconds:N2}s",
+            JsonSerializer.SerializeToElement(search.Query).ToString()
+        );
     }
 
     public Task CancelRetroSearch(int searchId, string connectionId)
@@ -182,6 +173,4 @@ public class RetroManager : IHostedService
 
         return Task.CompletedTask;
     }
-
-   
 }

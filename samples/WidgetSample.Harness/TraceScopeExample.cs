@@ -37,7 +37,7 @@ public static class TraceScopeExample
             if (SharedRandom.Next(100) < 50)
                 await TestTraceScope2(ident);
 
-            if (SharedRandom.NextDouble() > 0.99)
+            if (SharedRandom.NextDouble() > 0.75)
                 throw new ApplicationException($"Random Exception {SharedRandom.NextDouble()}");
 
             int times = SharedRandom.Next(1, 3);

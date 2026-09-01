@@ -1,6 +1,7 @@
-﻿import { OperationSet, Property, PropertyAlert } from '@domain/DiagResponse';
+﻿import { OperationSet, Property, PropertyAlert, PropertyStatus } from '@domain/DiagResponse';
 import { SubBagModel } from './SubBagModel';
 import { computed, signal } from '@angular/core';
+import { getStatusIconClass, getStatusIconSize, StatusIconSize } from './StatusVisual';
 
 const namedAlertSeverities: Record<string, number> = {
     None: 0,
@@ -52,6 +53,8 @@ export class PropModel {
     noTruncate = signal(false);
     valueKind = signal<DisplayValueKind>('text');
     alerts = signal<PropertyAlert[]>([]);
+    statuses = signal<PropertyStatus[]>([]);
+    statusIconSize = signal<StatusIconSize>('small');
     alertSeverity = computed(() => Math.max(0, ...this.alerts().map(getAlertSeverity)));
     alertTooltip = computed(() =>
         this.alerts()
@@ -78,6 +81,12 @@ export class PropModel {
         this.noTruncate.set(source.noTruncate ?? false);
         this.valueKind.set(getValueKind(source.valueKind));
         this.alerts.set(source.alerts ?? []);
+        this.statuses.set(source.statuses ?? []);
+        this.statusIconSize.set(getStatusIconSize(source.statusIconSize));
+    }
+
+    statusIcon(status: PropertyStatus): string {
+        return getStatusIconClass(status);
     }
 
     getOperationSet(): OperationSet | null {

@@ -13,6 +13,7 @@ public class Category
     public Category()
     {
         Properties = new List<Property>();
+        Statuses = new List<PropertyStatus>();
     }
 
     public Category(string name)
@@ -38,6 +39,12 @@ public class Category
 
     [ProtoMember(6)]
     public bool IsExpandedProperty { get; set; }
+
+    [ProtoMember(7)]
+    public List<PropertyStatus> Statuses { get; set; }
+
+    [ProtoMember(8)]
+    public StatusIconSize StatusIconSize { get; set; }
 
     internal object ValueObject { get; set; }
 

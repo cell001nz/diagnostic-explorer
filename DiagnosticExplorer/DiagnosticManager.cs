@@ -19,9 +19,6 @@ internal enum DiagnosticRenderMode
 
 public static class DiagnosticManager
 {
-    private static readonly StringComparer _ignoreCase = StringComparer.CurrentCultureIgnoreCase;
-    private static List<RegisteredObject> RegisteredObjects { get; set; }
-
     private static Dictionary<string, List<PropertyGetter>> _typeHash = new();
     private static readonly object _propertyGetterLock = new();
     private static readonly object _deferredConfigurationLock = new();
@@ -37,17 +34,11 @@ public static class DiagnosticManager
     public static LogEventStore LogEventStore { get; } = new();
     internal static int DrillDownMaxItems => _configuration.DrillDownMaxItems;
 
-    static DiagnosticManager()
-    {
-        RegisteredObjects = new List<RegisteredObject>();
-    }
-
     internal static void Clear()
     {
         _operationLookup.Clear();
         lock (_propertyGetterLock)
             _typeHash.Clear();
-        RegisteredObjects.Clear();
     }
 
     public static DiagnosticConfiguration Configure(Action<IDiagConfigurator> configure)
@@ -146,63 +137,6 @@ public static class DiagnosticManager
 
             if (reportFailure)
                 Trace.TraceError($"Diagnostic Explorer configuration failed and has been disabled: {exception}");
-        }
-    }
-
-    public static void Register(object o, string bagName, string bagCategory)
-    {
-        if (!Enabled)
-            return;
-
-        lock (RegisteredObjects)
-        {
-            RegisteredObject existing = RegisteredObjects.Find(ro => ReferenceEquals(ro.Object, o));
-
-            bagName = MakeNameUnique(existing, bagName, bagCategory);
-            if (existing == null)
-            {
-                RegisteredObjects.Add(new RegisteredObject(o, bagCategory, bagName));
-            }
-            else
-            {
-                existing.BagName = bagName;
-                existing.BagCategory = bagCategory;
-            }
-        }
-    }
-
-    private static string MakeNameUnique(RegisteredObject obj, string name, string category)
-    {
-        if (name == null)
-            return name;
-
-        if (!NameAlreadyTaken(name, category))
-            return name;
-
-        for (int i = 2; ; i++)
-        {
-            string extension = $" {i}";
-            string newName = $"{name}{extension}";
-            if (!NameAlreadyTaken(newName, category))
-                return newName;
-        }
-
-        bool NameAlreadyTaken(string proposedName, string proposedCat)
-        {
-            return RegisteredObjects.Any(ro =>
-                !ReferenceEquals(ro, obj) && _ignoreCase.Equals(proposedName, ro.BagName) && _ignoreCase.Equals(proposedCat, ro.BagCategory)
-            );
-        }
-    }
-
-    public static void Unregister(object obj)
-    {
-        lock (RegisteredObjects)
-        {
-            RegisteredObject existing = RegisteredObjects.Find(ro => ReferenceEquals(ro.Object, obj));
-
-            if (existing != null)
-                RegisteredObjects.Remove(existing);
         }
     }
 
@@ -338,28 +272,7 @@ public static class DiagnosticManager
     public static RegisteredObject[] GetRegisteredObjects(IServiceProvider serviceProvider = null)
     {
         EnsureConfiguration();
-        List<RegisteredObject> list = new();
-
-        lock (RegisteredObjects)
-        {
-            for (int i = RegisteredObjects.Count - 1; i >= 0; i--)
-            {
-                RegisteredObject obj = RegisteredObjects[i];
-                if (obj.Object == null)
-                    RegisteredObjects.RemoveAt(i);
-                else
-                    list.Add(obj);
-            }
-        }
-
-        foreach (RegisteredObject discovered in _configuration.FindRegisteredObjects(serviceProvider))
-        {
-            object discoveredObject = discovered?.Object;
-            if (discoveredObject != null && !list.Any(existing => ReferenceEquals(existing.Object, discoveredObject)))
-                list.Add(discovered);
-        }
-
-        return list.ToArray();
+        return _configuration.FindRegisteredObjects(serviceProvider).Where(registeredObject => registeredObject?.Object != null).ToArray();
     }
 
     public static PropertyBag ObjectToPropertyBag(object obj, string bagName, string bagCategory)
@@ -695,6 +608,7 @@ public static class DiagnosticManager
         configuration.DrillDownMaxItems = output.DrillDownMaxItems.Or(configuration.DrillDownMaxItems);
         configuration.DrillDownIconOnly = output.DrillDownIconOnly.Or(configuration.DrillDownIconOnly);
         configuration.DrillDownText = output.DrillDownText.Or(configuration.DrillDownText);
+        configuration.DrillDownTextFormatter = output.DrillDownTextFormatter ?? configuration.DrillDownTextFormatter;
         configuration.JsonHover = output.JsonHover.Or(configuration.JsonHover);
         configuration.ExpandedHover = output.ExpandedHover.Or(configuration.ExpandedHover);
     }

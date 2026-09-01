@@ -43,14 +43,18 @@ internal class PropertyGetter
     private ConfiguredValue<string> _categoryExpansionScope;
     private Func<object, string> _descriptionFormatter;
     private Func<object, string> _valueFormatter;
+    private Func<object, string> _textFormatter;
     private IReadOnlyList<PropertyAlertConfiguration> _alerts;
+    private IReadOnlyList<PropertyStatusConfiguration> _statuses;
     protected bool DrillDownEnabled { get; private set; }
     protected int DrillDownMaxItems { get; private set; }
     protected bool DrillDownIconOnly { get; private set; }
     protected string DrillDownText { get; private set; }
+    private Func<object, string> _drillDownTextFormatter;
     protected bool JsonHoverEnabled { get; private set; }
     protected bool ExpandedHoverEnabled { get; private set; }
     protected bool NoTruncate { get; private set; }
+    protected StatusIconSize StatusIconSize { get; private set; }
 
     protected PropertyGetter() { }
 
@@ -120,14 +124,19 @@ internal class PropertyGetter
             if (configuration.FormatString.IsSet)
                 FormatString = configuration.FormatString.Value;
             _valueFormatter = configuration.ValueFormatter;
+            _textFormatter = configuration.TextFormatter;
             _alerts = configuration.Alerts;
+            _statuses = configuration.Statuses;
+            if (configuration.StatusIconSize.IsSet)
+                StatusIconSize = configuration.StatusIconSize.Value;
             if (configuration.AllowSet.IsSet)
                 CanSet = propInfo?.CanWrite == true && configuration.AllowSet.Value;
             ConfigureDrillDown(
                 configuration.DrillDown,
                 configuration.DrillDownMaxItems,
                 configuration.DrillDownIconOnly,
-                configuration.DrillDownText
+                configuration.DrillDownText,
+                configuration.DrillDownTextFormatter
             );
             ConfigureHover(configuration.JsonHover, configuration.ExpandedHover);
             if (configuration.NoTruncate.IsSet)
@@ -186,18 +195,21 @@ internal class PropertyGetter
 
     public virtual void GetProperties(object obj, PropertyBag bag, string catPrepend)
     {
+        string value = GetValue(obj, out object objectValue);
         Property p = new Property
         {
             Name = GetName(obj),
             Description = GetDescription(obj),
-            Value = MaxLengthString(GetValue(obj, out object objectValue), 8092),
+            Value = MaxLengthString(GetText(obj, value), 8092),
             ValueObject = objectValue,
             CanSet = CanSet,
             Alerts = GetAlerts(obj),
+            Statuses = GetStatuses(obj),
+            StatusIconSize = StatusIconSize,
             SourceObject = obj,
             SourceProperty = PropInfo,
         };
-        ApplyDrillDown(p, objectValue);
+        ApplyDrillDown(p, objectValue, obj);
         if (p.DrillDownIconOnly)
             p.Value = null;
 
@@ -233,6 +245,21 @@ internal class PropertyGetter
 
     protected virtual string GetCategory(object obj) => GetFormattedMetadata(_categoryFormatter, obj, Category);
 
+    private string GetText(object obj, string value)
+    {
+        if (_textFormatter == null)
+            return value;
+
+        try
+        {
+            return _textFormatter(obj);
+        }
+        catch (Exception ex)
+        {
+            return $"<{ex.Message}>";
+        }
+    }
+
     internal virtual bool IsDirectProperty => true;
 
     internal bool IsInGeneralCategory(object obj) => CategoryExtensions.NormalizeName(GetCategory(obj)) == null;
@@ -264,6 +291,29 @@ internal class PropertyGetter
         }
 
         return activeAlerts;
+    }
+
+    protected List<PropertyStatus> GetStatuses(object obj)
+    {
+        if (_statuses == null)
+            return new List<PropertyStatus>();
+
+        List<PropertyStatus> activeStatuses = new();
+        foreach (PropertyStatusConfiguration status in _statuses)
+        {
+            try
+            {
+                if (status.Condition(obj))
+                    activeStatuses.Add(new PropertyStatus(status.Status, status.Text(obj)));
+            }
+            catch (Exception ex)
+            {
+                activeStatuses.Add(new PropertyStatus(StatusCode.Error, $"<{ex.Message}>"));
+                break;
+            }
+        }
+
+        return activeStatuses;
     }
 
     private static void AddWorstAlert(List<PropertyAlert> alerts, IDictionary<string, int> indexes, PropertyAlert alert)
@@ -393,11 +443,18 @@ internal class PropertyGetter
         _categoryExpansionScope = configuration.CategoryExpansionScope;
         _valueFormatter = configuration.ValueFormatter;
         _alerts = configuration.Alerts;
-        ConfigureDrillDown(configuration.DrillDown, configuration.DrillDownMaxItems, configuration.DrillDownIconOnly, configuration.DrillDownText);
+        _statuses = configuration.Statuses;
+        ConfigureDrillDown(
+            configuration.DrillDown,
+            configuration.DrillDownMaxItems,
+            configuration.DrillDownIconOnly,
+            configuration.DrillDownText,
+            configuration.DrillDownTextFormatter
+        );
         ConfigureHover(configuration.JsonHover, configuration.ExpandedHover);
     }
 
-    protected void ApplyDrillDown(Property property, object value)
+    protected void ApplyDrillDown(Property property, object value, object owner)
     {
         bool canDrillDown = DiagnosticManager.IsDrillDownValue(value);
         if (!canDrillDown && (!JsonHoverEnabled || value == null))
@@ -405,7 +462,7 @@ internal class PropertyGetter
 
         property.CanDrillDown = DrillDownEnabled && canDrillDown;
         property.DrillDownIconOnly = property.CanDrillDown && DrillDownIconOnly;
-        property.DrillDownText = property.CanDrillDown ? DrillDownText : null;
+        property.DrillDownText = property.CanDrillDown ? GetDrillDownText(owner) : null;
         property.CanJsonHover = JsonHoverEnabled && value != null;
         property.CanExpandedHover = ExpandedHoverEnabled && canDrillDown;
         property.DrillDownObject = value;
@@ -416,13 +473,30 @@ internal class PropertyGetter
         ConfiguredValue<bool> enabled,
         ConfiguredValue<int> maxItems,
         ConfiguredValue<bool> iconOnly,
-        ConfiguredValue<string> text
+        ConfiguredValue<string> text,
+        Func<object, string> textFormatter = null
     )
     {
         DrillDownEnabled = enabled.IsSet && enabled.Value;
         DrillDownMaxItems = maxItems.IsSet ? maxItems.Value : DiagnosticManager.DrillDownMaxItems;
         DrillDownIconOnly = iconOnly.IsSet && iconOnly.Value;
         DrillDownText = text.IsSet ? text.Value : null;
+        _drillDownTextFormatter = textFormatter;
+    }
+
+    private string GetDrillDownText(object owner)
+    {
+        if (_drillDownTextFormatter == null)
+            return DrillDownText;
+
+        try
+        {
+            return _drillDownTextFormatter(owner);
+        }
+        catch (Exception ex)
+        {
+            return $"<{ex.Message}>";
+        }
     }
 
     private void ConfigureHover(ConfiguredValue<bool> jsonHover, ConfiguredValue<bool> expandedHover)

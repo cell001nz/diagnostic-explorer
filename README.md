@@ -321,11 +321,10 @@ using DiagnosticExplorer;
 DiagnosticConfiguration diagnostics = DiagnosticManager.Configure(config =>
 {
     config.ConfigureHosting(applicationConfiguration);
+    config.RegisterObjects(registrar => registrar.Register(widget, "Widgets", "Widget 42"));
     ConfigureClasses(config);
     ConfigureEventRoutes(config);
 });
-
-DiagnosticManager.Register(widget, "Widget 42", "Widgets");
 
 await DiagnosticHostingService.StartAsync(diagnostics);
 try

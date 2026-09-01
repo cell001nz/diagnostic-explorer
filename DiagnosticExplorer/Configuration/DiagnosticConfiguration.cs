@@ -47,6 +47,11 @@ public sealed class DiagnosticConfiguration : IDiagConfigurator
         configure(RuntimeOptions);
     }
 
+    public ISystemEnvironmentConfigurator ConfigureSystemEnvironment()
+    {
+        return RuntimeOptions.SystemEnvironment;
+    }
+
     public void ConfigureEventRouting(Action<EventSinkRouteOptions> configure)
     {
         if (configure == null)
@@ -161,6 +166,7 @@ public sealed class DiagnosticRuntimeOptions : IDiagnosticHostingConfigurator
     public bool Enabled { get; private set; } = true;
     public List<DiagnosticHostOptions> Hosts { get; } = new();
     public EventRetentionOptions EventRetention { get; } = new();
+    public SystemEnvironmentOptions SystemEnvironment { get; } = new();
     public LogEventRetentionOptions LogEventRetention { get; } = new();
     public EventSinkRouteOptions Routing { get; } = new();
 
@@ -187,6 +193,37 @@ public sealed class DiagnosticRuntimeOptions : IDiagnosticHostingConfigurator
             throw new ArgumentNullException(nameof(configure));
 
         configure(EventRetention);
+        return this;
+    }
+}
+
+public sealed class SystemEnvironmentOptions : ISystemEnvironmentConfigurator
+{
+    public bool IsEnabled { get; private set; } = true;
+    public string Category { get; private set; } = "System";
+    public string Name { get; private set; } = "Environment";
+
+    ISystemEnvironmentConfigurator ISystemEnvironmentConfigurator.Enabled(bool enabled)
+    {
+        IsEnabled = enabled;
+        return this;
+    }
+
+    ISystemEnvironmentConfigurator ISystemEnvironmentConfigurator.WithCategory(string category)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            throw new ArgumentException("A category is required.", nameof(category));
+
+        Category = category;
+        return this;
+    }
+
+    ISystemEnvironmentConfigurator ISystemEnvironmentConfigurator.WithName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("A name is required.", nameof(name));
+
+        Name = name;
         return this;
     }
 }
@@ -521,8 +558,11 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<string> Description { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
+    public List<PropertyStatusConfiguration> Statuses { get; } = new();
     public ConfiguredValue<string> FormatString { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
+    public Func<object, string> TextFormatter { get; set; }
+    public ConfiguredValue<StatusIconSize> StatusIconSize { get; set; }
     public ConfiguredValue<bool> AllowSet { get; set; }
     public ConfiguredValue<bool> ExposeRate { get; set; }
     public ConfiguredValue<bool> ExposeTotal { get; set; }
@@ -537,6 +577,7 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
     public ConfiguredValue<string> DrillDownText { get; set; }
+    public Func<object, string> DrillDownTextFormatter { get; set; }
     public ConfiguredValue<bool> JsonHover { get; set; }
     public ConfiguredValue<bool> ExpandedHover { get; set; }
     public List<CollectionOutputConfiguration> CollectionOutputs { get; } = new();
@@ -556,6 +597,8 @@ internal sealed class PropertyConfiguration
         bound.NameFormatter = NameFormatter == null ? null : _ => NameFormatter(source);
         bound.CategoryFormatter = CategoryFormatter == null ? null : _ => CategoryFormatter(source);
         bound.DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source);
+        bound.TextFormatter = TextFormatter == null ? null : _ => TextFormatter(source);
+        bound.DrillDownTextFormatter = DrillDownTextFormatter == null ? null : _ => DrillDownTextFormatter(source);
         bound.Alerts.Clear();
         bound.Alerts.AddRange(
             Alerts.Select(alert => new PropertyAlertConfiguration(
@@ -564,6 +607,9 @@ internal sealed class PropertyConfiguration
                 _ => alert.Message(source),
                 alert.Category == null ? null : _ => alert.Category(source)
             ))
+        );
+        bound.Statuses.AddRange(
+            Statuses.Select(status => new PropertyStatusConfiguration(status.Status, _ => status.Condition(source), _ => status.Text(source)))
         );
         return bound;
     }
@@ -583,6 +629,8 @@ internal sealed class PropertyConfiguration
         DescriptionFormatter = source.DescriptionFormatter ?? DescriptionFormatter;
         FormatString = source.FormatString.Or(FormatString);
         ValueFormatter = source.ValueFormatter ?? ValueFormatter;
+        TextFormatter = source.TextFormatter ?? TextFormatter;
+        StatusIconSize = source.StatusIconSize.Or(StatusIconSize);
         AllowSet = source.AllowSet.Or(AllowSet);
         ExposeRate = source.ExposeRate.Or(ExposeRate);
         ExposeTotal = source.ExposeTotal.Or(ExposeTotal);
@@ -597,9 +645,11 @@ internal sealed class PropertyConfiguration
         DrillDownMaxItems = source.DrillDownMaxItems.Or(DrillDownMaxItems);
         DrillDownIconOnly = source.DrillDownIconOnly.Or(DrillDownIconOnly);
         DrillDownText = source.DrillDownText.Or(DrillDownText);
+        DrillDownTextFormatter = source.DrillDownTextFormatter ?? DrillDownTextFormatter;
         JsonHover = source.JsonHover.Or(JsonHover);
         ExpandedHover = source.ExpandedHover.Or(ExpandedHover);
         Alerts.AddRange(source.Alerts.Select(alert => alert.Clone()));
+        Statuses.AddRange(source.Statuses.Select(status => status.Clone()));
         if (source.CollectionOutputs.Count > 0)
         {
             CollectionOutputs.Clear();
@@ -631,6 +681,22 @@ internal sealed class PropertyAlertConfiguration
     public PropertyAlertConfiguration Clone() => new(Severity, Condition, Message, Category);
 }
 
+internal sealed class PropertyStatusConfiguration
+{
+    public PropertyStatusConfiguration(StatusCode status, Func<object, bool> condition, Func<object, string> text)
+    {
+        Status = status;
+        Condition = condition;
+        Text = text;
+    }
+
+    public StatusCode Status { get; }
+    public Func<object, bool> Condition { get; }
+    public Func<object, string> Text { get; }
+
+    public PropertyStatusConfiguration Clone() => new(Status, Condition, Text);
+}
+
 internal sealed class CustomPropertyConfiguration
 {
     public CustomPropertyConfiguration(string name, Func<object, object> value)
@@ -649,11 +715,13 @@ internal sealed class CustomPropertyConfiguration
     public Func<object, string> DescriptionFormatter { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
+    public List<PropertyStatusConfiguration> Statuses { get; } = new();
     public ConfiguredValue<bool> InitiallyExpanded { get; set; }
     public ConfiguredValue<bool> DrillDown { get; set; }
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
     public ConfiguredValue<string> DrillDownText { get; set; }
+    public Func<object, string> DrillDownTextFormatter { get; set; }
     public ConfiguredValue<bool> JsonHover { get; set; }
     public ConfiguredValue<bool> ExpandedHover { get; set; }
 
@@ -673,10 +741,12 @@ internal sealed class CustomPropertyConfiguration
             DrillDownMaxItems = DrillDownMaxItems,
             DrillDownIconOnly = DrillDownIconOnly,
             DrillDownText = DrillDownText,
+            DrillDownTextFormatter = DrillDownTextFormatter,
             JsonHover = JsonHover,
             ExpandedHover = ExpandedHover,
         };
         clone.Alerts.AddRange(Alerts.Select(alert => alert.Clone()));
+        clone.Statuses.AddRange(Statuses.Select(status => status.Clone()));
         return clone;
     }
 
@@ -696,6 +766,7 @@ internal sealed class CustomPropertyConfiguration
             DrillDownMaxItems = DrillDownMaxItems,
             DrillDownIconOnly = DrillDownIconOnly,
             DrillDownText = DrillDownText,
+            DrillDownTextFormatter = DrillDownTextFormatter == null ? null : _ => DrillDownTextFormatter(source),
             JsonHover = JsonHover,
             ExpandedHover = ExpandedHover,
         };
@@ -706,6 +777,9 @@ internal sealed class CustomPropertyConfiguration
                 _ => alert.Message(source),
                 alert.Category == null ? null : _ => alert.Category(source)
             ))
+        );
+        bound.Statuses.AddRange(
+            Statuses.Select(status => new PropertyStatusConfiguration(status.Status, _ => status.Condition(source), _ => status.Text(source)))
         );
         return bound;
     }
@@ -743,6 +817,7 @@ internal sealed class CollectionOutputConfiguration
     public ConfiguredValue<int> DrillDownMaxItems { get; set; }
     public ConfiguredValue<bool> DrillDownIconOnly { get; set; }
     public ConfiguredValue<string> DrillDownText { get; set; }
+    public Func<object, string> DrillDownTextFormatter { get; set; }
     public ConfiguredValue<bool> JsonHover { get; set; }
     public ConfiguredValue<bool> ExpandedHover { get; set; }
     public bool InitiallyExpanded { get; set; } = true;
@@ -1104,6 +1179,32 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
+    public IPropertyConfigurator<T, TProperty> WithText(string text)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        return WithText(_ => text);
+    }
+
+    public IPropertyConfigurator<T, TProperty> WithText(Func<T, string> text)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        Configuration.TextFormatter = item => text((T)item);
+        return this;
+    }
+
+    public IPropertyConfigurator<T, TProperty> WithIconSize(StatusIconSize size)
+    {
+        if (!Enum.IsDefined(typeof(StatusIconSize), size))
+            throw new ArgumentOutOfRangeException(nameof(size));
+
+        Configuration.StatusIconSize = new ConfiguredValue<StatusIconSize>(size);
+        return this;
+    }
+
     public IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100)
     {
         if (maxLength <= 0)
@@ -1152,6 +1253,16 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
+    public IPropertyConfigurator<T, TProperty> WithDrillDownOnly(Func<T, string> text, int? maxItems = null)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        ConfigureDrillDown(Configuration, true, maxItems, true);
+        Configuration.DrillDownTextFormatter = item => text((T)item);
+        return this;
+    }
+
     public IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true)
     {
         Configuration.JsonHover = new ConfiguredValue<bool>(enabled);
@@ -1164,6 +1275,29 @@ internal sealed class PropertyConfigurator<T, TProperty>
         Configuration.JsonHover = new ConfiguredValue<bool>(false);
         Configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
         return this;
+    }
+
+    public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition)
+    {
+        return Status(status, condition, status.ToString());
+    }
+
+    public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, string text)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        return Status(status, condition, _ => text);
+    }
+
+    public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text)
+    {
+        return AddStatus(status, condition, text);
+    }
+
+    public IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition)
+    {
+        return Warn(condition, "Warning");
     }
 
     void IDateStrategyConfigurator.ConfigureDate(bool? exposeDate, bool? exposeElapsed, bool? exposeTimeUntil)
@@ -1251,6 +1385,11 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return AddAlert(PropertyAlertSeverity.Error, condition, message, category);
     }
 
+    public IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition)
+    {
+        return Error(condition, "Error");
+    }
+
     public IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition, string message)
     {
         return Error(condition, message, null);
@@ -1279,6 +1418,19 @@ internal sealed class PropertyConfigurator<T, TProperty>
         Configuration.Alerts.Add(
             new PropertyAlertConfiguration(severity, item => condition((T)item), item => message((T)item), category == null ? null : _ => category)
         );
+        return this;
+    }
+
+    private IPropertyConfigurator<T, TProperty> AddStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text)
+    {
+        if (!Enum.IsDefined(typeof(StatusCode), status))
+            throw new ArgumentOutOfRangeException(nameof(status));
+        if (condition == null)
+            throw new ArgumentNullException(nameof(condition));
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        Configuration.Statuses.Add(new PropertyStatusConfiguration(status, item => condition((T)item), item => text((T)item)));
         return this;
     }
 }
@@ -1344,6 +1496,16 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
+    public ICustomPropertyConfigurator<T> WithDrillDownOnly(Func<T, string> text, int? maxItems = null)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        WithDrillDownOnly(maxItems);
+        _configuration.DrillDownTextFormatter = item => text((T)item);
+        return this;
+    }
+
     public ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true)
     {
         _configuration.JsonHover = new ConfiguredValue<bool>(enabled);
@@ -1356,6 +1518,11 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         _configuration.JsonHover = new ConfiguredValue<bool>(false);
         _configuration.ExpandedHover = new ConfiguredValue<bool>(enabled);
         return this;
+    }
+
+    public ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition)
+    {
+        return Warn(condition, "Warning");
     }
 
     public ICustomPropertyConfigurator<T> WithCategory(string category)
@@ -1421,6 +1588,11 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return AddAlert(PropertyAlertSeverity.Error, condition, message, category);
     }
 
+    public ICustomPropertyConfigurator<T> Error(Func<T, bool> condition)
+    {
+        return Error(condition, "Error");
+    }
+
     public ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, string message)
     {
         return Error(condition, message, null);
@@ -1444,6 +1616,37 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         _configuration.Alerts.Add(
             new PropertyAlertConfiguration(severity, item => condition((T)item), item => message((T)item), category == null ? null : _ => category)
         );
+        return this;
+    }
+
+    public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition)
+    {
+        return Status(status, condition, status.ToString());
+    }
+
+    public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, string text)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        return Status(status, condition, _ => text);
+    }
+
+    public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text)
+    {
+        return AddStatus(status, condition, text);
+    }
+
+    private ICustomPropertyConfigurator<T> AddStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text)
+    {
+        if (!Enum.IsDefined(typeof(StatusCode), status))
+            throw new ArgumentOutOfRangeException(nameof(status));
+        if (condition == null)
+            throw new ArgumentNullException(nameof(condition));
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        _configuration.Statuses.Add(new PropertyStatusConfiguration(status, item => condition((T)item), item => text((T)item)));
         return this;
     }
 }
@@ -1593,6 +1796,19 @@ internal sealed class CollectionConfigurator<T, TItem>
             Configuration.DrillDownText = new ConfiguredValue<string>(text);
         else
             _lastOutput.DrillDownText = new ConfiguredValue<string>(text);
+        return this;
+    }
+
+    public ICollectionConfigurator<T, TItem> WithDrillDownOnly(Func<T, string> text, int? maxItems = null)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        WithDrillDownOnly(maxItems);
+        if (_lastOutput == null)
+            Configuration.DrillDownTextFormatter = item => text((T)item);
+        else
+            _lastOutput.DrillDownTextFormatter = item => text((T)item);
         return this;
     }
 

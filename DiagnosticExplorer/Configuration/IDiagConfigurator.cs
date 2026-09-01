@@ -12,6 +12,7 @@ public interface IDiagConfigurator
     int DrillDownMaxItems { get; set; }
     void RegisterObjects(Action<IDiagRegistrar> configure);
     void ConfigureHosting(Action<IDiagnosticHostingConfigurator> configure);
+    ISystemEnvironmentConfigurator ConfigureSystemEnvironment();
     void ConfigureEventRouting(Action<EventSinkRouteOptions> configure);
     void ConfigureLogEventRetention(Action<LogEventRetentionOptions> configure);
     void DefaultFormat<T>(string formatString);
@@ -31,6 +32,13 @@ public interface IDiagnosticHostingConfigurator
     IDiagnosticHostingConfigurator Enabled(bool enabled = true);
     IDiagnosticHostingConfigurator AddHost(DiagnosticHostType type, string url);
     IDiagnosticHostingConfigurator EventRetention(Action<EventRetentionOptions> configure);
+}
+
+public interface ISystemEnvironmentConfigurator
+{
+    ISystemEnvironmentConfigurator Enabled(bool enabled = true);
+    ISystemEnvironmentConfigurator WithCategory(string category);
+    ISystemEnvironmentConfigurator WithName(string name);
 }
 
 public interface ITypeConfigurator<T>
@@ -76,17 +84,26 @@ public interface IObjectPropertyConfigurator<T, TSelf> : IPropertyConfigurator
 public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>
 {
     IPropertyConfigurator<T, TProperty> Format(Func<TProperty, string> format);
+    IPropertyConfigurator<T, TProperty> WithText(string text);
+    IPropertyConfigurator<T, TProperty> WithText(Func<T, string> text);
+    IPropertyConfigurator<T, TProperty> WithIconSize(StatusIconSize size);
     IPropertyConfigurator<T, TProperty> AsJson(int maxLength = 100);
     IPropertyConfigurator<T, TProperty> AsDateOnly();
     IPropertyConfigurator<T, TProperty> WithDrillDown(bool enabled = true, int? maxItems = null);
     IPropertyConfigurator<T, TProperty> WithDrillDownOnly(int? maxItems = null);
     IPropertyConfigurator<T, TProperty> WithDrillDownOnly(string text, int? maxItems = null);
+    IPropertyConfigurator<T, TProperty> WithDrillDownOnly(Func<T, string> text, int? maxItems = null);
     IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true);
     IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true);
+    IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition);
+    IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, string text);
+    IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text);
+    IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message, string category);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, Func<T, string> message);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, Func<T, string> message, string category);
+    IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition);
     IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition, string message);
     IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition, string message, string category);
     IPropertyConfigurator<T, TProperty> Error(Func<T, bool> condition, Func<T, string> message);
@@ -100,16 +117,22 @@ public interface ICustomPropertyConfigurator<T>
     ICustomPropertyConfigurator<T> WithDrillDown(bool enabled = true, int? maxItems = null);
     ICustomPropertyConfigurator<T> WithDrillDownOnly(int? maxItems = null);
     ICustomPropertyConfigurator<T> WithDrillDownOnly(string text, int? maxItems = null);
+    ICustomPropertyConfigurator<T> WithDrillDownOnly(Func<T, string> text, int? maxItems = null);
     ICustomPropertyConfigurator<T> WithJsonHover(bool enabled = true);
     ICustomPropertyConfigurator<T> WithExpandedHover(bool enabled = true);
     ICustomPropertyConfigurator<T> WithCategory(string category);
     ICustomPropertyConfigurator<T> WithCategory(Func<T, string> category);
     ICustomPropertyConfigurator<T> Description(string description);
     ICustomPropertyConfigurator<T> Description(Func<T, string> description);
+    ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition);
+    ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, string text);
+    ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text);
+    ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, string message);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, string message, string category);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, Func<T, string> message);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, Func<T, string> message, string category);
+    ICustomPropertyConfigurator<T> Error(Func<T, bool> condition);
     ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, string message);
     ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, string message, string category);
     ICustomPropertyConfigurator<T> Error(Func<T, bool> condition, Func<T, string> message);
@@ -139,6 +162,7 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
     ICollectionConfigurator<T, TItem> WithDrillDownOnly(int? maxItems = null);
     ICollectionConfigurator<T, TItem> WithDrillDownOnly(string text, int? maxItems = null);
+    ICollectionConfigurator<T, TItem> WithDrillDownOnly(Func<T, string> text, int? maxItems = null);
     ICollectionConfigurator<T, TItem> WithJsonHover(bool enabled = true);
     ICollectionConfigurator<T, TItem> WithExpandedHover(bool enabled = true);
 }

@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
-using System.Security;
 using DiagnosticExplorer.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -274,6 +272,56 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void FluentPropertyCanOverrideDisplayTextWithoutHidingStatuses()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.First).WithText("").Status(StatusCode.Running, _ => true);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), null);
+
+        Assert.Equal(string.Empty, property.Value);
+        PropertyStatus status = Assert.Single(property.Statuses);
+        Assert.Equal(StatusCode.Running, status.Status);
+    }
+
+    [Fact]
+    public void FluentPropertyCanUseOwnerBasedDisplayText()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.First).WithText(sample => $"Current: {sample.Second}");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), null);
+
+        Assert.Equal("Current: Second", property.Value);
+    }
+
+    [Fact]
+    public void FluentPropertyCanSelectStatusIconSize()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.First).WithIconSize(StatusIconSize.Large);
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), null);
+
+        Assert.Equal(StatusIconSize.Large, property.StatusIconSize);
+    }
+
+    [Fact]
     public void FluentPropertyCanRenderAsJson()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
@@ -452,6 +500,67 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void AlertsCanUseDefaultMessages()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.First).Warn(sample => sample.First == "First").Error(sample => sample.Second == "Second");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new ReplacementSample()).GetProperty(nameof(ReplacementSample.First), null);
+
+        Assert.Collection(
+            property.Alerts,
+            alert =>
+            {
+                Assert.Equal(PropertyAlertSeverity.Warning, alert.Severity);
+                Assert.Equal("Warning", alert.Message);
+                Assert.Equal("Warning", alert.Category);
+            },
+            alert =>
+            {
+                Assert.Equal(PropertyAlertSeverity.Error, alert.Severity);
+                Assert.Equal("Error", alert.Message);
+                Assert.Equal("Error", alert.Category);
+            }
+        );
+    }
+
+    [Fact]
+    public void PropertiesCanRenderMultipleStatuses()
+    {
+        ReplacementSample sample = new();
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<ReplacementSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(item => item.First)
+                .Status(StatusCode.Active, item => item.First == "First")
+                .Status(StatusCode.Success, item => item.Second == "Second", item => $"Ready: {item.Second}");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(sample).GetProperty(nameof(ReplacementSample.First), null);
+
+        Assert.Collection(
+            property.Statuses,
+            status =>
+            {
+                Assert.Equal(StatusCode.Active, status.Status);
+                Assert.Equal("Active", status.Text);
+            },
+            status =>
+            {
+                Assert.Equal(StatusCode.Success, status.Status);
+                Assert.Equal("Ready: Second", status.Text);
+            }
+        );
+    }
+
+    [Fact]
     public void NamedPropertyCanRenderAsJson()
     {
         DiagnosticConfiguration configuration = new();
@@ -484,6 +593,23 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.True(property.DrillDownIconOnly);
         Assert.Equal("View more details", property.DrillDownText);
         Assert.Null(property.Value);
+    }
+
+    [Fact]
+    public void NamedPropertyCanRenderWithDynamicDrillDownOnlyText()
+    {
+        StrategySample sample = new();
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property("Details", item => item.Details).WithDrillDownOnly(item => $"View {item.GetHashCode()}");
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(sample).GetProperty("Details", null);
+
+        Assert.Equal($"View {sample.GetHashCode()}", property.DrillDownText);
     }
 
     [Fact]
@@ -1683,6 +1809,28 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void ExpandedPropertyCategoriesCanRenderStatuses()
+    {
+        DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
+        configuration.Configure<StrategySample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Details)
+                .Expand()
+                .WithIconSize(StatusIconSize.Large)
+                .Status(StatusCode.Running, _ => true, "Details are running");
+        });
+        configuration.Configure<ChildSample>(type => type.IncludeAll());
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Category category = Render(new StrategySample()).Categories.Single(category => category.Name == nameof(StrategySample.Details));
+
+        PropertyStatus status = Assert.Single(category.Statuses);
+        Assert.Equal((StatusCode.Running, "Details are running"), (status.Status, status.Text));
+        Assert.Equal(StatusIconSize.Large, category.StatusIconSize);
+    }
+
+    [Fact]
     public void ExpandedPropertiesCanLimitChildPropertiesToPrimaryCategory()
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
@@ -1896,27 +2044,6 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void SystemStatusDoesNotRegisterWhenRateCounterCreationFails()
-    {
-        Type systemStatusType = typeof(DiagnosticHostingService).Assembly.GetType("DiagnosticExplorer.SystemStatus");
-        ConstructorInfo constructor = systemStatusType.GetConstructor(
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            null,
-            new[] { typeof(Func<RateCounter>) },
-            null
-        );
-        int registrationsBefore = DiagnosticManager.GetRegisteredObjects().Count(item => item.Object?.GetType() == systemStatusType);
-
-        TargetInvocationException exception = Assert.Throws<TargetInvocationException>(() =>
-            constructor.Invoke(new object[] { (Func<RateCounter>)(() => throw new SecurityException("Counter creation denied")) })
-        );
-
-        Assert.IsType<SecurityException>(exception.InnerException);
-        int registrationsAfter = DiagnosticManager.GetRegisteredObjects().Count(item => item.Object?.GetType() == systemStatusType);
-        Assert.Equal(registrationsBefore, registrationsAfter);
-    }
-
-    [Fact]
     public void HostingExtensionDefersFluentConfigurationUntilDiagnosticsAreRequested()
     {
         ServiceCollection services = new();
@@ -2107,27 +2234,6 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.Equal("Configured", registered.BagCategory);
         Assert.Equal("Second", registered.BagName);
         Assert.DoesNotContain(DiagnosticManager.GetRegisteredObjects(serviceProvider), item => ReferenceEquals(item.Object, first));
-    }
-
-    [Fact]
-    public void ExplicitRegistrationTakesPrecedenceOverConfiguredDiscovery()
-    {
-        ReplacementSample sample = new();
-        DiagnosticConfiguration configuration = new();
-        configuration.RegisterObjects(registrations => registrations.Register(sample, "Discovered", "Discovered"));
-        DiagnosticManager.UseConfiguration(configuration);
-        DiagnosticManager.Register(sample, "Explicit", "Registered");
-
-        try
-        {
-            RegisteredObject registered = Assert.Single(DiagnosticManager.GetRegisteredObjects().Where(item => ReferenceEquals(item.Object, sample)));
-            Assert.Equal("Registered", registered.BagCategory);
-            Assert.Equal("Explicit", registered.BagName);
-        }
-        finally
-        {
-            DiagnosticManager.Unregister(sample);
-        }
     }
 
     [Fact]

@@ -16,10 +16,11 @@ import { PropertyHoverComponent } from '@app/diagnostics/property-hover/property
 import { SelfHostNavigationService } from '../../../self-host/self-host-navigation.service';
 import { BagModel } from '@model/BagModel';
 import { PropertySectionModel } from '@model/PropertySectionModel';
+import { Tooltip } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-category-view',
-    imports: [Panel, PanelModule, EventSinkViewComponent, NgTemplateOutlet, PropertyHoverComponent],
+    imports: [Panel, PanelModule, EventSinkViewComponent, NgTemplateOutlet, PropertyHoverComponent, Tooltip],
     templateUrl: './category-view.component.html',
     styleUrl: './category-view.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
