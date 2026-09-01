@@ -83,13 +83,9 @@ export class SelfHostComponent implements OnInit, OnDestroy {
 
     onEventSelected(event: EventModel): void {
         const previous = this.selectedEvent();
-        if (previous) previous.isSelected = false;
-        if (previous === event) {
-            this.selectedEvent.set(null);
-        } else {
-            event.isSelected = true;
-            this.selectedEvent.set(event);
-        }
+        if (previous && previous !== event) previous.isSelected = false;
+        event.isSelected = true;
+        this.selectedEvent.set(event);
     }
 
     closeDetail(): void {

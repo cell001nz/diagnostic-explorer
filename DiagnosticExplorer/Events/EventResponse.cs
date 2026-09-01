@@ -26,11 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
-using ProtoBuf;
 
 namespace DiagnosticExplorer;
-
-[ProtoContract(UseProtoMembersOnly = true)]
 public class EventResponse
 {
 	public EventResponse()
@@ -43,13 +40,7 @@ public class EventResponse
 		Name = name;
 		Category = category;
 	}
-
-	[ProtoMember(1)]
 	public string Name { get; set; }
-
-	[ProtoMember(2)]
 	public string Category { get; set; }
-
-	[ProtoMember(3)]
 	public List<SystemEvent> Events { get; set; }
 }

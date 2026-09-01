@@ -58,18 +58,25 @@
                         [class.sink-filter-toggle--active]="sink().filtersVisible() || sink().filterText() || sink().hasLevelFilter">
                     <i class="pi pi-filter"></i>
                 </button>
+                <button class="sink-logger-toggle"
+                        [title]="eventGridSettings.showLogger() ? 'Hide Logger column' : 'Show Logger column'"
+                        [attr.aria-label]="eventGridSettings.showLogger() ? 'Hide Logger column' : 'Show Logger column'"
+                        (click)="eventGridSettings.toggleLogger(); $event.stopPropagation()">
+                    <i [class]="eventGridSettings.showLogger() ? 'pi pi-eye' : 'pi pi-eye-slash'"></i>
+                </button>
             </div>
         </div>
     </ng-template>
 
-    <div class="h-[300px] overflow-x-hidden overflow-y-auto border border-gray-700 rounded"
+    <div class="event-grid-container h-[300px] overflow-x-hidden overflow-y-auto border border-gray-700 rounded"
+            [class.event-grid-container--hide-logger]="!eventGridSettings.showLogger()"
          (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()">
         <table class="w-full table-fixed border-collapse text-sm">
             <colgroup>
                 <col class="w-20" />
                 <col class="w-44" />
                 <col class="w-20" />
-                <col class="w-48" />
+                <col class="event-logger-column" />
                 <col />
             </colgroup>
             <thead class="sticky top-0 bg-[#1a1c20] z-10">
@@ -77,7 +84,7 @@
                     <th class="p-2 text-left w-20">#</th>
                     <th class="p-2 text-left w-44 whitespace-nowrap">Date</th>
                     <th class="p-2 text-left w-20">Level</th>
-                    <th class="p-2 text-left w-48">Logger</th>
+                    <th class="event-logger-column p-2 text-left">Logger</th>
                     <th class="p-2 text-left">Message</th>
                 </tr>
             </thead>
@@ -90,7 +97,7 @@
                         <td class="p-2">{{ sink().getEventNumber(event) }}</td>
                         <td class="p-2 whitespace-nowrap">{{ event.date | date:'yyyy-MM-dd HH:mm:ss' }}</td>
                         <td class="p-2">{{ event.level | levelToString }}</td>
-                        <td class="overflow-hidden p-2 text-ellipsis whitespace-nowrap" [title]="event.loggerCategory">{{ event.loggerCategory }}</td>
+                        <td class="event-logger-column overflow-hidden p-2 text-ellipsis whitespace-nowrap" [title]="event.loggerCategory">{{ event.loggerCategory }}</td>
                         <td class="overflow-hidden p-2 text-ellipsis whitespace-nowrap">{{ truncateEventMessage(event.message) }}</td>
                     </tr>
                 } @empty {

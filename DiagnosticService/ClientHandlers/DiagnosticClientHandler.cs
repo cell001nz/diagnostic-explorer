@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Logging;
-using DiagnosticExplorer.Util;
 using Diagnostics.Service.Common.Hubs;
 using Microsoft.AspNetCore.SignalR;
 
@@ -42,17 +41,9 @@ public class DiagnosticClientHandler : IDiagnosticClient
     /// </summary>
     private IDiagnosticHubClient Client => _hubContext.Clients.Client(ConnectionId);
 
-    public async Task<DiagnosticResponse> GetDiagnostics(CancellationToken cancel)
-    {
-        byte[] data = await Client.GetDiagnostics();
-        return ProtobufUtil.Decompress<DiagnosticResponse>(data);
-    }
+    public Task<DiagnosticResponse> GetDiagnostics(CancellationToken cancel) => Client.GetDiagnostics();
 
-    public async Task<DrillDownResponse> GetDrillDown(DrillDownRequest request)
-    {
-        byte[] data = await Client.GetDrillDown(Guid.NewGuid().ToString("N"), request);
-        return ProtobufUtil.Decompress<DrillDownResponse>(data);
-    }
+    public Task<DrillDownResponse> GetDrillDown(DrillDownRequest request) => Client.GetDrillDown(Guid.NewGuid().ToString("N"), request);
 
     public Task<OperationResponse> SetProperty(SetPropertyRequest request)
     {

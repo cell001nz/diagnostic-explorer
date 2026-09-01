@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Logging;
-using DiagnosticExplorer.Util;
 using DiagWebService.ClientHandlers;
 using log4net;
 using Microsoft.AspNetCore.SignalR;
@@ -68,11 +67,10 @@ public class DiagnosticHub : Hub<IDiagnosticHubClient>, IDiagnosticHubServer
         }
     }
 
-    public async Task<RpcResult> LogEvents(byte[] eventData)
+    public async Task<RpcResult> LogEvents(DiagnosticMsg[] messages)
     {
         try
         {
-            DiagnosticMsg[]? messages = ProtobufUtil.Decompress<DiagnosticMsg[]>(eventData);
             if (messages?.Any() == true)
             {
                 _rtManager.RegisterAlertLevel(Context.ConnectionId, messages);

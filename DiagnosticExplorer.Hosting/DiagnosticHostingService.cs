@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -188,11 +189,22 @@ public class DiagnosticHostingService : IHostedService
             DiagnosticHostOptions[] selfHostOptions = runtime
                 .Hosts.Where(host => host.Type == DiagnosticHostType.SelfHost && !string.IsNullOrWhiteSpace(host.Url))
                 .ToArray();
-            _selfHosts = await Task.WhenAll(
-                selfHostOptions.Select(host =>
-                    DiagnosticSelfHostingService.StartAsync(host.Url, new SelfHostOptions { Enabled = runtime.Enabled, Url = host.Url })
-                )
-            );
+            List<DiagnosticSelfHost> startedHosts = new();
+            foreach (DiagnosticHostOptions host in selfHostOptions)
+            {
+                try
+                {
+                    startedHosts.Add(
+                        await DiagnosticSelfHostingService.StartAsync(host.Url, new SelfHostOptions { Enabled = runtime.Enabled, Url = host.Url })
+                    );
+                }
+                catch (Exception exception)
+                {
+                    Trace.TraceError($"Diagnostic Explorer self-host at '{host.Url}' failed to start: {exception}");
+                }
+            }
+
+            _selfHosts = startedHosts.ToArray();
         }
     }
 

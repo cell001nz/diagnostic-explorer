@@ -705,8 +705,15 @@ public partial class Form1 : Form, INotifyPropertyChanged
                 TraceScope.Trace("In the async bit B2");
             });
 
-            await task1;
-            await task2;
+            try
+            {
+                await task1;
+                await task2;
+            }
+            catch (Exception ex)
+            {
+                TraceScope.Trace(ex);
+            }
 
             await Task.Delay(1000);
             // await TraceScopeExample.TestTraceScope1();

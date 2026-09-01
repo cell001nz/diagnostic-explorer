@@ -28,11 +28,8 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using DiagnosticExplorer;
-using ProtoBuf;
 
 namespace DiagnosticExplorer;
-
-[ProtoContract(UseProtoMembersOnly = true)]
 public class PropertyBag
 {
     public PropertyBag()
@@ -73,20 +70,10 @@ public class PropertyBag
         }
         return cat;
     }
-
-    [ProtoMember(1)]
     public string Name { get; set; }
-
-    [ProtoMember(2)]
     public string Category { get; set; }
-
-    [ProtoMember(3)]
     public string OperationSet { get; set; }
-
-    [ProtoMember(4)]
     public List<Category> Categories { get; set; }
-
-    [ProtoMember(5)]
     public bool CanDrillDown { get; set; }
 
     [IgnoreDataMember]

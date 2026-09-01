@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, Component, input, OnDestroy, output, signal } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, input, OnDestroy, output, signal } from '@angular/core';
 import { DatePipe, LowerCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Panel, PanelModule } from 'primeng/panel';
@@ -6,6 +6,7 @@ import { Slider } from 'primeng/slider';
 import { InputText } from 'primeng/inputtext';
 import { EventSinkModel } from '@model/EventSinkModel';
 import { EventModel } from '@model/EventModel';
+import { EventGridSettings } from '@model/EventGridSettings';
 import { Level } from '@model/Level';
 import { LevelToStringPipe } from '@app/pipes/level-to-string.pipe';
 
@@ -19,6 +20,7 @@ import { LevelToStringPipe } from '@app/pipes/level-to-string.pipe';
 export class EventSinkViewComponent implements OnDestroy {
     sink = input.required<EventSinkModel>();
     eventSelected = output<EventModel>();
+    protected readonly eventGridSettings = inject(EventGridSettings);
     protected readonly rateClock = signal(Date.now());
     private readonly rateClockInterval = setInterval(() => this.rateClock.set(Date.now()), 250);
 

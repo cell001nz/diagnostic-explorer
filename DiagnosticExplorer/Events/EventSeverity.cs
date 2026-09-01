@@ -25,17 +25,11 @@
 using System;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
-using ProtoBuf;
 
 namespace DiagnosticExplorer;
-
-[ProtoContract(UseProtoMembersOnly = true)]
 public enum EventSeverity
 {
-	[ProtoEnum]
 	Low = 1,
-	[ProtoEnum]
 	Medium,
-	[ProtoEnum]
 	High,
 }

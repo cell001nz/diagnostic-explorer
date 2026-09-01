@@ -9,11 +9,13 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using DiagnosticExplorer.Util;
 using DiagWebService.Hubs;
 using log4net;
+using MessagePack;
+using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DiagnosticExplorer;
 
@@ -72,20 +74,11 @@ public class RegistrationHandler
                 IList<DiagnosticMsg> messages = await _logChannel.Reader.ReadAsync(cancel);
                 try
                 {
-                    Stopwatch watch1 = Stopwatch.StartNew();
-                    byte[] data = ProtobufUtil.Compress(messages, 1024);
-                    watch1.Stop();
-
-                    Stopwatch watch2 = Stopwatch.StartNew();
                     while (_hubAdapter == null)
                         await Task.Delay(TimeSpan.FromSeconds(1), cancel);
 
-                    Debug.WriteLine($"RegistrationHandler sending {data.Length} bytes");
-                    await _hubAdapter.LogEvents(data).ConfigureAwait(false);
-                    watch2.Stop();
-                    Debug.WriteLine(
-                        $"RegistrationHandler sent {data.Length} bytes, zip/send took {watch1.ElapsedMilliseconds}ms/{watch2.ElapsedMilliseconds}ms"
-                    );
+                    await _hubAdapter.LogEvents(messages.ToArray()).ConfigureAwait(false);
+                    Debug.WriteLine($"RegistrationHandler sent {messages.Count} log events");
                 }
                 catch (Exception ex)
                 {
@@ -171,6 +164,12 @@ public class RegistrationHandler
                             }
                         )
                 )
+                .AddMessagePackProtocol(options =>
+                {
+                    options.SerializerOptions = MessagePackSerializerOptions
+                        .Standard.WithResolver(ContractlessStandardResolver.Instance)
+                        .WithSecurity(MessagePackSecurity.UntrustedData);
+                })
                 .Build();
 
             _connection.Closed += HandleClosed;

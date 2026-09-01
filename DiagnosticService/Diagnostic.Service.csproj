@@ -24,6 +24,8 @@
   <ItemGroup>
 	  <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="8.0.10" />
 	  <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.28" />
+    <PackageReference Include="MessagePack" Version="2.5.301" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
     <PackageReference Include="Microsoft.VisualStudio.SlowCheetah" Version="4.0.50">

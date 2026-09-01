@@ -1,9 +1,6 @@
-﻿using System;
-using ProtoBuf;
+using System;
 
 namespace Diagnostics.Service.Common.Transport;
-
-[ProtoContract]
 public class RetroQuery
 {
     public int SearchId { get; set; }

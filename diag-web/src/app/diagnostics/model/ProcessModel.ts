@@ -6,6 +6,7 @@ import { customMerge } from '@util/merge';
 import { ObservableDisposable } from '@model/ObservableDisposable';
 import { Subject } from 'rxjs';
 import { DiagnosticModelFactory } from '@model/DiagnosticModelFactory';
+import { EventGridSettings } from '@model/EventGridSettings';
 import { strEqCI } from '@util/stringUtil';
 import { ProcessEventStore } from './ProcessEventStore';
 
@@ -27,6 +28,7 @@ export class ProcessModel implements ObservableDisposable {
     serverDate = signal<Date | undefined>(undefined);
     activeCatName = signal('');
     activeCat = computed(() => this.categories().find((c) => c.name() === this.activeCatName()));
+    #eventGridSettings = inject(EventGridSettings);
     private eventStore?: ProcessEventStore;
     private drillDownEventViews: DrillDownEventViewDefinition[] = [];
     private includeGlobalEventViews = true;
@@ -109,7 +111,7 @@ export class ProcessModel implements ObservableDisposable {
             cats,
             (d) => d.name.toLocaleLowerCase(),
             (c) => c.name().toLocaleLowerCase(),
-            (d) => new CategoryModel(this, d.name, d.props),
+            (d) => new CategoryModel(this, d.name, d.props, this.#eventGridSettings.showLogger),
             (d, c) => c.update(d.props),
             false
         );
@@ -134,7 +136,7 @@ export class ProcessModel implements ObservableDisposable {
     private getCat(name: string): CategoryModel {
         let cat = this.categories().find((c) => strEqCI(c.name(), name));
         if (!cat) {
-            cat = new CategoryModel(this, name);
+            cat = new CategoryModel(this, name, [], this.#eventGridSettings.showLogger);
             this.categories.update((categories) => [...categories, cat!].sort(compareCategories));
         }
 

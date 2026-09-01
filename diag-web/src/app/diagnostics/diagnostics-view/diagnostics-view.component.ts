@@ -144,16 +144,10 @@ export class DiagnosticsViewComponent implements OnDestroy {
     }
 
     onEventSelected(event: EventModel): void {
-        // Deselect previous
         const prev = this.selectedEvent();
-        if (prev) prev.isSelected = false;
-        // Select new (toggle off if same row clicked again)
-        if (prev === event) {
-            this.selectedEvent.set(null);
-        } else {
-            event.isSelected = true;
-            this.selectedEvent.set(event);
-        }
+        if (prev && prev !== event) prev.isSelected = false;
+        event.isSelected = true;
+        this.selectedEvent.set(event);
     }
 
     closeDetail(): void {

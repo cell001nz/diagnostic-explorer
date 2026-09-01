@@ -24,7 +24,7 @@ connection. Use either host or both, and tune retention without changing code:
   "DiagnosticExplorer": {
     "Enabled": true,
     "Hosts": [
-      { "Type": "SelfHost", "Url": "http://127.0.0.1:50001" },
+      { "Type": "SelfHost", "Url": "http://127.0.0.1:50101" },
       { "Type": "Remote", "Url": "http://localhost:50000/diagnostics" }
     ],
     "EventRetention": {

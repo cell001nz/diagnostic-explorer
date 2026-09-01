@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Logging;
-using DiagnosticExplorer.Util;
 using log4net;
 using Microsoft.AspNetCore.SignalR.Client;
 using TypedSignalR.Client;
@@ -94,14 +93,14 @@ internal class HubServerAdapter : IDiagnosticHubClient
         _clientRegistration.Dispose();
     }
 
-    public Task<byte[]> GetDiagnostics()
+    public Task<DiagnosticResponse> GetDiagnostics()
     {
         return Task.Run(() =>
         {
             try
             {
                 DiagnosticResponse response = DiagnosticManager.GetDiagnostics(_serviceProvider);
-                return ProtobufUtil.Compress(response, 1024);
+                return response;
             }
             catch (Exception ex)
             {
@@ -111,14 +110,14 @@ internal class HubServerAdapter : IDiagnosticHubClient
         });
     }
 
-    public Task<byte[]> GetDrillDown(string requestId, DrillDownRequest request)
+    public Task<DrillDownResponse> GetDrillDown(string requestId, DrillDownRequest request)
     {
         return Task.Run(() =>
         {
             try
             {
                 DrillDownResponse response = DiagnosticManager.GetDrillDown(_serviceProvider, request);
-                return ProtobufUtil.Compress(response, 1024);
+                return response;
             }
             catch (Exception ex)
             {
@@ -186,9 +185,9 @@ internal class HubServerAdapter : IDiagnosticHubClient
             throw new ApplicationException(response.Message);
     }
 
-    public async Task LogEvents(byte[] eventData)
+    public async Task LogEvents(DiagnosticMsg[] messages)
     {
-        RpcResult response = await _hubServer.LogEvents(eventData);
+        RpcResult response = await _hubServer.LogEvents(messages);
 
         if (!response.IsSuccess)
             throw new ApplicationException(response.Message);

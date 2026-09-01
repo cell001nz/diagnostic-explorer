@@ -36,6 +36,10 @@ await builder.Build().RunAsync();
 listeners as hosted services. Register the application's own services before
 calling it, so the registration callback can resolve them.
 
+Diagnostic Explorer hosting is best effort: if a configured diagnostics listener
+cannot start, the failure is traced and the application continues without that
+listener.
+
 Use the following configuration for the local browser UI. Add a `Remote` host
 only when the process should report to a separate DiagnosticService instance.
 
@@ -43,7 +47,7 @@ only when the process should report to a separate DiagnosticService instance.
 {
   "DiagnosticExplorer": {
     "Enabled": true,
-    "Hosts": [{ "Type": "SelfHost", "Url": "http://127.0.0.1:50001" }],
+    "Hosts": [{ "Type": "SelfHost", "Url": "http://127.0.0.1:50101" }],
     "EventRetention": {
       "MaxEventsPerSink": 1000,
       "MaxAgeMinutes": 30

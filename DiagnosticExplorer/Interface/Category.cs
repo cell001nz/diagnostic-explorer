@@ -1,19 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using ProtoBuf;
+using System.Text.Json.Serialization;
 
 namespace DiagnosticExplorer;
 
-[ProtoContract(UseProtoMembersOnly = true)]
 public class Category
 {
     public Category()
     {
         Properties = new List<Property>();
-        Statuses = new List<PropertyStatus>();
     }
 
     public Category(string name)
@@ -22,28 +20,15 @@ public class Category
         Name = name;
     }
 
-    [ProtoMember(1)]
     public string Name { get; set; }
-
-    [ProtoMember(2)]
     public string OperationSet { get; set; }
-
-    [ProtoMember(3)]
     public List<Property> Properties { get; set; }
-
-    [ProtoMember(4)]
     public bool CanDrillDown { get; set; }
-
-    [ProtoMember(5)]
     public bool IsExpanded { get; set; }
-
-    [ProtoMember(6)]
     public bool IsExpandedProperty { get; set; }
-
-    [ProtoMember(7)]
     public List<PropertyStatus> Statuses { get; set; }
 
-    [ProtoMember(8)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public StatusIconSize StatusIconSize { get; set; }
 
     internal object ValueObject { get; set; }

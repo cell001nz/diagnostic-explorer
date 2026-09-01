@@ -67,6 +67,7 @@
     }
 
     .p-tablist button[pTabPanelHeader] {
+        position: relative;
         writing-mode: vertical-rl;
         transform: rotate(180deg);
         padding: 1em 0.5em;
@@ -99,38 +100,44 @@
     }
 }
 
-/* Category event-severity indicator (next to category tab names) */
-.alert-pill {
-    display: inline-block;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background-color: transparent;
-    box-shadow: none;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+/* Recent category event levels, ordered from Verbose at the top to Critical below. */
+.event-level-tab-content {
+    display: inline-flex;
+    align-items: center;
+    writing-mode: horizontal-tb;
+}
+
+.event-level-stack {
+    position: absolute;
+    top: 50%;
+    right: 3px;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 8px;
     flex-shrink: 0;
+    transform: translateY(-50%);
 }
 
-.event-level-unknown,
-.event-level-trace,
-.event-level-debug,
-.event-level-info {
-    background-color: rgb(74, 222, 128);
-    box-shadow: 0 0 6px rgb(74, 222, 128);
+.event-level-bar {
+    display: block;
+    height: 3px;
+    border-radius: 1px;
+    background-color: rgb(71, 85, 105);
+    opacity: 1;
 }
 
-.event-level-warn {
-    background-color: rgb(251, 191, 36);
-    box-shadow: 0 0 6px rgb(251, 191, 36);
+.event-level-bar--active {
+    animation: event-level-dim 5s linear forwards;
 }
 
-.event-level-error {
-    background-color: rgb(248, 113, 113);
-    box-shadow: 0 0 6px rgb(248, 113, 113);
-}
+.event-level-bar--verbose { --event-level-color: rgb(96, 165, 250); }
+.event-level-bar--info { --event-level-color: rgb(74, 222, 128); }
+.event-level-bar--warn { --event-level-color: rgb(251, 191, 36); }
+.event-level-bar--error { --event-level-color: rgb(251, 113, 133); }
+.event-level-bar--critical { --event-level-color: rgb(239, 68, 68); }
 
-.event-level-critical,
-.event-level-none {
-    background-color: rgb(239, 68, 68);
-    box-shadow: 0 0 7px rgb(239, 68, 68);
+@keyframes event-level-dim {
+    from { background-color: var(--event-level-color); }
+    to { background-color: rgb(71, 85, 105); }
 }

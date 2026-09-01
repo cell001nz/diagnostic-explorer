@@ -16,12 +16,24 @@ export class CategoryModel {
     bags = signal<BagModel[]>([]);
     eventSinks = signal<EventSinkModel[]>([]);
     realtimeModel: ProcessModel;
-    labelClass = signal('');
-    pulseId = signal(0);
-    worstSev = 0;
-    worstSevDate = new Date();
+    readonly eventLevels = [
+        { values: [Level.Trace, Level.Debug], name: 'verbose' },
+        { values: [Level.Information], name: 'info' },
+        { values: [Level.Warning], name: 'warn' },
+        { values: [Level.Error], name: 'error' },
+        { values: [Level.Critical], name: 'critical' }
+    ];
+    activeEventLevels = signal<ReadonlySet<string>>(new Set());
+    private static readonly eventLevelIndicatorDurationMilliseconds = 5_000;
+    private readonly eventLevelActivity = new Map<string, number>();
+    private readonly eventLevelActivityIds = signal<ReadonlyMap<string, number>>(new Map());
 
-    constructor(realtimeModel: ProcessModel, name: string, props: PropertyBag[] = []) {
+    constructor(
+        realtimeModel: ProcessModel,
+        name: string,
+        props: PropertyBag[] = [],
+        private readonly loggerVisible = signal(true)
+    ) {
         this.realtimeModel = realtimeModel;
         this.name.set(name);
         if (props) this.update(props);
@@ -44,7 +56,7 @@ export class CategoryModel {
     getSink(name: string, eventProvider: () => EventModel[] = () => [], eventMatcher?: (event: EventModel) => boolean): EventSinkModel {
         let sink = this.eventSinks().find((c) => strEqCI(c.name, name));
         if (!sink) {
-            sink = new EventSinkModel(this, name, eventProvider, eventMatcher);
+            sink = new EventSinkModel(this, name, eventProvider, eventMatcher, this.loggerVisible);
             this.eventSinks.update((sinks) => [...sinks, sink!]);
         }
 
@@ -68,15 +80,35 @@ export class CategoryModel {
         for (const sinkName in grouped) this.getSink(sinkName).addEvents(grouped[sinkName]);
     }
 
-    recordEventSeverity(evts: readonly { level: number }[]): void {
-        const maxLevel = _.maxBy(evts, (evt) => evt.level)?.level ?? 0;
+    recordEventSeverity(evts: readonly { level: number }[], timestamp = Date.now()): void {
+        if (evts.length === 0) return;
 
-        if (maxLevel >= this.worstSev) {
-            this.worstSev = maxLevel;
-            this.worstSevDate = new Date();
-            this.labelClass.set(this.worstSev === 0 ? '' : 'event-level-' + Level.LevelToString(this.worstSev).toLocaleLowerCase());
-            if (this.worstSev > 0) this.pulseId.update((id) => id + 1);
+        const activeLevels = new Set(this.activeEventLevels());
+        const activityIds = new Map(this.eventLevelActivityIds());
+        for (const event of evts) {
+            const level = this.eventLevels.find((candidate) => candidate.values.includes(event.level));
+            if (!level) continue;
+
+            this.eventLevelActivity.set(level.name, timestamp);
+            activeLevels.add(level.name);
+            activityIds.set(level.name, (activityIds.get(level.name) ?? 0) + 1);
         }
+
+        this.activeEventLevels.set(activeLevels);
+        this.eventLevelActivityIds.set(activityIds);
+    }
+
+    isEventLevelActive(level: string): boolean {
+        return this.activeEventLevels().has(level);
+    }
+
+    getEventLevelActivityId(level: string): number {
+        return this.eventLevelActivityIds().get(level) ?? 0;
+    }
+
+    getEventLevelBars() {
+        const activityIds = this.eventLevelActivityIds();
+        return this.eventLevels.map((level) => ({ ...level, activityId: activityIds.get(level.name) ?? 0 }));
     }
 
     clearEvents() {
@@ -85,14 +117,15 @@ export class CategoryModel {
         }
     }
 
-    checkEventSeverityLevels() {
-        if (this.worstSev > 0) {
-            const time = new Date().valueOf() - this.worstSevDate.valueOf();
+    checkEventSeverityLevels(timestamp = Date.now()) {
+        const activeLevels = new Set(this.activeEventLevels());
+        for (const [level, lastSeen] of this.eventLevelActivity) {
+            if (timestamp - lastSeen <= CategoryModel.eventLevelIndicatorDurationMilliseconds) continue;
 
-            if (time > 2_000) {
-                this.worstSev = 0;
-                this.labelClass.set('');
-            }
+            this.eventLevelActivity.delete(level);
+            activeLevels.delete(level);
         }
+
+        this.activeEventLevels.set(activeLevels);
     }
 }

@@ -27,8 +27,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 using System.Xml.Serialization;
-using ProtoBuf;
 
 namespace DiagnosticExplorer;
 
@@ -78,7 +78,6 @@ public enum PropertyValueKind
     Object = 11,
 }
 
-[ProtoContract(UseProtoMembersOnly = true)]
 public class PropertyAlert
 {
     public PropertyAlert() { }
@@ -93,17 +92,11 @@ public class PropertyAlert
         Category = category ?? message;
     }
 
-    [ProtoMember(1)]
     public PropertyAlertSeverity Severity { get; set; }
-
-    [ProtoMember(2)]
     public string Message { get; set; }
-
-    [ProtoMember(3)]
     public string Category { get; set; }
 }
 
-[ProtoContract(UseProtoMembersOnly = true)]
 public class PropertyStatus
 {
     public PropertyStatus() { }
@@ -114,14 +107,10 @@ public class PropertyStatus
         Text = text ?? status.ToString();
     }
 
-    [ProtoMember(1)]
     public StatusCode Status { get; set; }
-
-    [ProtoMember(2)]
     public string Text { get; set; }
 }
 
-[ProtoContract(UseProtoMembersOnly = true)]
 public class Property
 {
     public Property() { }
@@ -139,49 +128,22 @@ public class Property
         Description = description;
     }
 
-    [ProtoMember(1)]
     public string Name { get; set; }
-
-    [ProtoMember(2)]
     public string Value { get; set; }
-
-    [ProtoMember(3)]
     public string Description { get; set; }
-
-    [ProtoMember(4)]
     public string OperationSet { get; set; }
-
-    [ProtoMember(5)]
     public bool CanSet { get; set; }
-
-    [ProtoMember(6)]
-    public List<PropertyAlert> Alerts { get; set; } = new();
-
-    [ProtoMember(7)]
+    public List<PropertyAlert> Alerts { get; set; }
     public bool CanDrillDown { get; set; }
-
-    [ProtoMember(8)]
     public bool DrillDownIconOnly { get; set; }
-
-    [ProtoMember(9)]
     public PropertyValueKind ValueKind { get; set; }
-
-    [ProtoMember(10)]
     public bool CanJsonHover { get; set; }
-
-    [ProtoMember(11)]
     public bool CanExpandedHover { get; set; }
-
-    [ProtoMember(12)]
     public string DrillDownText { get; set; }
-
-    [ProtoMember(13)]
     public bool NoTruncate { get; set; }
+    public List<PropertyStatus> Statuses { get; set; }
 
-    [ProtoMember(14)]
-    public List<PropertyStatus> Statuses { get; set; } = new();
-
-    [ProtoMember(15)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public StatusIconSize StatusIconSize { get; set; }
 
     internal object SourceObject { get; set; }

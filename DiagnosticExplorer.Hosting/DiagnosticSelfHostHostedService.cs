@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,16 +29,31 @@ internal sealed class DiagnosticSelfHostHostedService : IHostedService
         DiagnosticHostOptions[] hosts = _options
             .Hosts.Where(host => host.Type == DiagnosticHostType.SelfHost && !string.IsNullOrWhiteSpace(host.Url))
             .ToArray();
-        _selfHosts = await Task.WhenAll(
-            hosts.Select(host =>
-                DiagnosticSelfHostingService.StartAsync(
-                    host.Url,
-                    new SelfHostOptions { Enabled = _options.Enabled, Url = host.Url },
-                    cancellationToken,
-                    _serviceProvider
-                )
-            )
-        );
+        List<DiagnosticSelfHost> startedHosts = new();
+        foreach (DiagnosticHostOptions host in hosts)
+        {
+            try
+            {
+                startedHosts.Add(
+                    await DiagnosticSelfHostingService.StartAsync(
+                        host.Url,
+                        new SelfHostOptions { Enabled = _options.Enabled, Url = host.Url },
+                        cancellationToken,
+                        _serviceProvider
+                    )
+                );
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceError($"Diagnostic Explorer self-host at '{host.Url}' failed to start: {exception}");
+            }
+        }
+
+        _selfHosts = startedHosts.ToArray();
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.WhenAll(_selfHosts.Select(host => host.StopAsync()));

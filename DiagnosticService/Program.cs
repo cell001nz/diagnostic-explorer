@@ -4,6 +4,8 @@ using System.Text.Json.Serialization.Metadata;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Common;
 using Diagnostics.Service.Common.Hubs;
+using MessagePack;
+using MessagePack.Resolvers;
 using Microsoft.Extensions.Options;
 
 public static class Program
@@ -51,6 +53,12 @@ public static class Program
                 options.MaximumReceiveMessageSize = int.MaxValue;
                 options.MaximumParallelInvocationsPerClient = 5;
                 options.EnableDetailedErrors = true;
+            })
+            .AddMessagePackProtocol(options =>
+            {
+                options.SerializerOptions = MessagePackSerializerOptions
+                    .Standard.WithResolver(ContractlessStandardResolver.Instance)
+                    .WithSecurity(MessagePackSecurity.UntrustedData);
             })
             .AddJsonProtocol(options =>
             {

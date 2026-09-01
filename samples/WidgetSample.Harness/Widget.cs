@@ -76,7 +76,6 @@ public partial class Widget : INotifyPropertyChanged
             {
                 options
                     .Property(widget => widget.Thing1)
-                    .WithText("")
                     .WithIconSize(StatusIconSize.Small)
                     .Status(StatusCode.Active, obj => obj.Thing1 > 10, "This is active")
                     .Status(StatusCode.Inactive, obj => obj.Thing1 > 20, obj => $"Thing 1 is {obj.Thing1}")
@@ -84,7 +83,6 @@ public partial class Widget : INotifyPropertyChanged
 
                 options
                     .Property(widget => widget.Thing2)
-                    .WithText("")
                     .WithIconSize(StatusIconSize.Medium)
                     .Status(StatusCode.Success, obj => obj.Thing2 > 10)
                     .Status(StatusCode.Warning, obj => obj.Thing2 > 20)
@@ -92,7 +90,6 @@ public partial class Widget : INotifyPropertyChanged
                 ;
                 options
                     .Property(widget => widget.Thing3)
-                    .WithText("")
                     .WithIconSize(StatusIconSize.Large)
                     .Status(StatusCode.Alert, obj => obj.Thing3 > 10)
                     .Status(StatusCode.Danger, obj => obj.Thing3 > 20)
@@ -100,7 +97,6 @@ public partial class Widget : INotifyPropertyChanged
 
                 options
                     .Property(widget => widget.Thing4)
-                    .WithText("")
                     .Status(StatusCode.Stopped, obj => obj.Thing4 > 10)
                     .Status(StatusCode.Disabled, obj => obj.Thing4 > 20)
                     .Status(StatusCode.Paused, obj => obj.Thing4 > 30);
@@ -116,7 +112,6 @@ public partial class Widget : INotifyPropertyChanged
                     projection =>
                     {
                         projection.Property(widget => widget.FullName);
-                        projection.Property(widget => "Hello " + widget.FullName);
                         projection.Property("Primary config", widget => widget.PrimaryConfig).Expand();
                         projection.Property("Secondary config", widget => widget.SecondaryConfig).Expand();
                         projection.Property("Names", widget => _names).ListItems();

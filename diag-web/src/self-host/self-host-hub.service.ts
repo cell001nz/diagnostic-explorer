@@ -195,23 +195,17 @@ export class SelfHostDiagHubService {
     }
 
     private registerCallbacks(register: (name: string, callback: (...args: any[]) => void) => void): void {
-        const registerLogged = (name: string, callback: (...args: any[]) => void): void =>
-            register(name, (...args: any[]) => {
-                if (name === 'ShowDiagnostics') console.log(`Server message: ${name}`, ...args);
-                callback(...args);
-            });
-
-        registerLogged('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
+        register('ShowDiagnostics', (processId: string, response: DiagnosticResponse) => {
             this.diagsArrived$.next({
                 processId,
                 response: { ...response, serverDate: response.serverDate ?? new Date().toISOString() }
             });
         });
-        registerLogged('ShowDiagnosticsError', (_processId: string, message: string) => this.error.set(message));
-        registerLogged('InitializeLogStream', (processId: string, initialization: LogStreamInitialization) => {
+        register('ShowDiagnosticsError', (_processId: string, message: string) => this.error.set(message));
+        register('InitializeLogStream', (processId: string, initialization: LogStreamInitialization) => {
             this.logStreamInitialized$.next({ processId, initialization });
         });
-        registerLogged('StreamLogEvents', (processId: string, events: LogStreamEvent[]) => {
+        register('StreamLogEvents', (processId: string, events: LogStreamEvent[]) => {
             this.logStreamEvents$.next({ processId, events });
         });
     }

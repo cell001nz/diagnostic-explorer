@@ -145,7 +145,7 @@ public class MongoRetroLogger : IRetroLogger
         IMongoCollection<DiagnosticMsg> collection = database.GetCollection<DiagnosticMsg>("Log");
 
         // Dates originate as DateTime.UtcNow but cross the client->server boundary via
-        // protobuf-net, which does not preserve DateTime.Kind. They arrive here as
+        // SignalR MessagePack, which does not preserve DateTime.Kind. They arrive here as
         // DateTimeKind.Unspecified, which would cause the MongoDB driver to treat them as
         // local time and apply a spurious local->UTC conversion on insert. Re-assert UTC so
         // the numeric value is stored verbatim.

@@ -266,8 +266,8 @@ internal class PropertyGetter
 
     protected List<PropertyAlert> GetAlerts(object obj)
     {
-        if (_alerts == null)
-            return new List<PropertyAlert>();
+        if (_alerts == null || _alerts.Count == 0)
+            return null;
 
         List<PropertyAlert> activeAlerts = new();
         Dictionary<string, int> alertIndexes = new(StringComparer.Ordinal);
@@ -290,13 +290,13 @@ internal class PropertyGetter
             }
         }
 
-        return activeAlerts;
+        return activeAlerts.Count == 0 ? null : activeAlerts;
     }
 
     protected List<PropertyStatus> GetStatuses(object obj)
     {
-        if (_statuses == null)
-            return new List<PropertyStatus>();
+        if (_statuses == null || _statuses.Count == 0)
+            return null;
 
         List<PropertyStatus> activeStatuses = new();
         foreach (PropertyStatusConfiguration status in _statuses)
@@ -313,7 +313,7 @@ internal class PropertyGetter
             }
         }
 
-        return activeStatuses;
+        return activeStatuses.Count == 0 ? null : activeStatuses;
     }
 
     private static void AddWorstAlert(List<PropertyAlert> alerts, IDictionary<string, int> indexes, PropertyAlert alert)

@@ -1,3 +1,11 @@
+.event-logger-column {
+  width: 27rem;
+}
+
+.event-grid-container--hide-logger .event-logger-column {
+  display: none;
+}
+
 // Event severity level row styles
 .event-row-verbose,
 .event-row-debug {
@@ -216,7 +224,8 @@ tbody tr {
   outline: none;
 }
 
-.sink-filter-toggle {
+.sink-filter-toggle,
+.sink-logger-toggle {
   display: flex;
   align-items: center;
   justify-content: center;

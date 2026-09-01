@@ -1,4 +1,4 @@
-﻿import { SystemEvent } from '@domain/DiagResponse';
+import { SystemEvent } from '@domain/DiagResponse';
 import { CategoryModel } from './CategoryModel';
 import { EventModel } from './EventModel';
 import { FilterCriteria } from './FilterCriteria';
@@ -67,7 +67,8 @@ export class EventSinkModel {
         readonly cat: CategoryModel,
         name: string,
         private readonly eventProvider: () => EventModel[] = () => [],
-        eventMatcher?: (event: EventModel) => boolean
+        eventMatcher?: (event: EventModel) => boolean,
+        private readonly loggerVisible = signal(true)
     ) {
         this.watchEnabled = true;
         this.name = name;
@@ -79,7 +80,12 @@ export class EventSinkModel {
             const events = this.events();
             const text = this.filterText().trim().toLowerCase();
             const [minLevel, maxLevel] = this.normalizedLevelRange;
-            return events.filter((event) => event.level >= minLevel && event.level <= maxLevel && (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text)));
+            return events.filter(
+                (event) =>
+                    event.level >= minLevel &&
+                    event.level <= maxLevel &&
+                    (!text || event.message?.toLowerCase().includes(text) || event.detail?.toLowerCase().includes(text) || (this.loggerVisible() && event.loggerCategory?.toLowerCase().includes(text)))
+            );
         });
     }
 

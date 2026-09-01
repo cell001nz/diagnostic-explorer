@@ -29,7 +29,7 @@ namespace WidgetSample.Harness;
 public class Thing : ThingBase
 {
     // Invoked by Diagnostic Explorer assembly configuration discovery.
-    internal static void ConfigureDiagnostics(IDiagConfigurator config)
+    internal static new void ConfigureDiagnostics(IDiagConfigurator config)
     {
         config.Configure<Thing>(options =>
         {

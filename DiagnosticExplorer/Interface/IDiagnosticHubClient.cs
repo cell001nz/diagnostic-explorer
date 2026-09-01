@@ -31,8 +31,8 @@ namespace DiagnosticExplorer;
 
 public interface IDiagnosticHubClient
 {
-    Task<byte[]> GetDiagnostics();
-    Task<byte[]> GetDrillDown(string requestId, DrillDownRequest request);
+    Task<DiagnosticResponse> GetDiagnostics();
+    Task<DrillDownResponse> GetDrillDown(string requestId, DrillDownRequest request);
     Task<OperationResponse> ExecuteOperation(string requestId, string path, string operation, string[] arguments);
     Task<OperationResponse> ExecuteOperationWithContext(string requestId, OperationRequest request);
     Task<OperationResponse> SetProperty(string requestId, string path, string value);
@@ -45,7 +45,7 @@ public interface IDiagnosticHubServer
 {
     Task<RpcResult<RegistrationResponse>> Register(Registration registration);
     Task<RpcResult> Deregister(Registration registration);
-    Task<RpcResult> LogEvents(byte[] eventData);
+    Task<RpcResult> LogEvents(DiagnosticMsg[] messages);
     Task InitializeLogStream(LogStreamInitialization initialization);
     Task StreamLogEvents(LogStreamEvent[] events);
 }

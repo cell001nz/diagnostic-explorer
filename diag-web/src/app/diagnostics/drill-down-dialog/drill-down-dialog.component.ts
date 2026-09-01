@@ -104,13 +104,7 @@ export class DrillDownDialogComponent implements OnInit {
 
     onEventSelected(event: EventModel): void {
         const previousEvent = this.selectedEvent();
-        if (previousEvent) previousEvent.isSelected = false;
-
-        if (previousEvent === event) {
-            this.selectedEvent.set(null);
-            return;
-        }
-
+        if (previousEvent && previousEvent !== event) previousEvent.isSelected = false;
         event.isSelected = true;
         this.selectedEvent.set(event);
     }

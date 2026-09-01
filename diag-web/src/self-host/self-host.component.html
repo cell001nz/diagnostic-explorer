@@ -46,10 +46,17 @@
                         <p-tablist>
                             @for (category of processModel().categories(); track category.name()) {
                                 <p-tab [value]="category.name()">
-                                    <span [class]="'alert-pill ' + category.labelClass()"
-                                          [class.pill-pulse-odd]="category.pulseId() % 2 === 1"
-                                          [class.pill-pulse-even]="category.pulseId() % 2 === 0 && category.pulseId() > 0"></span>
-                                    {{ category.name() }}
+                                    <span class="event-level-tab-content">
+                                        @if (category.eventSinks().length) {
+                                            <span class="event-level-stack" aria-hidden="true">
+                                                @for (level of category.getEventLevelBars(); track level.name + '-' + level.activityId) {
+                                                    <span [class]="'event-level-bar event-level-bar--' + level.name"
+                                                          [class.event-level-bar--active]="category.isEventLevelActive(level.name)"></span>
+                                                }
+                                            </span>
+                                        }
+                                        <span>{{ category.name() }}</span>
+                                    </span>
                                 </p-tab>
                             }
                         </p-tablist>

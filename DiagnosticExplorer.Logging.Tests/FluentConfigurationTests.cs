@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using DiagnosticExplorer.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -184,7 +187,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.ConfigureHosting(hosting =>
             hosting
                 .AddHost(DiagnosticHostType.Remote, "http://localhost:2803/diagnostics")
-                .AddHost(DiagnosticHostType.SelfHost, "http://127.0.0.1:50001")
+                .AddHost(DiagnosticHostType.SelfHost, "http://127.0.0.1:50101")
         );
 
         ServiceCollection services = new();
@@ -197,6 +200,32 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public async Task HostingStartupContinuesWhenSelfHostListenerIsUnavailable()
+    {
+        using TcpListener listener = new(IPAddress.Loopback, 0);
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string>
+                {
+                    ["DiagnosticExplorer:Enabled"] = "true",
+                    ["DiagnosticExplorer:Hosts:0:Type"] = "SelfHost",
+                    ["DiagnosticExplorer:Hosts:0:Url"] = $"http://127.0.0.1:{port}",
+                }
+            )
+            .Build();
+
+        using IHost host = Host.CreateDefaultBuilder().ConfigureServices(services => services.AddDiagnosticExplorer(configuration)).Build();
+
+        await host.StartAsync();
+        await host.StopAsync();
+
+        DiagnosticSelfHost selfHost = await DiagnosticSelfHostingService.StartAsync($"http://127.0.0.1:{port}");
+        Assert.False(selfHost.IsEnabled);
+    }
+
+    [Fact]
     public void HostingConfigurationBindsTypedHostsFromConfiguration()
     {
         IConfiguration source = new ConfigurationBuilder()
@@ -206,7 +235,7 @@ public sealed class FluentConfigurationTests : IDisposable
                     ["DiagnosticExplorer:Hosts:0:Type"] = "Remote",
                     ["DiagnosticExplorer:Hosts:0:Url"] = "http://localhost:2803/diagnostics",
                     ["DiagnosticExplorer:Hosts:1:Type"] = "SelfHost",
-                    ["DiagnosticExplorer:Hosts:1:Url"] = "http://127.0.0.1:50001",
+                    ["DiagnosticExplorer:Hosts:1:Url"] = "http://127.0.0.1:50101",
                 }
             )
             .Build();
@@ -217,7 +246,7 @@ public sealed class FluentConfigurationTests : IDisposable
         Assert.Collection(
             configuration.RuntimeOptions.Hosts,
             host => Assert.Equal((DiagnosticHostType.Remote, "http://localhost:2803/diagnostics"), (host.Type, host.Url)),
-            host => Assert.Equal((DiagnosticHostType.SelfHost, "http://127.0.0.1:50001"), (host.Type, host.Url))
+            host => Assert.Equal((DiagnosticHostType.SelfHost, "http://127.0.0.1:50101"), (host.Type, host.Url))
         );
     }
 
@@ -424,7 +453,7 @@ public sealed class FluentConfigurationTests : IDisposable
                 Assert.Equal("Current", alert.Category);
             }
         );
-        Assert.Empty(validProperty.Alerts);
+        Assert.Null(validProperty.Alerts);
     }
 
     [Fact]

@@ -29,6 +29,18 @@ describe('EventSinkModel', () => {
         expect(sink.normalizedLevelRange).toEqual([1, 5]);
     });
 
+    it('searches logger names only while the Logger column is visible', () => {
+        const loggerVisible = signal(true);
+        const events = signal([{ ...createEvent(1), detail: '', loggerCategory: 'Worker.Pipeline' }]);
+        const sink = new EventSinkModel({} as CategoryModel, 'Events', events, undefined, loggerVisible);
+
+        sink.setFilterText('pipeline');
+        expect(sink.filteredEvents()).toHaveSize(1);
+
+        loggerVisible.set(false);
+        expect(sink.filteredEvents()).toHaveSize(0);
+    });
+
     it('assigns stable event numbers in arrival order while displaying newest events first', () => {
         const firstEvent = createEvent(1);
         const secondEvent = createEvent(2);

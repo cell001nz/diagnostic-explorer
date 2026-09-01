@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,20 +67,32 @@ public static class DiagnosticSelfHostingService
         string listenerUrl = string.IsNullOrWhiteSpace(url) ? resolvedOptions.Url : url;
         if (string.IsNullOrWhiteSpace(listenerUrl))
             listenerUrl = SelfHostOptions.DefaultUrl;
-        if (Hosts.ContainsKey(listenerUrl))
-            throw new InvalidOperationException($"A self-host listener is already running at '{listenerUrl}'.");
-
-        DiagnosticSelfHost host = await DiagnosticSelfHostFactory
-            .StartAsync(listenerUrl, resolvedOptions, cancellationToken, serviceProvider)
-            .ConfigureAwait(false);
-        if (!Hosts.TryAdd(listenerUrl, host))
+        try
         {
-            await host.StopAsync().ConfigureAwait(false);
-            throw new InvalidOperationException($"A self-host listener is already running at '{listenerUrl}'.");
-        }
+            if (Hosts.ContainsKey(listenerUrl))
+                throw new InvalidOperationException($"A self-host listener is already running at '{listenerUrl}'.");
 
-        host.Stopped += (_, _) => Hosts.TryRemove(listenerUrl, out _);
-        return host;
+            DiagnosticSelfHost host = await DiagnosticSelfHostFactory
+                .StartAsync(listenerUrl, resolvedOptions, cancellationToken, serviceProvider)
+                .ConfigureAwait(false);
+            if (!Hosts.TryAdd(listenerUrl, host))
+            {
+                await host.StopAsync().ConfigureAwait(false);
+                throw new InvalidOperationException($"A self-host listener is already running at '{listenerUrl}'.");
+            }
+
+            host.Stopped += (_, _) => Hosts.TryRemove(listenerUrl, out _);
+            return host;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError($"Diagnostic Explorer self-host at '{listenerUrl}' failed to start: {exception}");
+            return DiagnosticSelfHost.Disabled();
+        }
     }
 }
 

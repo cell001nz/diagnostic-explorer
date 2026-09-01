@@ -108,6 +108,12 @@ internal sealed class SignalRProtocolContractResolver : CamelCasePropertyNamesCo
             Predicate<object> shouldSerialize = property.ShouldSerialize;
             property.ShouldSerialize = parent => (shouldSerialize?.Invoke(parent) ?? true) && !Equals(property.ValueProvider.GetValue(parent), false);
         }
+        else if (property.PropertyType == typeof(StatusIconSize))
+        {
+            Predicate<object> shouldSerialize = property.ShouldSerialize;
+            property.ShouldSerialize = parent =>
+                (shouldSerialize?.Invoke(parent) ?? true) && !Equals(property.ValueProvider.GetValue(parent), StatusIconSize.Small);
+        }
 
         return property;
     }
