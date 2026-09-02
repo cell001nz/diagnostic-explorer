@@ -207,7 +207,7 @@ public partial class Form1 : Form, INotifyPropertyChanged
                     items
                         .WithName((obj, index) => $"Item {index} - {obj.FullName}")
                         .AsJson()
-                        .Wide(2)
+                        .Wide()
                         .WithExpandedHover()
                         .WithDrillDown()
                         .WithStatus(StatusCode.Active, obj => obj != null)
