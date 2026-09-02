@@ -9,6 +9,7 @@ $event-grid-min-width: 60rem;
 }
 
 .property-sheet {
+	--wide-max-span: 1;
 	display: grid;
 	grid-template-columns: minmax($property-label-min-width, max-content) minmax(0, 1fr);
 	gap:.25rem 2em;
@@ -183,15 +184,8 @@ $event-grid-min-width: 60rem;
 
 @container (min-width: 73rem) {
 	.property-sheet {
+		--wide-max-span: 3;
 		grid-template-columns: repeat(2, minmax($property-label-min-width, max-content) minmax(0, 1fr));
-	}
-
-	.section-property-grid > .property-row .property-name {
-		padding-left: 0;
-	}
-
-	.section-property-grid > .property-row:nth-child(odd) .property-name {
-		padding-left: calc(var(--section-depth, 0) * 1rem);
 	}
 
 	.section-property-grid > .property-row:not(:nth-child(2n)) > .value-kind {
@@ -201,15 +195,8 @@ $event-grid-min-width: 60rem;
 
 @container (min-width: 110rem) {
 	.category-view:not(.max-property-columns-2) .property-sheet {
+		--wide-max-span: 5;
 		grid-template-columns: repeat(3, minmax($property-label-min-width, max-content) minmax(0, 1fr));
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) .property-name {
-		padding-left: 0;
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(3n + 1) .property-name {
-		padding-left: calc(var(--section-depth, 0) * 1rem);
 	}
 
 	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) > .value-kind {
@@ -223,15 +210,8 @@ $event-grid-min-width: 60rem;
 
 @container (min-width: 147rem) {
 	.category-view:not(.max-property-columns-2) .property-sheet {
+		--wide-max-span: 7;
 		grid-template-columns: repeat(4, minmax($property-label-min-width, max-content) minmax(0, 1fr));
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) .property-name {
-		padding-left: 0;
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(4n + 1) .property-name {
-		padding-left: calc(var(--section-depth, 0) * 1rem);
 	}
 
 	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) > .value-kind {
@@ -245,15 +225,8 @@ $event-grid-min-width: 60rem;
 
 @container (min-width: 184rem) {
 	.category-view:not(.max-property-columns-2) .property-sheet {
+		--wide-max-span: 9;
 		grid-template-columns: repeat(5, minmax($property-label-min-width, max-content) minmax(0, 1fr));
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) .property-name {
-		padding-left: 0;
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(5n + 1) .property-name {
-		padding-left: calc(var(--section-depth, 0) * 1rem);
 	}
 
 	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) > .value-kind {
@@ -267,15 +240,8 @@ $event-grid-min-width: 60rem;
 
 @container (min-width: 221rem) {
 	.category-view:not(.max-property-columns-2) .property-sheet {
+		--wide-max-span: 11;
 		grid-template-columns: repeat(6, minmax($property-label-min-width, max-content) minmax(0, 1fr));
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) .property-name {
-		padding-left: 0;
-	}
-
-	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(6n + 1) .property-name {
-		padding-left: calc(var(--section-depth, 0) * 1rem);
 	}
 
 	.category-view:not(.max-property-columns-2) .section-property-grid > .property-row:nth-child(n) > .value-kind {

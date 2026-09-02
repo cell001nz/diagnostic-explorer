@@ -2,6 +2,7 @@
 import { SubBagModel } from './SubBagModel';
 import { computed, signal } from '@angular/core';
 import { getStatusIconClass, getStatusIconSize, StatusIconSize } from './StatusVisual';
+import { tokenizeJson } from '@app/diagnostics/json-tokenizer';
 
 const namedAlertSeverities: Record<string, number> = {
     None: 0,
@@ -50,7 +51,10 @@ export class PropModel {
     drillDownText = signal('');
     canJsonHover = signal(false);
     canExpandedHover = signal(false);
+    isJson = signal(false);
+    jsonTokens = computed(() => (this.isJson() ? tokenizeJson(this.value()) : []));
     noTruncate = signal(false);
+    width = signal(0);
     valueKind = signal<DisplayValueKind>('text');
     alerts = signal<PropertyAlert[]>([]);
     statuses = signal<PropertyStatus[]>([]);
@@ -78,7 +82,9 @@ export class PropModel {
         this.drillDownText.set(source.drillDownText ?? '');
         this.canJsonHover.set(source.canJsonHover ?? false);
         this.canExpandedHover.set(source.canExpandedHover ?? false);
+        this.isJson.set(source.isJson ?? false);
         this.noTruncate.set(source.noTruncate ?? false);
+        this.width.set(source.width ?? 0);
         this.valueKind.set(getValueKind(source.valueKind));
         this.alerts.set(source.alerts ?? []);
         this.statuses.set(source.statuses ?? []);

@@ -142,8 +142,10 @@ internal sealed class CollectionOptions
     public CollectionMode Mode { get; set; }
     public string NameProperty { get; set; }
     public Func<object, string> NameFormatter { get; set; }
+    public Func<object, int, string> IndexedNameFormatter { get; set; }
     public string ValueProperty { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
+    public bool ItemIsJson { get; set; }
     public string DescriptionProperty { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public string CategoryProperty { get; set; }
@@ -154,4 +156,5 @@ internal sealed class CollectionOptions
     public bool PrimaryPropertiesOnly { get; set; }
     public List<PropertyStatusConfiguration> ItemStatuses { get; set; } = new();
     public ConfiguredValue<StatusIconSize> ItemStatusIconSize { get; set; }
+    public int ItemWidth { get; set; }
 }

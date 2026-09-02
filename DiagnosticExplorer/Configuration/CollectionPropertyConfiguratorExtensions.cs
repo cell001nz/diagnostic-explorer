@@ -32,9 +32,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, TItem[]> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, TItem[]> property, int maxItems) =>
         ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
@@ -64,9 +63,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, List<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, List<TItem>> property, int maxItems) =>
         ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
@@ -96,9 +94,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, HashSet<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, HashSet<TItem>> property, int maxItems) =>
         ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
@@ -130,9 +127,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
         this IPropertyConfigurator<T, ObservableCollection<TItem>> property,
@@ -166,9 +162,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, BindingList<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
         this IPropertyConfigurator<T, BindingList<TItem>> property,
@@ -203,9 +198,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ExpandItems<T, TKey, TValue>(
         this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
         Action<ICollectionExpandedItemConfigurator<KeyValuePair<TKey, TValue>>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> WithMaxItems<T, TKey, TValue>(
         this IPropertyConfigurator<T, Dictionary<TKey, TValue>> property,
@@ -240,9 +234,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ExpandItems<T, TKey, TValue>(
         this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
         Action<ICollectionExpandedItemConfigurator<KeyValuePair<TKey, TValue>>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> WithMaxItems<T, TKey, TValue>(
         this IPropertyConfigurator<T, IDictionary<TKey, TValue>> property,
@@ -277,9 +270,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> ExpandItems<T, TKey, TValue>(
         this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
         Action<ICollectionExpandedItemConfigurator<KeyValuePair<TKey, TValue>>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, KeyValuePair<TKey, TValue>>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, KeyValuePair<TKey, TValue>> WithMaxItems<T, TKey, TValue>(
         this IPropertyConfigurator<T, IReadOnlyDictionary<TKey, TValue>> property,
@@ -311,9 +303,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, IList<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, IList<TItem>> property, int maxItems) =>
         ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
@@ -345,9 +336,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyList<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyList<TItem>> property,
@@ -381,9 +371,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyCollection<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
         this IPropertyConfigurator<T, IReadOnlyCollection<TItem>> property,
@@ -415,9 +404,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, ISet<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(this IPropertyConfigurator<T, ISet<TItem>> property, int maxItems) =>
         ConfigureCollection<T, TItem>(property).WithMaxItems(maxItems);
@@ -449,9 +437,8 @@ public static class CollectionPropertyConfiguratorExtensions
     public static ICollectionConfigurator<T, TItem> ExpandItems<T, TItem>(
         this IPropertyConfigurator<T, ICollection<TItem>> property,
         Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name, initiallyExpanded);
+        string name = null
+    ) => ConfigureCollection<T, TItem>(property).ExpandItems(configure, name);
 
     public static ICollectionConfigurator<T, TItem> WithMaxItems<T, TItem>(
         this IPropertyConfigurator<T, ICollection<TItem>> property,

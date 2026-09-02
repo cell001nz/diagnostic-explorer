@@ -139,6 +139,12 @@ public class Property
     public PropertyValueKind ValueKind { get; set; }
     public bool CanJsonHover { get; set; }
     public bool CanExpandedHover { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsJson { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Width { get; set; }
     public string DrillDownText { get; set; }
     public bool NoTruncate { get; set; }
     public List<PropertyStatus> Statuses { get; set; }

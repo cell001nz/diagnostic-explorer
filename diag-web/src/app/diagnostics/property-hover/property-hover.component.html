@@ -3,7 +3,7 @@
 </span>
 
 <ng-template #tooltipContent>
-    <section class="property-hover-tooltip" role="tooltip" (mouseenter)="cancelHide()" (mouseleave)="scheduleHide()">
+    <section class="property-hover-tooltip" role="tooltip">
         @if (loading()) {
             <div class="property-hover-status">Loading...</div>
         } @else if (errorMessage()) {

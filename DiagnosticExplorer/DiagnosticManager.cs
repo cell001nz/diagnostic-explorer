@@ -544,8 +544,10 @@ public static class DiagnosticManager
             options.Mode = output.Mode;
             options.NameProperty = output.NameProperty ?? options.NameProperty;
             options.NameFormatter = output.NameFormatter ?? options.NameFormatter;
+            options.IndexedNameFormatter = output.IndexedNameFormatter ?? options.IndexedNameFormatter;
             options.ValueProperty = output.ValueProperty ?? options.ValueProperty;
             options.ValueFormatter = output.ValueFormatter ?? options.ValueFormatter;
+            options.ItemIsJson = output.ItemIsJson;
             options.DescriptionProperty = output.DescriptionProperty ?? options.DescriptionProperty;
             options.DescriptionFormatter = output.DescriptionFormatter ?? options.DescriptionFormatter;
             options.CategoryProperty = output.CategoryProperty ?? options.CategoryProperty;
@@ -555,6 +557,7 @@ public static class DiagnosticManager
             options.PrimaryPropertiesOnly = output.PrimaryPropertiesOnly;
             options.ItemStatuses = output.ItemStatuses;
             options.ItemStatusIconSize = output.ItemStatusIconSize;
+            options.ItemWidth = output.ItemWidth;
             ApplyCollectionConfiguration(options, configuration);
 
             PropertyConfiguration outputConfiguration = configuration.Clone();
@@ -584,8 +587,10 @@ public static class DiagnosticManager
         {
             NameProperty = source.NameProperty,
             NameFormatter = source.NameFormatter,
+            IndexedNameFormatter = source.IndexedNameFormatter,
             ValueProperty = source.ValueProperty,
             ValueFormatter = source.ValueFormatter,
+            ItemIsJson = source.ItemIsJson,
             DescriptionProperty = source.DescriptionProperty,
             DescriptionFormatter = source.DescriptionFormatter,
             CategoryProperty = source.CategoryProperty,
@@ -596,6 +601,7 @@ public static class DiagnosticManager
             PrimaryPropertiesOnly = source.PrimaryPropertiesOnly,
             ItemStatuses = source.ItemStatuses,
             ItemStatusIconSize = source.ItemStatusIconSize,
+            ItemWidth = source.ItemWidth,
         };
     }
 

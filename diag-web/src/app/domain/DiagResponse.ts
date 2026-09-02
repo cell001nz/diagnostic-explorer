@@ -72,7 +72,9 @@ export interface Property {
     drillDownText?: string;
     canJsonHover?: boolean;
     canExpandedHover?: boolean;
+    isJson?: boolean;
     noTruncate?: boolean;
+    width?: number;
     alerts: PropertyAlert[];
     statuses?: PropertyStatus[];
     statusIconSize?: number | 'Small' | 'Medium' | 'Large';

@@ -87,7 +87,7 @@
             @if (section.subBag; as subBag) {
                 <div class="section-property-grid">
                     @for (prop of subBag.properties(); track prop.name()) {
-                    <div class="property-row">
+                    <div class="property-row" [class.wide-property-row]="prop.width() > 0">
                     <app-property-hover class="text-s my-1 flex items-start gap-1 min-w-0"
                         [class.text-stone-500]="!prop.alertSeverity()"
                         [class.text-amber-400]="prop.alertSeverity() === 1"
@@ -113,7 +113,8 @@
                             </button>
                         }
                     </app-property-hover>
-                      <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [attr.data-value-kind]="prop.valueKind()"
+                      <span class="text-s my-1 flex items-start gap-1 min-w-0 value-kind" [class.wide-value]="prop.width() > 0"
+                          [style.--wide-column-count]="prop.width()" [attr.data-value-kind]="prop.valueKind()"
                           [pTooltip]="prop.canJsonHover() || prop.canExpandedHover() ? null : prop.alertTooltip() || null" [showDelay]="0">
                         @if (prop.statuses().length) {
                             <span class="property-statuses"
@@ -135,14 +136,30 @@
                             @if (!prop.drillDownIconOnly() && prop.value()) {
                                 @if (prop.canDrillDown()) {
                                     <button type="button" class="diag-drilldown-value" (click)="showDrillDown(prop.getOperationPath(), prop.name())">
-                                        @for (line of prop.valueLines(); track $index) {
-                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : line">{{ line }}</span>
+                                        @if (prop.isJson()) {
+                                            <span class="value-line json-value" [class.no-truncate]="prop.noTruncate()">
+                                                @for (token of prop.jsonTokens(); track $index) {
+                                                    <span [class]="token.type">{{ token.text }}</span>
+                                                }
+                                            </span>
+                                        } @else {
+                                            @for (line of prop.valueLines(); track $index) {
+                                                <span class="value-line" [class.no-truncate]="prop.noTruncate()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : line">{{ line }}</span>
+                                            }
                                         }
                                     </button>
                                 } @else {
                                     <span class="value-text">
-                                        @for (line of prop.valueLines(); track $index) {
-                                            <span class="value-line" [class.no-truncate]="prop.noTruncate()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : line">{{ line }}</span>
+                                        @if (prop.isJson()) {
+                                            <span class="value-line json-value" [class.no-truncate]="prop.noTruncate()">
+                                                @for (token of prop.jsonTokens(); track $index) {
+                                                    <span [class]="token.type">{{ token.text }}</span>
+                                                }
+                                            </span>
+                                        } @else {
+                                            @for (line of prop.valueLines(); track $index) {
+                                                <span class="value-line" [class.no-truncate]="prop.noTruncate()" [attr.title]="prop.canJsonHover() || prop.canExpandedHover() ? null : line">{{ line }}</span>
+                                            }
                                         }
                                     </span>
                                 }

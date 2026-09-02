@@ -151,11 +151,7 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, Func<TItem, string> format = null);
     ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format);
     ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null);
-    ICollectionConfigurator<T, TItem> ExpandItems(
-        Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    );
+    ICollectionConfigurator<T, TItem> ExpandItems(Action<ICollectionExpandedItemConfigurator<TItem>> configure = null, string name = null);
     ICollectionConfigurator<T, TItem> WithPrimaryPropertiesOnly();
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
     ICollectionConfigurator<T, TItem> WithTextWrap();
@@ -170,8 +166,13 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
 public interface ICollectionListConfigurator<TItem>
 {
     ICollectionListConfigurator<TItem> WithName(Func<TItem, string> format);
+    ICollectionListConfigurator<TItem> WithName(Func<TItem, int, string> format);
     ICollectionListConfigurator<TItem> WithValue(Func<TItem, string> format);
-    ICollectionListConfigurator<TItem> AsJson(int maxLength = 100);
+    ICollectionListConfigurator<TItem> AsJson(int maxLength = 8092);
+    ICollectionListConfigurator<TItem> Wide(int? cols = null);
+    ICollectionListConfigurator<TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
+    ICollectionListConfigurator<TItem> WithJsonHover(bool enabled = true);
+    ICollectionListConfigurator<TItem> WithExpandedHover(bool enabled = true);
     ICollectionListConfigurator<TItem> WithDescription(Func<TItem, string> format);
     ICollectionListConfigurator<TItem> WithCategory(Func<TItem, string> format);
     ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition);
@@ -183,6 +184,7 @@ public interface ICollectionExpandedItemConfigurator<TItem>
 {
     ICollectionExpandedItemConfigurator<TItem> WithName(Func<TItem, string> format);
     ICollectionExpandedItemConfigurator<TItem> WithInitiallyExpanded();
+    ICollectionExpandedItemConfigurator<TItem> WithInitiallyCollapsed();
     ICollectionExpandedItemConfigurator<TItem> WithPrimaryPropertiesOnly();
     ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition);
     ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, string text);

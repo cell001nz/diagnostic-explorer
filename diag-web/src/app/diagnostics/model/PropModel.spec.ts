@@ -56,4 +56,16 @@ describe('PropModel', () => {
 
         expect(model.valueLines()).toEqual(['Widget X', 'Widget Y']);
     });
+
+    it('tokenizes explicitly configured JSON values', () => {
+        const property = createProperty('None');
+        property.value = '{"name":"Widget","count":2}';
+        property.isJson = true;
+
+        const model = new PropModel({} as SubBagModel, property);
+
+        expect(model.isJson()).toBeTrue();
+        expect(model.jsonTokens().some((token) => token.type === 'json-key')).toBeTrue();
+        expect(model.jsonTokens().some((token) => token.type === 'json-number')).toBeTrue();
+    });
 });

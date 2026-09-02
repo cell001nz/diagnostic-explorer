@@ -14,6 +14,7 @@ internal class CollectionGetter : PropertyGetter
     private int _maxItems;
     private Func<object, object> _nameFunc;
     private Func<object, string> _nameFormatter;
+    private Func<object, int, string> _indexedNameFormatter;
     private Func<object, object> _valueFunc;
     private Func<object, string> _valueFormatter;
     private Func<object, object> _descrFunc;
@@ -22,6 +23,8 @@ internal class CollectionGetter : PropertyGetter
     private Func<object, string> _categoryFormatter;
     private IReadOnlyList<PropertyStatusConfiguration> _itemStatuses;
     private StatusIconSize _itemStatusIconSize;
+    private bool _itemIsJson;
+    private int _itemWidth;
     private bool _initiallyExpanded;
     private NestedPropertyRenderMode _itemRenderMode;
 
@@ -44,11 +47,14 @@ internal class CollectionGetter : PropertyGetter
         _separator = options.Separator ?? ", ";
         _mode = options.Mode;
         _nameFormatter = options.NameFormatter;
+        _indexedNameFormatter = options.IndexedNameFormatter;
         _valueFormatter = options.ValueFormatter;
         _descriptionFormatter = options.DescriptionFormatter;
         _categoryFormatter = options.CategoryFormatter;
         _itemStatuses = options.ItemStatuses;
         _itemStatusIconSize = options.ItemStatusIconSize.IsSet ? options.ItemStatusIconSize.Value : StatusIconSize.Small;
+        _itemIsJson = options.ItemIsJson;
+        _itemWidth = options.ItemWidth;
         _initiallyExpanded = options.InitiallyExpanded;
         _itemRenderMode = options.PrimaryPropertiesOnly ? NestedPropertyRenderMode.PrimaryOnly : NestedPropertyRenderMode.All;
 
@@ -257,13 +263,23 @@ internal class CollectionGetter : PropertyGetter
         int index = 0;
         foreach (object obj in GetLimitedItems(col))
         {
+            int itemIndex = index++;
             object objectValue = obj;
-            string name = _nameFormatter?.Invoke(obj) ?? Convert.ToString(GetNextPropVal(obj, _nameFunc, index++, GetName(owner)));
+            string name =
+                _indexedNameFormatter?.Invoke(obj, itemIndex)
+                ?? _nameFormatter?.Invoke(obj)
+                ?? Convert.ToString(GetNextPropVal(obj, _nameFunc, itemIndex, GetName(owner)));
             string val = _valueFormatter?.Invoke(obj) ?? (_valueFunc == null ? FormatValue(obj) : GetValue(obj, _valueFunc, out objectValue));
             string desc = _descriptionFormatter?.Invoke(obj) ?? (_descrFunc == null ? null : GetValue(obj, _descrFunc, out objectValue));
             string cat = _categoryFormatter?.Invoke(obj) ?? (_catFunc == null ? null : GetValue(obj, _catFunc, out objectValue));
 
-            Property prop = new Property(name, val, desc) { ValueObject = objectValue, Statuses = GetItemStatuses(obj) };
+            Property prop = new Property(name, val, desc)
+            {
+                ValueObject = objectValue,
+                Statuses = GetItemStatuses(obj),
+                IsJson = _itemIsJson,
+                Width = _itemWidth,
+            };
             ApplyDrillDown(prop, obj, owner);
             bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend, owner), cat));
         }

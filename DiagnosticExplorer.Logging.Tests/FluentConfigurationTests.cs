@@ -1231,7 +1231,7 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
-            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name), initiallyExpanded: false)
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name).WithInitiallyCollapsed())
         );
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -1247,7 +1247,7 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
-            type.Property(sample => sample.Items).ExpandItems(items => items.WithInitiallyExpanded(), initiallyExpanded: false)
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithInitiallyCollapsed().WithInitiallyExpanded())
         );
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -1369,13 +1369,95 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).AsJson());
+            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).AsJson().Wide());
         });
         DiagnosticManager.UseConfiguration(configuration);
 
         Property property = Render(new CollectionSample()).GetProperty("One", null);
 
         Assert.Equal("{\"Name\":\"One\",\"Value\":1}", property.Value);
+        Assert.True(property.IsJson);
+        Assert.Equal(100, property.Width);
+    }
+
+    [Fact]
+    public void CollectionListItemsCanFormatNamesWithItemIndex()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ListItems(items => items.WithName((item, index) => $"Item {index}: {item.Name}"));
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionSample());
+
+        Assert.Equal("One", bag.GetProperty("Item 0: One", null).Value);
+        Assert.Equal("Two", bag.GetProperty("Item 1: Two", null).Value);
+        Assert.Equal("Three", bag.GetProperty("Item 2: Three", null).Value);
+    }
+
+    [Fact]
+    public void CollectionListItemsDoNotTruncateJsonAtOneHundredCharactersByDefault()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<LongCollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).AsJson());
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new LongCollectionSample()).GetProperty("Long", null);
+
+        Assert.True(property.Value.Length > 100);
+        Assert.Contains(new string('x', 200), property.Value);
+    }
+
+    [Fact]
+    public void CollectionListItemsCanLimitWideColumns()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).Wide(2));
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new CollectionSample()).GetProperty("One", null);
+
+        Assert.Equal(2, property.Width);
+    }
+
+    [Fact]
+    public void CollectionListItemsCanConfigureHover()
+    {
+        DiagnosticConfiguration jsonConfiguration = new();
+        jsonConfiguration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).WithJsonHover());
+        });
+        DiagnosticManager.UseConfiguration(jsonConfiguration);
+
+        Property jsonProperty = Render(new CollectionSample()).GetProperty("One", null);
+        Assert.True(jsonProperty.CanJsonHover);
+        Assert.False(jsonProperty.CanExpandedHover);
+
+        DiagnosticConfiguration expandedConfiguration = new();
+        expandedConfiguration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).WithExpandedHover().WithDrillDown());
+        });
+        DiagnosticManager.UseConfiguration(expandedConfiguration);
+
+        Property expandedProperty = Render(new CollectionSample()).GetProperty("One", null);
+        Assert.False(expandedProperty.CanJsonHover);
+        Assert.True(expandedProperty.CanExpandedHover);
+        Assert.True(expandedProperty.CanDrillDown);
     }
 
     [Fact]
@@ -1431,7 +1513,9 @@ public sealed class FluentConfigurationTests : IDisposable
         DiagnosticConfiguration configuration = new();
 
         ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() =>
-            configuration.Configure<CollectionSample>(type => type.Property(sample => sample.Items).ListItems(items => items.WithName(null)))
+            configuration.Configure<CollectionSample>(type =>
+                type.Property(sample => sample.Items).ListItems(items => items.WithName((Func<CollectionItem, string>)null))
+            )
         );
 
         Assert.Equal("format", exception.ParamName);
@@ -2466,6 +2550,17 @@ public sealed class FluentConfigurationTests : IDisposable
             type.Property(sample => sample._privateItems)
                 .ListItems(items => items.WithName(item => item.Name).WithValue(item => item.Value.ToString()));
         }
+    }
+
+    private sealed class LongCollectionSample
+    {
+        public ICollection<LongCollectionItem> Items { get; } = new List<LongCollectionItem> { new() };
+    }
+
+    private sealed class LongCollectionItem
+    {
+        public string Name { get; } = "Long";
+        public string Value { get; } = new string('x', 200);
     }
 
     private sealed class NullExpandedSample

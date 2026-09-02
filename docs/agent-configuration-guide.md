@@ -257,13 +257,15 @@ Use `ListItems(...)` for a scan-friendly item list. Use
 collection section with a nested section for each item, populated with that
 item's diagnostic properties. Without `WithName(...)`, item names default to
 the collection name and a zero-based index.
+Use `ListItems(items => items.Wide())` to let each item value span all currently
+available property columns, or `Wide(2)` to limit it to two columns.
 Use `ListItems(items => items.WithStatus(...))` to display one or more status
 icons on individual list rows; conditions and tooltip text are evaluated for
 each item. Use `ExpandItems(items => items.WithStatus(...))` to show statuses
 on individual expanded-item headings, and chain `WithIconSize(...)` to choose
 their icon size. A configured name must be distinct for every item; include an
-identifier when a readable name alone is not unique. Pass
-`initiallyExpanded: false` to start that section collapsed. Use `ConcatItems(...)`
+identifier when a readable name alone is not unique. Use
+`WithInitiallyCollapsed()` to start that section collapsed. Use `ConcatItems(...)`
 only for short, simple collections.
 Chain `WithPrimaryPropertiesOnly()` after `ExpandItems(...)` or `Expand()` to
 show only direct, uncategorized properties; nested `Expand()` and `Custom()`

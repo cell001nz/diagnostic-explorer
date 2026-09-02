@@ -562,6 +562,7 @@ internal sealed class PropertyConfiguration
     public ConfiguredValue<string> FormatString { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
     public Func<object, string> TextFormatter { get; set; }
+    public ConfiguredValue<bool> IsJson { get; set; }
     public ConfiguredValue<StatusIconSize> StatusIconSize { get; set; }
     public ConfiguredValue<bool> AllowSet { get; set; }
     public ConfiguredValue<bool> ExposeRate { get; set; }
@@ -630,6 +631,7 @@ internal sealed class PropertyConfiguration
         FormatString = source.FormatString.Or(FormatString);
         ValueFormatter = source.ValueFormatter ?? ValueFormatter;
         TextFormatter = source.TextFormatter ?? TextFormatter;
+        IsJson = source.IsJson.Or(IsJson);
         StatusIconSize = source.StatusIconSize.Or(StatusIconSize);
         AllowSet = source.AllowSet.Or(AllowSet);
         ExposeRate = source.ExposeRate.Or(ExposeRate);
@@ -714,6 +716,7 @@ internal sealed class CustomPropertyConfiguration
     public ConfiguredValue<string> Description { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
+    public ConfiguredValue<bool> IsJson { get; set; }
     public List<PropertyAlertConfiguration> Alerts { get; } = new();
     public List<PropertyStatusConfiguration> Statuses { get; } = new();
     public ConfiguredValue<bool> InitiallyExpanded { get; set; }
@@ -736,6 +739,7 @@ internal sealed class CustomPropertyConfiguration
             Description = Description,
             DescriptionFormatter = DescriptionFormatter,
             ValueFormatter = ValueFormatter,
+            IsJson = IsJson,
             InitiallyExpanded = InitiallyExpanded,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
@@ -761,6 +765,7 @@ internal sealed class CustomPropertyConfiguration
             Description = Description,
             DescriptionFormatter = DescriptionFormatter == null ? null : _ => DescriptionFormatter(source),
             ValueFormatter = ValueFormatter,
+            IsJson = IsJson,
             InitiallyExpanded = InitiallyExpanded,
             DrillDown = DrillDown,
             DrillDownMaxItems = DrillDownMaxItems,
@@ -806,8 +811,10 @@ internal sealed class CollectionOutputConfiguration
     public string Separator { get; set; }
     public string NameProperty { get; set; }
     public Func<object, string> NameFormatter { get; set; }
+    public Func<object, int, string> IndexedNameFormatter { get; set; }
     public string ValueProperty { get; set; }
     public Func<object, string> ValueFormatter { get; set; }
+    public bool ItemIsJson { get; set; }
     public string DescriptionProperty { get; set; }
     public Func<object, string> DescriptionFormatter { get; set; }
     public string CategoryProperty { get; set; }
@@ -824,6 +831,7 @@ internal sealed class CollectionOutputConfiguration
     public bool PrimaryPropertiesOnly { get; set; }
     public List<PropertyStatusConfiguration> ItemStatuses { get; set; } = new();
     public ConfiguredValue<StatusIconSize> ItemStatusIconSize { get; set; }
+    public int ItemWidth { get; set; }
 
     public CollectionOutputConfiguration Clone()
     {
@@ -1222,6 +1230,7 @@ internal sealed class PropertyConfigurator<T, TProperty>
             string json = JsonSerializer.Serialize((TProperty)value);
             return json.Substring(0, Math.Min(maxLength, json.Length));
         };
+        Configuration.IsJson = new ConfiguredValue<bool>(true);
         return this;
     }
 
@@ -1461,6 +1470,7 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
             string json = JsonSerializer.Serialize(value);
             return json.Substring(0, Math.Min(maxLength, json.Length));
         };
+        _configuration.IsJson = new ConfiguredValue<bool>(true);
         return this;
     }
 
@@ -1690,14 +1700,9 @@ internal sealed class CollectionConfigurator<T, TItem>
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> ExpandItems(
-        Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
-        string name = null,
-        bool initiallyExpanded = true
-    )
+    public ICollectionConfigurator<T, TItem> ExpandItems(Action<ICollectionExpandedItemConfigurator<TItem>> configure = null, string name = null)
     {
         CollectionOutputConfiguration output = AddOutput(CollectionMode.ExpandedItems, name);
-        output.InitiallyExpanded = initiallyExpanded;
         configure?.Invoke(new CollectionExpandedItemConfigurator<TItem>(output));
         return this;
     }
@@ -1848,6 +1853,17 @@ internal sealed class CollectionListConfigurator<TItem> : ICollectionListConfigu
     public ICollectionListConfigurator<TItem> WithName(Func<TItem, string> format)
     {
         _output.NameFormatter = CreateFormatter(format);
+        _output.IndexedNameFormatter = null;
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithName(Func<TItem, int, string> format)
+    {
+        if (format == null)
+            throw new ArgumentNullException(nameof(format));
+
+        _output.NameFormatter = null;
+        _output.IndexedNameFormatter = (item, index) => format((TItem)item, index);
         return this;
     }
 
@@ -1857,7 +1873,7 @@ internal sealed class CollectionListConfigurator<TItem> : ICollectionListConfigu
         return this;
     }
 
-    public ICollectionListConfigurator<TItem> AsJson(int maxLength = 100)
+    public ICollectionListConfigurator<TItem> AsJson(int maxLength = 8092)
     {
         if (maxLength <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxLength), "JSON max length must be greater than zero.");
@@ -1867,6 +1883,41 @@ internal sealed class CollectionListConfigurator<TItem> : ICollectionListConfigu
             string json = JsonSerializer.Serialize((TItem)item);
             return json.Substring(0, Math.Min(maxLength, json.Length));
         };
+        _output.ItemIsJson = true;
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> Wide(int? cols = null)
+    {
+        if (cols <= 0)
+            throw new ArgumentOutOfRangeException(nameof(cols), "Wide column count must be greater than zero.");
+
+        _output.ItemWidth = cols ?? 100;
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithDrillDown(bool enabled = true, int? maxItems = null)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        _output.DrillDown = new ConfiguredValue<bool>(enabled);
+        if (maxItems.HasValue)
+            _output.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithJsonHover(bool enabled = true)
+    {
+        _output.JsonHover = new ConfiguredValue<bool>(enabled);
+        _output.ExpandedHover = new ConfiguredValue<bool>(false);
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithExpandedHover(bool enabled = true)
+    {
+        _output.JsonHover = new ConfiguredValue<bool>(false);
+        _output.ExpandedHover = new ConfiguredValue<bool>(enabled);
         return this;
     }
 
@@ -1943,6 +1994,12 @@ internal sealed class CollectionExpandedItemConfigurator<TItem> : ICollectionExp
     public ICollectionExpandedItemConfigurator<TItem> WithInitiallyExpanded()
     {
         _output.InitiallyExpanded = true;
+        return this;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithInitiallyCollapsed()
+    {
+        _output.InitiallyExpanded = false;
         return this;
     }
 

@@ -55,6 +55,7 @@ internal class PropertyGetter
     protected bool ExpandedHoverEnabled { get; private set; }
     protected bool NoTruncate { get; private set; }
     protected StatusIconSize StatusIconSize { get; private set; }
+    protected bool IsJson { get; private set; }
 
     protected PropertyGetter() { }
 
@@ -125,6 +126,8 @@ internal class PropertyGetter
                 FormatString = configuration.FormatString.Value;
             _valueFormatter = configuration.ValueFormatter;
             _textFormatter = configuration.TextFormatter;
+            if (configuration.IsJson.IsSet)
+                IsJson = configuration.IsJson.Value;
             _alerts = configuration.Alerts;
             _statuses = configuration.Statuses;
             if (configuration.StatusIconSize.IsSet)
@@ -206,6 +209,7 @@ internal class PropertyGetter
             Alerts = GetAlerts(obj),
             Statuses = GetStatuses(obj),
             StatusIconSize = StatusIconSize,
+            IsJson = IsJson,
             SourceObject = obj,
             SourceProperty = PropInfo,
         };
@@ -444,6 +448,8 @@ internal class PropertyGetter
         _valueFormatter = configuration.ValueFormatter;
         _alerts = configuration.Alerts;
         _statuses = configuration.Statuses;
+        if (configuration.IsJson.IsSet)
+            IsJson = configuration.IsJson.Value;
         ConfigureDrillDown(
             configuration.DrillDown,
             configuration.DrillDownMaxItems,

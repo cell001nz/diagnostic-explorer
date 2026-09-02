@@ -176,11 +176,11 @@ value with that item's diagnostic properties. Without `WithName(...)`, item
 names default to the collection name and a zero-based index. A configured name
 must be distinct for every item; include an identifier when a readable name
 alone is not unique. Pass
-`initiallyExpanded: false` when the collection should start collapsed:
+`WithInitiallyCollapsed()` when the collection should start collapsed:
 
 ```csharp
 options.Property(widget => widget.Gadgets)
-    .ExpandItems(items => items.WithName(gadget => gadget.FullName), initiallyExpanded: false);
+    .ExpandItems(items => items.WithName(gadget => gadget.FullName).WithInitiallyCollapsed());
 ```
 
 Chain `WithPrimaryPropertiesOnly()` after `ExpandItems(...)` or `Expand()` to

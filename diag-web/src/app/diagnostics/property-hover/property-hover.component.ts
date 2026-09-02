@@ -94,6 +94,7 @@ export class PropertyHoverComponent implements OnDestroy {
             ]);
 
         this.#overlayRef = this.#overlay.create({
+            panelClass: 'property-hover-overlay',
             positionStrategy,
             scrollStrategy: this.#overlay.scrollStrategies.reposition()
         });

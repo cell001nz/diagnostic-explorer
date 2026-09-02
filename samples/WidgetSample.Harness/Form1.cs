@@ -203,8 +203,29 @@ public partial class Form1 : Form, INotifyPropertyChanged
 
             options
                 .Property("WidgetList", obj => obj.Widgets)
-                .ListItems(items => items.WithName(obj => obj.FullName).AsJson().WithStatus(StatusCode.Active, obj => obj != null))
+                .ListItems(items =>
+                    items
+                        .WithName((obj, index) => $"Item {index} - {obj.FullName}")
+                        .AsJson()
+                        .Wide(2)
+                        .WithExpandedHover()
+                        .WithDrillDown()
+                        .WithStatus(StatusCode.Active, obj => obj != null)
+                )
                 .WithCategory("WidgetList");
+
+            options
+                .Property("WidgetList2", obj => obj.Widgets)
+                .ListItems(items =>
+                    items
+                        .WithName(obj => obj.FullName)
+                        .AsJson()
+                        .Wide(3)
+                        .WithJsonHover()
+                        .WithDrillDown()
+                        .WithStatus(StatusCode.Active, obj => obj != null)
+                )
+                .WithCategory("WidgetList2");
 
             options
                 .Custom(

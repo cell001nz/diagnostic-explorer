@@ -12,3 +12,48 @@ app-category-view .value-line.no-truncate {
     white-space: normal;
     overflow-wrap: anywhere;
 }
+
+.json-key { color: #67e8f9; }
+.json-string { color: #fde68a; }
+.json-number { color: #c4b5fd; }
+.json-literal { color: #f9a8d4; }
+.json-punctuation { color: #d1d5db; }
+
+.property-hover-overlay {
+    pointer-events: none;
+}
+
+.property-sheet { --property-column-count: 1; }
+
+.property-row.wide-property-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(var(--property-column-count), minmax(10.8rem, max-content) minmax(0, 1fr));
+    column-gap: 2em;
+}
+
+.property-row.wide-property-row > app-property-hover { grid-column: 1; }
+.section-property-grid > .property-row.wide-property-row .property-name { padding-left: 0; }
+.category-view .section-property-grid > .property-row.wide-property-row:nth-child(n) .property-name { padding-left: 0; }
+.category-view:not(.max-property-columns-2) .section-property-grid > .property-row.wide-property-row:nth-child(n) .property-name { padding-left: 0; }
+.value-kind.wide-value { grid-column: 2 / span min(calc((var(--wide-column-count) * 2) - 1), var(--wide-max-span)); }
+
+@container (min-width: 73rem) {
+    .property-sheet { --property-column-count: 2; }
+}
+
+@container (min-width: 110rem) {
+    .category-view:not(.max-property-columns-2) .property-sheet { --property-column-count: 3; }
+}
+
+@container (min-width: 147rem) {
+    .category-view:not(.max-property-columns-2) .property-sheet { --property-column-count: 4; }
+}
+
+@container (min-width: 184rem) {
+    .category-view:not(.max-property-columns-2) .property-sheet { --property-column-count: 5; }
+}
+
+@container (min-width: 221rem) {
+    .category-view:not(.max-property-columns-2) .property-sheet { --property-column-count: 6; }
+}
