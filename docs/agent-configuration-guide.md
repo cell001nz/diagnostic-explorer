@@ -151,7 +151,7 @@ the immediate summary. Never use a `General` section: null, empty, and
 
 ## Add property statuses
 
-Use `Status(...)` when a property has one or more current states that need an
+Use `WithStatus(...)` when a property has one or more current states that need an
 icon in the viewer. A property can have several active statuses. Statuses use
 the fixed `StatusCode` values `Active`, `Inactive`, `Pending`, `Success`,
 `Warning`, `Error`, `Alert`, `Danger`, `Running`, `Stopped`, and `Disabled`,
@@ -161,8 +161,8 @@ the owning object.
 
 ```csharp
 options.Property(worker => worker.Endpoint)
-    .Status(StatusCode.Active, worker => worker.IsConnected, "Connected")
-    .Status(StatusCode.Pending, worker => worker.IsRetrying, worker => $"Retry {worker.RetryCount}");
+    .WithStatus(StatusCode.Active, worker => worker.IsConnected, "Connected")
+    .WithStatus(StatusCode.Pending, worker => worker.IsRetrying, worker => $"Retry {worker.RetryCount}");
 ```
 
 When a property uses `Expand()`, its statuses render beside the generated
@@ -175,7 +175,7 @@ status-only row; an owner callback can display a related value instead.
 ```csharp
 options.Property(worker => worker.QueueDepth)
     .WithText("")
-    .Status(StatusCode.Running, worker => worker.IsProcessing);
+    .WithStatus(StatusCode.Running, worker => worker.IsProcessing);
 
 options.Property(worker => worker.QueueDepth)
     .WithText(worker => $"{worker.ActiveJobCount} active jobs");
@@ -225,7 +225,7 @@ derived members or a collection presentation:
 options.Custom("Worker inventory", projection =>
 {
     projection.Property("Workers", registry => registry.CurrentWorkers)
-        .ExpandItems(worker => worker.Id);
+    .ExpandItems(items => items.WithName(worker => worker.Id));
 }).Expand();
 ```
 
@@ -240,9 +240,10 @@ serializing a large collection into one value:
 
 ```csharp
 options.Property(registry => registry.CurrentWorkers)
-    .ListItems()
-    .WithListItemName(worker => worker.Id)
-    .WithListItemValue(worker => worker.State)
+    .ListItems(items => items
+        .WithName(worker => worker.Id)
+        .WithValue(worker => worker.State)
+        .WithStatus(StatusCode.Running, worker => worker.IsProcessing, "Processing"))
     .WithMaxItems(50)
     .WithDrillDown();
 
@@ -252,9 +253,15 @@ options.Property(registry => registry.EnabledFeatures)
 ```
 
 Use `ListItems(...)` for a scan-friendly item list. Use
-`ExpandItems(item => item.Id)` to create an expanded collection section with a
-nested section for each item, populated with that item's diagnostic properties.
-The selector must produce a distinct label for every item; include an
+`ExpandItems(items => items.WithName(item => item.Id))` to create an expanded
+collection section with a nested section for each item, populated with that
+item's diagnostic properties. Without `WithName(...)`, item names default to
+the collection name and a zero-based index.
+Use `ListItems(items => items.WithStatus(...))` to display one or more status
+icons on individual list rows; conditions and tooltip text are evaluated for
+each item. Use `ExpandItems(items => items.WithStatus(...))` to show statuses
+on individual expanded-item headings, and chain `WithIconSize(...)` to choose
+their icon size. A configured name must be distinct for every item; include an
 identifier when a readable name alone is not unique. Pass
 `initiallyExpanded: false` to start that section collapsed. Use `ConcatItems(...)`
 only for short, simple collections.

@@ -95,9 +95,9 @@ public interface IPropertyConfigurator<T, TProperty> : IObjectPropertyConfigurat
     IPropertyConfigurator<T, TProperty> WithDrillDownOnly(Func<T, string> text, int? maxItems = null);
     IPropertyConfigurator<T, TProperty> WithJsonHover(bool enabled = true);
     IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true);
-    IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition);
-    IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, string text);
-    IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text);
+    IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition);
+    IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition, string text);
+    IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message);
     IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition, string message, string category);
@@ -124,9 +124,9 @@ public interface ICustomPropertyConfigurator<T>
     ICustomPropertyConfigurator<T> WithCategory(Func<T, string> category);
     ICustomPropertyConfigurator<T> Description(string description);
     ICustomPropertyConfigurator<T> Description(Func<T, string> description);
-    ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition);
-    ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, string text);
-    ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text);
+    ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition);
+    ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition, string text);
+    ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, string message);
     ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition, string message, string category);
@@ -150,12 +150,12 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> ShowCount(string name = null);
     ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, Func<TItem, string> format = null);
     ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format);
-    ICollectionConfigurator<T, TItem> ListItems();
-    ICollectionConfigurator<T, TItem> WithListItemName(Func<TItem, string> format);
-    ICollectionConfigurator<T, TItem> WithListItemValue(Func<TItem, string> format);
-    ICollectionConfigurator<T, TItem> WithListItemDescription(Func<TItem, string> format);
-    ICollectionConfigurator<T, TItem> WithListItemCategory(Func<TItem, string> format);
-    ICollectionConfigurator<T, TItem> ExpandItems(Func<TItem, object> itemName, string name = null, bool initiallyExpanded = true);
+    ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null);
+    ICollectionConfigurator<T, TItem> ExpandItems(
+        Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
+        string name = null,
+        bool initiallyExpanded = true
+    );
     ICollectionConfigurator<T, TItem> WithPrimaryPropertiesOnly();
     ICollectionConfigurator<T, TItem> WithMaxItems(int maxItems);
     ICollectionConfigurator<T, TItem> WithTextWrap();
@@ -165,4 +165,28 @@ public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator
     ICollectionConfigurator<T, TItem> WithDrillDownOnly(Func<T, string> text, int? maxItems = null);
     ICollectionConfigurator<T, TItem> WithJsonHover(bool enabled = true);
     ICollectionConfigurator<T, TItem> WithExpandedHover(bool enabled = true);
+}
+
+public interface ICollectionListConfigurator<TItem>
+{
+    ICollectionListConfigurator<TItem> WithName(Func<TItem, string> format);
+    ICollectionListConfigurator<TItem> WithValue(Func<TItem, string> format);
+    ICollectionListConfigurator<TItem> AsJson(int maxLength = 100);
+    ICollectionListConfigurator<TItem> WithDescription(Func<TItem, string> format);
+    ICollectionListConfigurator<TItem> WithCategory(Func<TItem, string> format);
+    ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition);
+    ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, string text);
+    ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, Func<TItem, string> text);
+}
+
+public interface ICollectionExpandedItemConfigurator<TItem>
+{
+    ICollectionExpandedItemConfigurator<TItem> WithName(Func<TItem, string> format);
+    ICollectionExpandedItemConfigurator<TItem> WithInitiallyExpanded();
+    ICollectionExpandedItemConfigurator<TItem> WithPrimaryPropertiesOnly();
+    ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition);
+    ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, string text);
+    ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, Func<TItem, string> text);
+    ICollectionExpandedItemConfigurator<TItem> WithIconSize(StatusIconSize size);
+    ICollectionExpandedItemConfigurator<TItem> WithDrillDown(bool enabled = true, int? maxItems = null);
 }

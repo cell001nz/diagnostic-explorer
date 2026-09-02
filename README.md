@@ -156,9 +156,9 @@ diagnostics.Configure<Widget>(options =>
     options.Property(widget => widget.Components)
         .WithLabel("Components")
         .WithCategory("Inventory")
-        .ListItems()
-        .WithListItemName(component => component.Name)
-        .WithListItemValue(component => component.Status)
+        .ListItems(items => items
+            .WithName(component => component.Name)
+            .WithValue(component => component.Status))
         .WithMaxItems(50)
         .WithDrillDown();
 
@@ -170,15 +170,17 @@ diagnostics.Configure<Widget>(options =>
 ```
 
 `ListItems(...)` gives each item its own row. `ConcatItems(...)` creates one
-compact text value. `ExpandItems(item => item.Id)` creates an expanded section
-for the collection, then an item section for each value with that item's
-diagnostic properties. Its selector must produce a distinct label for every
-item; include an identifier when a readable name alone is not unique. Pass
+compact text value. `ExpandItems(items => items.WithName(item => item.Id))`
+creates an expanded section for the collection, then an item section for each
+value with that item's diagnostic properties. Without `WithName(...)`, item
+names default to the collection name and a zero-based index. A configured name
+must be distinct for every item; include an identifier when a readable name
+alone is not unique. Pass
 `initiallyExpanded: false` when the collection should start collapsed:
 
 ```csharp
 options.Property(widget => widget.Gadgets)
-    .ExpandItems(gadget => gadget.FullName, initiallyExpanded: false);
+    .ExpandItems(items => items.WithName(gadget => gadget.FullName), initiallyExpanded: false);
 ```
 
 Chain `WithPrimaryPropertiesOnly()` after `ExpandItems(...)` or `Expand()` to
@@ -202,7 +204,7 @@ view section. The projection may include a collection output:
 options.Custom("Gadgets", projection =>
 {
     projection.Property("All gadgets", form => form.Gadgets)
-        .ExpandItems(gadget => gadget.FullName);
+    .ExpandItems(items => items.WithName(gadget => gadget.FullName));
 }).Expand();
 ```
 

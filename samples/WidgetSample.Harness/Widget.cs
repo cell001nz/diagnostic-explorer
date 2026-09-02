@@ -29,6 +29,7 @@ using System.Drawing.Printing;
 using System.Text.Json;
 using DiagnosticExplorer;
 using DiagnosticExplorer.Logging;
+using Microsoft.Extensions.Options;
 
 namespace WidgetSample.Harness;
 
@@ -77,29 +78,29 @@ public partial class Widget : INotifyPropertyChanged
                 options
                     .Property(widget => widget.Thing1)
                     .WithIconSize(StatusIconSize.Small)
-                    .Status(StatusCode.Active, obj => obj.Thing1 > 10, "This is active")
-                    .Status(StatusCode.Inactive, obj => obj.Thing1 > 20, obj => $"Thing 1 is {obj.Thing1}")
-                    .Status(StatusCode.Pending, obj => obj.Thing1 > 30);
+                    .WithStatus(StatusCode.Active, obj => obj.Thing1 > 10, "This is active")
+                    .WithStatus(StatusCode.Inactive, obj => obj.Thing1 > 20, obj => $"Thing 1 is {obj.Thing1}")
+                    .WithStatus(StatusCode.Pending, obj => obj.Thing1 > 30);
 
                 options
                     .Property(widget => widget.Thing2)
                     .WithIconSize(StatusIconSize.Medium)
-                    .Status(StatusCode.Success, obj => obj.Thing2 > 10)
-                    .Status(StatusCode.Warning, obj => obj.Thing2 > 20)
-                    .Status(StatusCode.Error, obj => obj.Thing2 > 30);
+                    .WithStatus(StatusCode.Success, obj => obj.Thing2 > 10)
+                    .WithStatus(StatusCode.Warning, obj => obj.Thing2 > 20)
+                    .WithStatus(StatusCode.Error, obj => obj.Thing2 > 30);
                 ;
                 options
                     .Property(widget => widget.Thing3)
                     .WithIconSize(StatusIconSize.Large)
-                    .Status(StatusCode.Alert, obj => obj.Thing3 > 10)
-                    .Status(StatusCode.Danger, obj => obj.Thing3 > 20)
-                    .Status(StatusCode.Running, obj => obj.Thing3 > 30);
+                    .WithStatus(StatusCode.Alert, obj => obj.Thing3 > 10)
+                    .WithStatus(StatusCode.Danger, obj => obj.Thing3 > 20)
+                    .WithStatus(StatusCode.Running, obj => obj.Thing3 > 30);
 
                 options
                     .Property(widget => widget.Thing4)
-                    .Status(StatusCode.Stopped, obj => obj.Thing4 > 10)
-                    .Status(StatusCode.Disabled, obj => obj.Thing4 > 20)
-                    .Status(StatusCode.Paused, obj => obj.Thing4 > 30);
+                    .WithStatus(StatusCode.Stopped, obj => obj.Thing4 > 10)
+                    .WithStatus(StatusCode.Disabled, obj => obj.Thing4 > 20)
+                    .WithStatus(StatusCode.Paused, obj => obj.Thing4 > 30);
             }
 
             options.Property(widget => widget._dateCreated).ShowElapsed();

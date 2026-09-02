@@ -822,8 +822,15 @@ internal sealed class CollectionOutputConfiguration
     public ConfiguredValue<bool> ExpandedHover { get; set; }
     public bool InitiallyExpanded { get; set; } = true;
     public bool PrimaryPropertiesOnly { get; set; }
+    public List<PropertyStatusConfiguration> ItemStatuses { get; set; } = new();
+    public ConfiguredValue<StatusIconSize> ItemStatusIconSize { get; set; }
 
-    public CollectionOutputConfiguration Clone() => (CollectionOutputConfiguration)MemberwiseClone();
+    public CollectionOutputConfiguration Clone()
+    {
+        CollectionOutputConfiguration clone = (CollectionOutputConfiguration)MemberwiseClone();
+        clone.ItemStatuses = ItemStatuses.Select(status => status.Clone()).ToList();
+        return clone;
+    }
 }
 
 internal sealed class TypeConfigurator<T> : ITypeConfigurator<T>
@@ -1277,20 +1284,20 @@ internal sealed class PropertyConfigurator<T, TProperty>
         return this;
     }
 
-    public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition)
+    public IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition)
     {
-        return Status(status, condition, status.ToString());
+        return WithStatus(status, condition, status.ToString());
     }
 
-    public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, string text)
+    public IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition, string text)
     {
         if (text == null)
             throw new ArgumentNullException(nameof(text));
 
-        return Status(status, condition, _ => text);
+        return WithStatus(status, condition, _ => text);
     }
 
-    public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text)
+    public IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text)
     {
         return AddStatus(status, condition, text);
     }
@@ -1619,20 +1626,20 @@ internal sealed class CustomPropertyConfigurator<T> : ICustomPropertyConfigurato
         return this;
     }
 
-    public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition)
+    public ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition)
     {
-        return Status(status, condition, status.ToString());
+        return WithStatus(status, condition, status.ToString());
     }
 
-    public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, string text)
+    public ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition, string text)
     {
         if (text == null)
             throw new ArgumentNullException(nameof(text));
 
-        return Status(status, condition, _ => text);
+        return WithStatus(status, condition, _ => text);
     }
 
-    public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text)
+    public ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text)
     {
         return AddStatus(status, condition, text);
     }
@@ -1676,44 +1683,22 @@ internal sealed class CollectionConfigurator<T, TItem>
 
     public ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format) => ConcatItems(null, format);
 
-    public ICollectionConfigurator<T, TItem> ListItems()
+    public ICollectionConfigurator<T, TItem> ListItems(Action<ICollectionListConfigurator<TItem>> configure = null)
     {
-        AddOutput(CollectionMode.List, null);
+        CollectionOutputConfiguration output = AddOutput(CollectionMode.List, null);
+        configure?.Invoke(new CollectionListConfigurator<TItem>(output));
         return this;
     }
 
-    public ICollectionConfigurator<T, TItem> WithListItemName(Func<TItem, string> format)
+    public ICollectionConfigurator<T, TItem> ExpandItems(
+        Action<ICollectionExpandedItemConfigurator<TItem>> configure = null,
+        string name = null,
+        bool initiallyExpanded = true
+    )
     {
-        ConfigureListItems().NameFormatter = CreateListItemFormatter(format);
-        return this;
-    }
-
-    public ICollectionConfigurator<T, TItem> WithListItemValue(Func<TItem, string> format)
-    {
-        ConfigureListItems().ValueFormatter = CreateListItemFormatter(format);
-        return this;
-    }
-
-    public ICollectionConfigurator<T, TItem> WithListItemDescription(Func<TItem, string> format)
-    {
-        ConfigureListItems().DescriptionFormatter = CreateListItemFormatter(format);
-        return this;
-    }
-
-    public ICollectionConfigurator<T, TItem> WithListItemCategory(Func<TItem, string> format)
-    {
-        ConfigureListItems().CategoryFormatter = CreateListItemFormatter(format);
-        return this;
-    }
-
-    public ICollectionConfigurator<T, TItem> ExpandItems(Func<TItem, object> itemName, string name = null, bool initiallyExpanded = true)
-    {
-        if (itemName == null)
-            throw new ArgumentNullException(nameof(itemName));
-
         CollectionOutputConfiguration output = AddOutput(CollectionMode.ExpandedItems, name);
-        output.CategoryFormatter = item => Convert.ToString(itemName((TItem)item));
         output.InitiallyExpanded = initiallyExpanded;
+        configure?.Invoke(new CollectionExpandedItemConfigurator<TItem>(output));
         return this;
     }
 
@@ -1849,21 +1834,173 @@ internal sealed class CollectionConfigurator<T, TItem>
         _lastOutput = output;
         return output;
     }
+}
 
-    private CollectionOutputConfiguration ConfigureListItems()
+internal sealed class CollectionListConfigurator<TItem> : ICollectionListConfigurator<TItem>
+{
+    private readonly CollectionOutputConfiguration _output;
+
+    public CollectionListConfigurator(CollectionOutputConfiguration output)
     {
-        if (_lastOutput?.Mode != CollectionMode.List)
-            throw new InvalidOperationException("ListItems must be configured before setting list item fields.");
-
-        return _lastOutput;
+        _output = output;
     }
 
-    private static Func<object, string> CreateListItemFormatter(Func<TItem, string> format)
+    public ICollectionListConfigurator<TItem> WithName(Func<TItem, string> format)
+    {
+        _output.NameFormatter = CreateFormatter(format);
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithValue(Func<TItem, string> format)
+    {
+        _output.ValueFormatter = CreateFormatter(format);
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> AsJson(int maxLength = 100)
+    {
+        if (maxLength <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxLength), "JSON max length must be greater than zero.");
+
+        _output.ValueFormatter = item =>
+        {
+            string json = JsonSerializer.Serialize((TItem)item);
+            return json.Substring(0, Math.Min(maxLength, json.Length));
+        };
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithDescription(Func<TItem, string> format)
+    {
+        _output.DescriptionFormatter = CreateFormatter(format);
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithCategory(Func<TItem, string> format)
+    {
+        _output.CategoryFormatter = CreateFormatter(format);
+        return this;
+    }
+
+    public ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition)
+    {
+        return AddStatus(status, condition, _ => status.ToString());
+    }
+
+    public ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, string text)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        return AddStatus(status, condition, _ => text);
+    }
+
+    public ICollectionListConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, Func<TItem, string> text)
+    {
+        return AddStatus(status, condition, text);
+    }
+
+    private static Func<object, string> CreateFormatter(Func<TItem, string> format)
     {
         if (format == null)
             throw new ArgumentNullException(nameof(format));
 
         return item => format((TItem)item);
+    }
+
+    private ICollectionListConfigurator<TItem> AddStatus(StatusCode status, Func<TItem, bool> condition, Func<TItem, string> text)
+    {
+        if (!Enum.IsDefined(typeof(StatusCode), status))
+            throw new ArgumentOutOfRangeException(nameof(status));
+        if (condition == null)
+            throw new ArgumentNullException(nameof(condition));
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        _output.ItemStatuses.Add(new PropertyStatusConfiguration(status, item => condition((TItem)item), item => text((TItem)item)));
+        return this;
+    }
+}
+
+internal sealed class CollectionExpandedItemConfigurator<TItem> : ICollectionExpandedItemConfigurator<TItem>
+{
+    private readonly CollectionOutputConfiguration _output;
+
+    public CollectionExpandedItemConfigurator(CollectionOutputConfiguration output)
+    {
+        _output = output;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithName(Func<TItem, string> format)
+    {
+        if (format == null)
+            throw new ArgumentNullException(nameof(format));
+
+        _output.CategoryFormatter = item => format((TItem)item);
+        return this;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithInitiallyExpanded()
+    {
+        _output.InitiallyExpanded = true;
+        return this;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithPrimaryPropertiesOnly()
+    {
+        _output.PrimaryPropertiesOnly = true;
+        return this;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition)
+    {
+        return AddStatus(status, condition, _ => status.ToString());
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, string text)
+    {
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        return AddStatus(status, condition, _ => text);
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, Func<TItem, string> text)
+    {
+        return AddStatus(status, condition, text);
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithIconSize(StatusIconSize size)
+    {
+        if (!Enum.IsDefined(typeof(StatusIconSize), size))
+            throw new ArgumentOutOfRangeException(nameof(size));
+
+        _output.ItemStatusIconSize = new ConfiguredValue<StatusIconSize>(size);
+        return this;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithDrillDown(bool enabled = true, int? maxItems = null)
+    {
+        if (maxItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxItems), "Drilldown max items must be greater than zero.");
+
+        _output.DrillDown = new ConfiguredValue<bool>(enabled);
+        if (maxItems.HasValue)
+            _output.DrillDownMaxItems = new ConfiguredValue<int>(maxItems.Value);
+        return this;
+    }
+
+    private ICollectionExpandedItemConfigurator<TItem> AddStatus(StatusCode status, Func<TItem, bool> condition, Func<TItem, string> text)
+    {
+        if (!Enum.IsDefined(typeof(StatusCode), status))
+            throw new ArgumentOutOfRangeException(nameof(status));
+        if (condition == null)
+            throw new ArgumentNullException(nameof(condition));
+        if (text == null)
+            throw new ArgumentNullException(nameof(text));
+
+        _output.ItemStatuses.Add(new PropertyStatusConfiguration(status, item => condition((TItem)item), item => text((TItem)item)));
+        return this;
     }
 }
 

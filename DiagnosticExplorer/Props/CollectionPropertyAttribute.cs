@@ -23,6 +23,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace DiagnosticExplorer;
@@ -151,4 +152,6 @@ internal sealed class CollectionOptions
     public int MaxItems { get; set; }
     public bool InitiallyExpanded { get; set; } = true;
     public bool PrimaryPropertiesOnly { get; set; }
+    public List<PropertyStatusConfiguration> ItemStatuses { get; set; } = new();
+    public ConfiguredValue<StatusIconSize> ItemStatusIconSize { get; set; }
 }

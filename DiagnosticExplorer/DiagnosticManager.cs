@@ -553,6 +553,8 @@ public static class DiagnosticManager
             options.Separator = output.Separator ?? options.Separator;
             options.InitiallyExpanded = output.InitiallyExpanded;
             options.PrimaryPropertiesOnly = output.PrimaryPropertiesOnly;
+            options.ItemStatuses = output.ItemStatuses;
+            options.ItemStatusIconSize = output.ItemStatusIconSize;
             ApplyCollectionConfiguration(options, configuration);
 
             PropertyConfiguration outputConfiguration = configuration.Clone();
@@ -592,6 +594,8 @@ public static class DiagnosticManager
             MaxItems = source.MaxItems,
             InitiallyExpanded = source.InitiallyExpanded,
             PrimaryPropertiesOnly = source.PrimaryPropertiesOnly,
+            ItemStatuses = source.ItemStatuses,
+            ItemStatusIconSize = source.ItemStatusIconSize,
         };
     }
 

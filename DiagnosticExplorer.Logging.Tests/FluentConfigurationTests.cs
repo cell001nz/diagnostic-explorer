@@ -307,7 +307,7 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<ReplacementSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.First).WithText("").Status(StatusCode.Running, _ => true);
+            type.Property(sample => sample.First).WithText("").WithStatus(StatusCode.Running, _ => true);
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -567,8 +567,8 @@ public sealed class FluentConfigurationTests : IDisposable
         {
             type.ExcludeAll();
             type.Property(item => item.First)
-                .Status(StatusCode.Active, item => item.First == "First")
-                .Status(StatusCode.Success, item => item.Second == "Second", item => $"Ready: {item.Second}");
+                .WithStatus(StatusCode.Active, item => item.First == "First")
+                .WithStatus(StatusCode.Success, item => item.Second == "Second", item => $"Ready: {item.Second}");
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -727,9 +727,7 @@ public sealed class FluentConfigurationTests : IDisposable
                         projection.Property(root => root.Child).Expand();
                         projection
                             .Property("Items", root => root.Items)
-                            .ListItems()
-                            .WithListItemName(item => item.Name)
-                            .WithListItemValue(item => item.Value.ToString());
+                            .ListItems(items => items.WithName(item => item.Name).WithValue(item => item.Value.ToString()));
                         projection.Property("Requests", root => root.Requests).ShowRate(false).ShowTotal();
                     }
                 )
@@ -781,7 +779,11 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         DiagnosticConfiguration configuration = new() { ApplyAttributes = false };
         configuration.Configure<DrillDownRoot>(type =>
-            type.Custom("Summary", projection => projection.Property("Items", root => root.Items).ExpandItems(item => item.Name)).Expand()
+            type.Custom(
+                    "Summary",
+                    projection => projection.Property("Items", root => root.Items).ExpandItems(items => items.WithName(item => item.Name))
+                )
+                .Expand()
         );
         configuration.Configure<CollectionItem>(type =>
         {
@@ -1001,12 +1003,14 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionInterfaceSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.Array).WithCategory("Array").ListItems().WithListItemName(item => item.Name);
-            type.Property(sample => sample.List).WithCategory("List").ListItems().WithListItemName(item => item.Name);
-            type.Property(sample => sample.ReadOnlyList).WithCategory("Read-only list").ListItems().WithListItemName(item => item.Name);
-            type.Property(sample => sample.Collection).WithCategory("Collection").ListItems().WithListItemName(item => item.Name);
-            type.Property(sample => sample.ReadOnlyCollection).WithCategory("Read-only collection").ListItems().WithListItemName(item => item.Name);
-            type.Property(sample => sample.Set).WithCategory("Set").ListItems().WithListItemName(item => item.Name);
+            type.Property(sample => sample.Array).WithCategory("Array").ListItems(items => items.WithName(item => item.Name));
+            type.Property(sample => sample.List).WithCategory("List").ListItems(items => items.WithName(item => item.Name));
+            type.Property(sample => sample.ReadOnlyList).WithCategory("Read-only list").ListItems(items => items.WithName(item => item.Name));
+            type.Property(sample => sample.Collection).WithCategory("Collection").ListItems(items => items.WithName(item => item.Name));
+            type.Property(sample => sample.ReadOnlyCollection)
+                .WithCategory("Read-only collection")
+                .ListItems(items => items.WithName(item => item.Name));
+            type.Property(sample => sample.Set).WithCategory("Set").ListItems(items => items.WithName(item => item.Name));
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -1027,24 +1031,36 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<CollectionInterfaceSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.Array).ShowCount().ConcatItems(", ", item => item.Name).ExpandItems(item => item.Name).WithMaxItems(1);
-            type.Property(sample => sample.List).ShowCount().ConcatItems(", ", item => item.Name).ExpandItems(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.Array)
+                .ShowCount()
+                .ConcatItems(", ", item => item.Name)
+                .ExpandItems(items => items.WithName(item => item.Name))
+                .WithMaxItems(1);
+            type.Property(sample => sample.List)
+                .ShowCount()
+                .ConcatItems(", ", item => item.Name)
+                .ExpandItems(items => items.WithName(item => item.Name))
+                .WithMaxItems(1);
             type.Property(sample => sample.ReadOnlyList)
                 .ShowCount()
                 .ConcatItems(", ", item => item.Name)
-                .ExpandItems(item => item.Name)
+                .ExpandItems(items => items.WithName(item => item.Name))
                 .WithMaxItems(1);
             type.Property(sample => sample.Collection)
                 .ShowCount()
                 .ConcatItems(", ", item => item.Name)
-                .ExpandItems(item => item.Name)
+                .ExpandItems(items => items.WithName(item => item.Name))
                 .WithMaxItems(1);
             type.Property(sample => sample.ReadOnlyCollection)
                 .ShowCount()
                 .ConcatItems(", ", item => item.Name)
-                .ExpandItems(item => item.Name)
+                .ExpandItems(items => items.WithName(item => item.Name))
                 .WithMaxItems(1);
-            type.Property(sample => sample.Set).ShowCount().ConcatItems(", ", item => item.Name).ExpandItems(item => item.Name).WithMaxItems(1);
+            type.Property(sample => sample.Set)
+                .ShowCount()
+                .ConcatItems(", ", item => item.Name)
+                .ExpandItems(items => items.WithName(item => item.Name))
+                .WithMaxItems(1);
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -1065,10 +1081,10 @@ public sealed class FluentConfigurationTests : IDisposable
         configuration.Configure<ConcreteCollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.List).WithCategory("List").ListItems().WithListItemName(item => item.Name);
+            type.Property(sample => sample.List).WithCategory("List").ListItems(items => items.WithName(item => item.Name));
             type.Property(sample => sample.Set).WithCategory("Set").ShowCount();
             type.Property(sample => sample.Observable).WithCategory("Observable").ConcatItems(", ", item => item.Name);
-            type.Property(sample => sample.Binding).WithCategory("Binding").ExpandItems(item => item.Name);
+            type.Property(sample => sample.Binding).WithCategory("Binding").ExpandItems(items => items.WithName(item => item.Name));
             type.Property(sample => sample.Dictionary).WithCategory("Dictionary").ListItems();
             type.Property(sample => sample.InterfaceDictionary)
                 .WithCategory("Interface dictionary")
@@ -1186,13 +1202,13 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void ExpandItemsUsesTypedSelectorAndMaxItems()
+    public void ExpandItemsUsesItemConfigurationAndMaxItems()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.Items).ExpandItems(item => item.Name).WithMaxItems(2);
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name)).WithMaxItems(2);
         });
         configuration.Configure<CollectionItem>(type =>
         {
@@ -1215,7 +1231,7 @@ public sealed class FluentConfigurationTests : IDisposable
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
-            type.Property(sample => sample.Items).ExpandItems(item => item.Name, initiallyExpanded: false)
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name), initiallyExpanded: false)
         );
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -1227,11 +1243,49 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void ExpandItemsCanConfigureInitiallyExpanded()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithInitiallyExpanded(), initiallyExpanded: false)
+        );
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Category category = Render(new CollectionSample()).Categories.FindByName("Items");
+
+        Assert.True(category.IsExpanded);
+    }
+
+    [Fact]
+    public void ExpandItemsUsesDefaultNamesAndIndividualStatuses()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items)
+                .ExpandItems(items =>
+                    items.WithStatus(StatusCode.Warning, item => item.Value > 1, item => $"Value: {item.Value}").WithIconSize(StatusIconSize.Large)
+                );
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionSample());
+
+        Category firstCategory = bag.Categories.FindByName("Items.Items 0");
+        Category category = bag.Categories.FindByName("Items.Items 1");
+        Assert.Null(firstCategory.Statuses);
+        PropertyStatus status = Assert.Single(category.Statuses);
+        Assert.Equal((StatusCode.Warning, "Value: 2"), (status.Status, status.Text));
+        Assert.Equal(StatusIconSize.Large, category.StatusIconSize);
+    }
+
+    [Fact]
     public void ExpandItemsCanLimitItemPropertiesToPrimaryCategory()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
-            type.Property(sample => sample.Items).ExpandItems(item => item.Name).WithPrimaryPropertiesOnly()
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name).WithPrimaryPropertiesOnly())
         );
         configuration.Configure<CollectionItem>(type =>
         {
@@ -1248,13 +1302,27 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void ExpandItemsCanConfigureIndividualItemDrillDown()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name).WithDrillDown())
+        );
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Category category = Render(new CollectionSample()).Categories.FindByName("Items.One");
+
+        Assert.True(category.CanDrillDown);
+    }
+
+    [Fact]
     public void ExpandItemsDoesNotHideNamedCollectionDrillDown()
     {
         DiagnosticConfiguration configuration = new();
         configuration.Configure<CollectionSample>(type =>
         {
             type.ExcludeAll();
-            type.Property(sample => sample.Items).ExpandItems(item => item.Name);
+            type.Property(sample => sample.Items).ExpandItems(items => items.WithName(item => item.Name));
             type.Property("Item things", sample => sample.Items).WithCategory("Items").WithDrillDown();
         });
         configuration.Configure<CollectionItem>(type =>
@@ -1281,9 +1349,7 @@ public sealed class FluentConfigurationTests : IDisposable
         {
             type.ExcludeAll();
             type.Property(sample => sample.Items)
-                .ListItems()
-                .WithListItemName(item => item.Name)
-                .WithListItemValue(item => item.Value.ToString())
+                .ListItems(items => items.WithName(item => item.Name).WithValue(item => item.Value.ToString()))
                 .WithMaxItems(2);
         });
         DiagnosticManager.UseConfiguration(configuration);
@@ -1297,6 +1363,44 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void CollectionListItemsCanRenderAsJson()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items).ListItems(items => items.WithName(item => item.Name).AsJson());
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        Property property = Render(new CollectionSample()).GetProperty("One", null);
+
+        Assert.Equal("{\"Name\":\"One\",\"Value\":1}", property.Value);
+    }
+
+    [Fact]
+    public void CollectionListItemsCanRenderIndividualStatuses()
+    {
+        DiagnosticConfiguration configuration = new();
+        configuration.Configure<CollectionSample>(type =>
+        {
+            type.ExcludeAll();
+            type.Property(sample => sample.Items)
+                .ListItems(items =>
+                    items.WithName(item => item.Name).WithStatus(StatusCode.Warning, item => item.Value > 1, item => $"Value: {item.Value}")
+                );
+        });
+        DiagnosticManager.UseConfiguration(configuration);
+
+        PropertyBag bag = Render(new CollectionSample());
+
+        Assert.Null(bag.GetProperty("One", null).Statuses);
+        PropertyStatus status = Assert.Single(bag.GetProperty("Two", null).Statuses);
+        Assert.Equal(StatusCode.Warning, status.Status);
+        Assert.Equal("Value: 2", status.Text);
+    }
+
+    [Fact]
     public void CollectionListSupportsComputedNames()
     {
         DiagnosticConfiguration configuration = new();
@@ -1304,11 +1408,13 @@ public sealed class FluentConfigurationTests : IDisposable
         {
             type.ExcludeAll();
             type.Property(sample => sample.Items)
-                .ListItems()
-                .WithListItemName(item => $"Item: {item.Name}")
-                .WithListItemValue(item => item.Value.ToString())
-                .WithListItemDescription(item => $"Description: {item.Name}")
-                .WithListItemCategory(item => $"Group: {item.Name}");
+                .ListItems(items =>
+                    items
+                        .WithName(item => $"Item: {item.Name}")
+                        .WithValue(item => item.Value.ToString())
+                        .WithDescription(item => $"Description: {item.Name}")
+                        .WithCategory(item => $"Group: {item.Name}")
+                );
         });
         DiagnosticManager.UseConfiguration(configuration);
 
@@ -1320,17 +1426,15 @@ public sealed class FluentConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void ListItemFieldsRequireListItemsOutput()
+    public void ListItemFieldsRequireNonNullFormatters()
     {
         DiagnosticConfiguration configuration = new();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            configuration.Configure<CollectionSample>(type =>
-                type.Property(sample => sample.Items).ConcatItems(", ").WithListItemName(item => item.Name)
-            )
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() =>
+            configuration.Configure<CollectionSample>(type => type.Property(sample => sample.Items).ListItems(items => items.WithName(null)))
         );
 
-        Assert.Equal("ListItems must be configured before setting list item fields.", exception.Message);
+        Assert.Equal("format", exception.ParamName);
     }
 
     [Fact]
@@ -1521,9 +1625,7 @@ public sealed class FluentConfigurationTests : IDisposable
         {
             type.ExcludeAll();
             type.Property(sample => sample.Items)
-                .ListItems()
-                .WithListItemName(item => item.Name)
-                .WithListItemValue(item => item.Value.ToString())
+                .ListItems(items => items.WithName(item => item.Name).WithValue(item => item.Value.ToString()))
                 .WithDrillDownOnly();
         });
         configuration.Configure<CollectionItem>(type =>
@@ -1847,7 +1949,7 @@ public sealed class FluentConfigurationTests : IDisposable
             type.Property(sample => sample.Details)
                 .Expand()
                 .WithIconSize(StatusIconSize.Large)
-                .Status(StatusCode.Running, _ => true, "Details are running");
+                .WithStatus(StatusCode.Running, _ => true, "Details are running");
         });
         configuration.Configure<ChildSample>(type => type.IncludeAll());
         DiagnosticManager.UseConfiguration(configuration);
@@ -2356,17 +2458,13 @@ public sealed class FluentConfigurationTests : IDisposable
         public static void ConfigurePrivateItems(ITypeConfigurator<CollectionSample> type)
         {
             type.Property("Private items", sample => sample._privateItems)
-                .ListItems()
-                .WithListItemName(item => item.Name)
-                .WithListItemValue(item => item.Value.ToString());
+                .ListItems(items => items.WithName(item => item.Name).WithValue(item => item.Value.ToString()));
         }
 
         public static void ConfigurePrivateItemsFromField(ITypeConfigurator<CollectionSample> type)
         {
             type.Property(sample => sample._privateItems)
-                .ListItems()
-                .WithListItemName(item => item.Name)
-                .WithListItemValue(item => item.Value.ToString());
+                .ListItems(items => items.WithName(item => item.Name).WithValue(item => item.Value.ToString()));
         }
     }
 

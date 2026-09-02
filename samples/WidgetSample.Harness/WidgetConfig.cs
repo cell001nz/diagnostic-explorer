@@ -42,8 +42,8 @@ public sealed class WidgetConfig
             options
                 .Property(obj => obj.Connection)
                 .Expand(true)
-                .Status(StatusCode.Active, obj => obj.Connection.RetryLimit > 1)
-                .Status(StatusCode.Running, obj => obj.Connection.RetryLimit > 2);
+                .WithStatus(StatusCode.Active, obj => obj.Connection.RetryLimit > 1)
+                .WithStatus(StatusCode.Running, obj => obj.Connection.RetryLimit > 2);
 
             options
                 .Property(obj => obj.RefreshIntervalSeconds)
@@ -52,11 +52,13 @@ public sealed class WidgetConfig
 
             options
                 .Property(configuration => configuration.Items)
-                .ListItems()
-                .WithListItemName(item => $"Item: {item.Name}")
-                .WithListItemCategory(item => "Items")
-                .WithListItemValue(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
-                .WithListItemDescription(item => $"Installed {item.InstalledDate:d MMM yyyy}")
+                .ListItems(items =>
+                    items
+                        .WithName(item => $"Item: {item.Name}")
+                        .WithCategory(item => "Items")
+                        .WithValue(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
+                        .WithDescription(item => $"Installed {item.InstalledDate:d MMM yyyy}")
+                )
                 .WithDrillDown()
                 .WithExpandedHover();
         });

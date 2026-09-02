@@ -152,11 +152,11 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public IPropertyConfigurator<T, TProperty> WithExpandedHover(bool enabled = true) => this;
 
-        public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition) => this;
+        public IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition) => this;
 
-        public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, string text) => this;
+        public IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition, string text) => this;
 
-        public IPropertyConfigurator<T, TProperty> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text) => this;
+        public IPropertyConfigurator<T, TProperty> WithStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text) => this;
 
         public IPropertyConfigurator<T, TProperty> Warn(Func<T, bool> condition) => this;
 
@@ -205,11 +205,11 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         public ICustomPropertyConfigurator<T> Description(Func<T, string> description) => this;
 
-        public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition) => this;
+        public ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition) => this;
 
-        public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, string text) => this;
+        public ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition, string text) => this;
 
-        public ICustomPropertyConfigurator<T> Status(StatusCode status, Func<T, bool> condition, Func<T, string> text) => this;
+        public ICustomPropertyConfigurator<T> WithStatus(StatusCode status, Func<T, bool> condition, Func<T, string> text) => this;
 
         public ICustomPropertyConfigurator<T> Warn(Func<T, bool> condition) => this;
 

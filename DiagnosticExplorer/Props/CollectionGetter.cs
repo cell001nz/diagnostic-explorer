@@ -20,6 +20,8 @@ internal class CollectionGetter : PropertyGetter
     private Func<object, string> _descriptionFormatter;
     private Func<object, object> _catFunc;
     private Func<object, string> _categoryFormatter;
+    private IReadOnlyList<PropertyStatusConfiguration> _itemStatuses;
+    private StatusIconSize _itemStatusIconSize;
     private bool _initiallyExpanded;
     private NestedPropertyRenderMode _itemRenderMode;
 
@@ -45,6 +47,8 @@ internal class CollectionGetter : PropertyGetter
         _valueFormatter = options.ValueFormatter;
         _descriptionFormatter = options.DescriptionFormatter;
         _categoryFormatter = options.CategoryFormatter;
+        _itemStatuses = options.ItemStatuses;
+        _itemStatusIconSize = options.ItemStatusIconSize.IsSet ? options.ItemStatusIconSize.Value : StatusIconSize.Small;
         _initiallyExpanded = options.InitiallyExpanded;
         _itemRenderMode = options.PrimaryPropertiesOnly ? NestedPropertyRenderMode.PrimaryOnly : NestedPropertyRenderMode.All;
 
@@ -228,6 +232,8 @@ internal class CollectionGetter : PropertyGetter
             if (item != null)
             {
                 item.ValueObject = listObject;
+                item.Statuses = GetItemStatuses(listObject);
+                item.StatusIconSize = _itemStatusIconSize;
                 if (DrillDownEnabled && DiagnosticManager.IsDrillDownValue(listObject))
                 {
                     item.CanDrillDown = true;
@@ -257,8 +263,7 @@ internal class CollectionGetter : PropertyGetter
             string desc = _descriptionFormatter?.Invoke(obj) ?? (_descrFunc == null ? null : GetValue(obj, _descrFunc, out objectValue));
             string cat = _categoryFormatter?.Invoke(obj) ?? (_catFunc == null ? null : GetValue(obj, _catFunc, out objectValue));
 
-            Property prop = new Property(name, val, desc);
-            prop.ValueObject = objectValue;
+            Property prop = new Property(name, val, desc) { ValueObject = objectValue, Statuses = GetItemStatuses(obj) };
             ApplyDrillDown(prop, obj, owner);
             bag.AddProperty(prop, CombineCategories(PrependToCategory(catPrepend, owner), cat));
         }
@@ -291,6 +296,29 @@ internal class CollectionGetter : PropertyGetter
             SourceProperty = PropInfo,
             NoTruncate = NoTruncate,
         };
+    }
+
+    private List<PropertyStatus> GetItemStatuses(object item)
+    {
+        if (_itemStatuses == null || _itemStatuses.Count == 0)
+            return null;
+
+        List<PropertyStatus> activeStatuses = new();
+        foreach (PropertyStatusConfiguration status in _itemStatuses)
+        {
+            try
+            {
+                if (status.Condition(item))
+                    activeStatuses.Add(new PropertyStatus(status.Status, status.Text(item)));
+            }
+            catch (Exception ex)
+            {
+                activeStatuses.Add(new PropertyStatus(StatusCode.Error, $"<{ex.Message}>"));
+                break;
+            }
+        }
+
+        return activeStatuses.Count == 0 ? null : activeStatuses;
     }
 
     private object GetNextPropVal(object obj, Func<object, object> propFunc, int index, string name)
