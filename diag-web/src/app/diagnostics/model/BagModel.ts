@@ -52,7 +52,7 @@ export class BagModel {
     }
 
     isSectionCollapsed(section: PropertySectionModel, firstLevelExpanded = true): boolean {
-        const defaultExpanded = firstLevelExpanded && section.depth === 1 && section.isExpanded;
+        const defaultExpanded = firstLevelExpanded && section.isExpanded;
         return !(this.#sectionExpansionOverrides().get(section.path) ?? defaultExpanded);
     }
 

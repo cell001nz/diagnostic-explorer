@@ -219,17 +219,22 @@ internal class PropertyGetter
 
         string prependToCategory = PrependToCategory(catPrepend, obj);
         bag.AddProperty(p, prependToCategory);
+        ApplyCategoryExpansion(bag, prependToCategory, catPrepend);
+    }
+
+    protected void ApplyCategoryExpansion(PropertyBag bag, string category, string parentCategory)
+    {
         if (
             _categoryInitiallyExpanded.IsSet
             && _categoryExpansionScope.IsSet
             && string.Equals(
-                CategoryExtensions.NormalizeName(prependToCategory),
-                CategoryExtensions.NormalizeName(_categoryExpansionScope.Value),
+                CategoryExtensions.NormalizeName(category),
+                CategoryExtensions.NormalizeName(CombineCategories(parentCategory, _categoryExpansionScope.Value)),
                 StringComparison.OrdinalIgnoreCase
             )
         )
         {
-            bag.FindOrCreateCategory(prependToCategory).IsExpanded = _categoryInitiallyExpanded.Value;
+            bag.FindOrCreateCategory(category).IsExpanded = _categoryInitiallyExpanded.Value;
         }
     }
 

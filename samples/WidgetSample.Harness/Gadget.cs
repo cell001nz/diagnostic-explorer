@@ -115,6 +115,7 @@ public partial class Gadget : INotifyPropertyChanged
         config.Configure<Gadget>(options =>
         {
             options.IncludeAll();
+            options.Exclude(g => g.Log);
             options.Property(gadget => gadget.Name).AllowSet();
             options.Property(gadget => gadget.Purpose).AllowSet();
             options.Property(gadget => gadget.Configuration).WithDrillDownOnly().WithExpandedHover();
@@ -123,9 +124,9 @@ public partial class Gadget : INotifyPropertyChanged
         config.ConfigureDrillDown<Gadget>(options =>
         {
             options.IncludeAll();
-            options.Property(gadget => gadget.Configuration).WithCategory("Configuration").Expand();
+            options.Property(gadget => gadget.Configuration).WithCategory("Configuration").Expand(true);
             options.Property(gadget => gadget.Name).AllowSet();
-            options.Property(gadget => gadget.Configuration).WithLabel("Gadget Config");
+            options.Property(gadget => gadget.Configuration).WithLabel("Gadget Config").Expand(true);
             options.Route(
                 gadget => $"{typeof(Gadget).FullName}.{gadget.FullName}",
                 LoggerNameMatchMode.Exact,

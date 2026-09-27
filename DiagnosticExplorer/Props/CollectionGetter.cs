@@ -26,6 +26,7 @@ internal class CollectionGetter : PropertyGetter
     private bool _itemIsJson;
     private int _itemWidth;
     private bool _initiallyExpanded;
+    private bool _itemsInitiallyExpanded;
     private NestedPropertyRenderMode _itemRenderMode;
 
     public CollectionGetter(PropertyInfo info, CollectionPropertyAttribute attr, bool isStatic)
@@ -56,6 +57,7 @@ internal class CollectionGetter : PropertyGetter
         _itemIsJson = options.ItemIsJson;
         _itemWidth = options.ItemWidth;
         _initiallyExpanded = options.InitiallyExpanded;
+        _itemsInitiallyExpanded = options.ItemsInitiallyExpanded;
         _itemRenderMode = options.PrimaryPropertiesOnly ? NestedPropertyRenderMode.PrimaryOnly : NestedPropertyRenderMode.All;
 
         Type collectionType = info?.PropertyType ?? configuration.ValueType;
@@ -174,6 +176,10 @@ internal class CollectionGetter : PropertyGetter
             string error = $"<{ex.Message}>";
             bag.AddProperty(CreateOutputProperty(GetName(obj), error, obj, null), PrependToCategory(catPrepend, obj));
         }
+        finally
+        {
+            ApplyCategoryExpansion(bag, PrependToCategory(catPrepend, obj), catPrepend);
+        }
     }
 
     private void AddCountProperty(string name, int count, IEnumerable collection, PropertyBag bag, string catPrepend, object owner)
@@ -228,8 +234,11 @@ internal class CollectionGetter : PropertyGetter
         int index = 0;
         foreach (object listObject in GetLimitedItems(col))
         {
+            int itemIndex = index++;
             string itemName =
-                _categoryFormatter?.Invoke(listObject) ?? Convert.ToString(GetNextPropVal(listObject, _catFunc, index++, GetName(owner)));
+                _indexedNameFormatter?.Invoke(listObject, itemIndex)
+                ?? _categoryFormatter?.Invoke(listObject)
+                ?? Convert.ToString(GetNextPropVal(listObject, _catFunc, itemIndex, GetName(owner)));
             string itemCategory = CombineCategories(category, itemName);
 
             NestedPropertyRenderer.Render(listObject, bag, itemCategory, _itemRenderMode);
@@ -237,6 +246,7 @@ internal class CollectionGetter : PropertyGetter
             Category item = bag.Categories.FindByName(itemCategory);
             if (item != null)
             {
+                item.IsExpanded = _itemsInitiallyExpanded;
                 item.ValueObject = listObject;
                 item.Statuses = GetItemStatuses(listObject);
                 item.StatusIconSize = _itemStatusIconSize;

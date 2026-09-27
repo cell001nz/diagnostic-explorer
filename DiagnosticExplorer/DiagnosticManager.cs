@@ -554,6 +554,7 @@ public static class DiagnosticManager
             options.CategoryFormatter = output.CategoryFormatter ?? options.CategoryFormatter;
             options.Separator = output.Separator ?? options.Separator;
             options.InitiallyExpanded = output.InitiallyExpanded;
+            options.ItemsInitiallyExpanded = output.ItemsInitiallyExpanded;
             options.PrimaryPropertiesOnly = output.PrimaryPropertiesOnly;
             options.ItemStatuses = output.ItemStatuses;
             options.ItemStatusIconSize = output.ItemStatusIconSize;
@@ -598,6 +599,7 @@ public static class DiagnosticManager
             Separator = source.Separator,
             MaxItems = source.MaxItems,
             InitiallyExpanded = source.InitiallyExpanded,
+            ItemsInitiallyExpanded = source.ItemsInitiallyExpanded,
             PrimaryPropertiesOnly = source.PrimaryPropertiesOnly,
             ItemStatuses = source.ItemStatuses,
             ItemStatusIconSize = source.ItemStatusIconSize,

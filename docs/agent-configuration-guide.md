@@ -264,9 +264,11 @@ icons on individual list rows; conditions and tooltip text are evaluated for
 each item. Use `ExpandItems(items => items.WithStatus(...))` to show statuses
 on individual expanded-item headings, and chain `WithIconSize(...)` to choose
 their icon size. A configured name must be distinct for every item; include an
-identifier when a readable name alone is not unique. Use
-`WithInitiallyCollapsed()` to start that section collapsed. Use `ConcatItems(...)`
-only for short, simple collections.
+identifier when a readable name alone is not unique. Expanded collections and
+their item sections start collapsed. Chain `WithInitiallyExpanded()` after
+`ExpandItems(...)` to open the collection container, or call it inside
+`ExpandItems(...)` to open each item section. Use `ConcatItems(...)` only for
+short, simple collections.
 Chain `WithPrimaryPropertiesOnly()` after `ExpandItems(...)` or `Expand()` to
 show only direct, uncategorized properties; nested `Expand()` and `Custom()`
 sections are omitted.

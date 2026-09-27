@@ -13,6 +13,7 @@ namespace WidgetSample.Harness;
 internal static class DiagnosticsConfiguration
 {
     private static WidgetConfig _widgetConfig = new();
+    private static EmptyThing _emptyThing = new();
 
     public static void Configure(IDiagConfigurator config, IConfiguration configuration)
     {
@@ -24,10 +25,7 @@ internal static class DiagnosticsConfiguration
         config.ApplyAttributes = false;
 
         config.ConfigureHosting(configuration);
-        config.ConfigureSystemEnvironment()
-            .Enabled()
-            .WithCategory("System")
-            .WithName("Environment");
+        config.ConfigureSystemEnvironment().Enabled().WithCategory("System").WithName("Environment");
         config.ConfigureEventRouting(ConfigureEventRouting);
         config.RegisterObjects(RegisterObjects);
 
@@ -43,6 +41,7 @@ internal static class DiagnosticsConfiguration
 
         registrar.RegisterService<Form1>("Form 1", "Main Form");
         registrar.Register(_widgetConfig, "My Config", "Main Form");
+        registrar.Register(_emptyThing, "Empty Thing", "Empty Thing");
         foreach (var widget in form1.Widgets)
             registrar.Register(widget, widget.FullName, widget.FullName);
     }
@@ -52,9 +51,12 @@ internal static class DiagnosticsConfiguration
         routes
             .UseMatchMode(EventSinkRouteMatchMode.AllMatches)
             .Route(typeof(Widget).FullName, route => route.To(RouteValue.LoggerSuffix, "Widget Events2"))
+            .Route(typeof(Widget).FullName, route => route.To("Empty Thing", "Widget Events"))
             .Route(typeof(Widget).FullName, route => route.To("Form 1", "Widget Events"))
             .Route(typeof(Gadget).FullName, route => route.To("Form 1", "Gadget Events"))
             .Route(typeof(Form1).FullName, route => route.To("Form 1", "Form1 Events Only"))
             .Route("*", route => route.To("System", "Events"));
     }
 }
+
+public class EmptyThing { }

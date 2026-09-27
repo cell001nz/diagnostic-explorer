@@ -41,4 +41,13 @@ describe('BagModel', () => {
 
         expect(model.isSectionCollapsed(propertySection, false)).toBeFalse();
     });
+
+    it('expands a server-marked category section by default', () => {
+        const section = createSubBag('Items');
+        section.isExpanded = true;
+        const model = new BagModel({} as CategoryModel, createBag([section]));
+        const propertySection = model.propertySections().children[0];
+
+        expect(model.isSectionCollapsed(propertySection)).toBeFalse();
+    });
 });

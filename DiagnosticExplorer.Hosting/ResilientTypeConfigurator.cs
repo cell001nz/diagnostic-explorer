@@ -100,6 +100,10 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
 
         IPropertyConfigurator IPropertyConfigurator.WithCategory(string category) => this;
 
+        IPropertyConfigurator IPropertyConfigurator.WithCategory(string category, bool initiallyExpanded) => this;
+
+        IPropertyConfigurator IPropertyConfigurator.WithInitiallyExpanded(bool expanded) => this;
+
         IPropertyConfigurator IPropertyConfigurator.Description(string description) => this;
 
         IPropertyConfigurator IPropertyConfigurator.Format(string formatString) => this;
@@ -114,7 +118,16 @@ internal sealed class ResilientTypeConfigurator<T> : ITypeConfigurator<T>
         IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithCategory(string category) => this;
 
         IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithCategory(
+            string category,
+            bool initiallyExpanded
+        ) => this;
+
+        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithCategory(
             Func<T, string> category
+        ) => this;
+
+        IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.WithInitiallyExpanded(
+            bool expanded
         ) => this;
 
         IPropertyConfigurator<T, TProperty> IObjectPropertyConfigurator<T, IPropertyConfigurator<T, TProperty>>.Description(string description) =>

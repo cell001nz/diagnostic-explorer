@@ -39,9 +39,13 @@ public sealed class WidgetConfig
         config.Configure<WidgetConfig>(options =>
         {
             options.IncludeAll();
+
+            options.Property(instance => instance.Connection).WithCategory("Connection").Expand().WithInitiallyExpanded();
+
             options
                 .Property(obj => obj.Connection)
-                .Expand(true)
+                .Expand()
+                .WithInitiallyExpanded(true)
                 .WithStatus(StatusCode.Active, obj => obj.Connection.RetryLimit > 1)
                 .WithStatus(StatusCode.Running, obj => obj.Connection.RetryLimit > 2);
 
@@ -52,19 +56,26 @@ public sealed class WidgetConfig
 
             options
                 .Property(configuration => configuration.Items)
+                .WithCategory("Items")
+                .WithInitiallyExpanded()
                 .ListItems(items =>
                     items
                         .WithName(item => $"Item: {item.Name}")
-                        .WithCategory(item => "Items")
-                        .WithValue(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
+                        // .WithCategory(item => "Items")
+                        .Wide()
+                        .AsJson()
+                        // .WithValue(item => $"Capacity {item.Capacity}, tolerance {item.Tolerance:N2}")
                         .WithDescription(item => $"Installed {item.InstalledDate:d MMM yyyy}")
                 )
                 .WithDrillDown()
                 .WithExpandedHover();
-        });
-        config.Configure<WidgetConfig>(options =>
-        {
-            options.Property(instance => instance.Connection).WithCategory("Connection").Expand();
+
+            options
+                .Property("Items2", configuration => configuration.Items)
+                .ExpandItems(items => items.WithName((item, index) => $"{index}: {item.Name}"))
+                .WithInitiallyExpanded()
+                .WithDrillDownOnly()
+                .WithExpandedHover();
         });
     }
 

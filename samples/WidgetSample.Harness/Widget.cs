@@ -71,6 +71,7 @@ public partial class Widget : INotifyPropertyChanged
         {
             options.IncludeAll();
             options.Exclude(widget => widget.IgnoredProperty);
+            options.Exclude(widget => widget.Log);
             options.Property(widget => widget.Name).AllowSet();
 
             using (options.CreateCategoryScope("Things").Expanded())
@@ -103,13 +104,14 @@ public partial class Widget : INotifyPropertyChanged
                     .WithStatus(StatusCode.Paused, obj => obj.Thing4 > 30);
             }
 
+            options.Property("PrimaryConfig123", widget => widget.PrimaryConfig).WithExpandedHover().WithDrillDown();
             options.Property(widget => widget._dateCreated).ShowElapsed();
             options.Property(widget => widget.PrimaryConfig).Expand(true).WithLabel("Widget Config").WithExpandedHover();
             options.Property(widget => widget.SecondaryConfig).Expand().WithDrillDownOnly().WithExpandedHover();
 
             options
                 .Custom(
-                    "Config",
+                    "Custom Config",
                     projection =>
                     {
                         projection.Property(widget => widget.FullName);

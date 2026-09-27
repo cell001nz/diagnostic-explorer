@@ -64,6 +64,8 @@ public interface IPropertyConfigurator
 {
     IPropertyConfigurator WithLabel(string label);
     IPropertyConfigurator WithCategory(string category);
+    IPropertyConfigurator WithCategory(string category, bool initiallyExpanded);
+    IPropertyConfigurator WithInitiallyExpanded(bool expanded = true);
     IPropertyConfigurator Description(string description);
     IPropertyConfigurator Format(string formatString);
     IPropertyConfigurator AllowSet(bool allowSet = true);
@@ -74,7 +76,9 @@ public interface IObjectPropertyConfigurator<T, TSelf> : IPropertyConfigurator
     new TSelf WithLabel(string label);
     TSelf WithLabel(Func<T, string> label);
     new TSelf WithCategory(string category);
+    new TSelf WithCategory(string category, bool initiallyExpanded);
     TSelf WithCategory(Func<T, string> category);
+    new TSelf WithInitiallyExpanded(bool expanded = true);
     new TSelf Description(string description);
     TSelf Description(Func<T, string> description);
     new TSelf Format(string formatString);
@@ -147,6 +151,7 @@ public interface ICustomObjectConfigurator<T>
 
 public interface ICollectionConfigurator<T, TItem> : IObjectPropertyConfigurator<T, ICollectionConfigurator<T, TItem>>
 {
+    new ICollectionConfigurator<T, TItem> WithInitiallyExpanded(bool expanded = true);
     ICollectionConfigurator<T, TItem> ShowCount(string name = null);
     ICollectionConfigurator<T, TItem> ConcatItems(string separator = null, Func<TItem, string> format = null);
     ICollectionConfigurator<T, TItem> ConcatItems(Func<TItem, string> format);
@@ -183,8 +188,8 @@ public interface ICollectionListConfigurator<TItem>
 public interface ICollectionExpandedItemConfigurator<TItem>
 {
     ICollectionExpandedItemConfigurator<TItem> WithName(Func<TItem, string> format);
+    ICollectionExpandedItemConfigurator<TItem> WithName(Func<TItem, int, string> format);
     ICollectionExpandedItemConfigurator<TItem> WithInitiallyExpanded();
-    ICollectionExpandedItemConfigurator<TItem> WithInitiallyCollapsed();
     ICollectionExpandedItemConfigurator<TItem> WithPrimaryPropertiesOnly();
     ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition);
     ICollectionExpandedItemConfigurator<TItem> WithStatus(StatusCode status, Func<TItem, bool> condition, string text);

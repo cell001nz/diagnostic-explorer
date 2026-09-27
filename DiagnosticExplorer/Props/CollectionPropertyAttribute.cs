@@ -153,6 +153,7 @@ internal sealed class CollectionOptions
     public string Separator { get; set; }
     public int MaxItems { get; set; }
     public bool InitiallyExpanded { get; set; } = true;
+    public bool ItemsInitiallyExpanded { get; set; }
     public bool PrimaryPropertiesOnly { get; set; }
     public List<PropertyStatusConfiguration> ItemStatuses { get; set; } = new();
     public ConfiguredValue<StatusIconSize> ItemStatusIconSize { get; set; }

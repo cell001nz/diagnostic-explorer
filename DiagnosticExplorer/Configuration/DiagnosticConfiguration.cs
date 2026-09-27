@@ -827,7 +827,8 @@ internal sealed class CollectionOutputConfiguration
     public Func<object, string> DrillDownTextFormatter { get; set; }
     public ConfiguredValue<bool> JsonHover { get; set; }
     public ConfiguredValue<bool> ExpandedHover { get; set; }
-    public bool InitiallyExpanded { get; set; } = true;
+    public bool InitiallyExpanded { get; set; }
+    public bool ItemsInitiallyExpanded { get; set; }
     public bool PrimaryPropertiesOnly { get; set; }
     public List<PropertyStatusConfiguration> ItemStatuses { get; set; } = new();
     public ConfiguredValue<StatusIconSize> ItemStatusIconSize { get; set; }
@@ -1069,6 +1070,22 @@ internal class PropertyConfigurator : IPropertyConfigurator
         return this;
     }
 
+    public IPropertyConfigurator WithCategory(string category, bool initiallyExpanded)
+    {
+        WithCategory(category);
+        return WithInitiallyExpanded(initiallyExpanded);
+    }
+
+    public IPropertyConfigurator WithInitiallyExpanded(bool expanded = true)
+    {
+        if (!Configuration.Category.IsSet || string.IsNullOrWhiteSpace(Configuration.Category.Value))
+            throw new InvalidOperationException("A category must be configured before setting its initial expansion state.");
+
+        Configuration.CategoryInitiallyExpanded = new ConfiguredValue<bool>(expanded);
+        Configuration.CategoryExpansionScope = Configuration.Category;
+        return this;
+    }
+
     public IPropertyConfigurator Description(string description)
     {
         Configuration.Description = new ConfiguredValue<string>(description);
@@ -1116,12 +1133,24 @@ internal abstract class ObjectPropertyConfigurator<T, TSelf> : PropertyConfigura
         return Self;
     }
 
+    public new TSelf WithCategory(string category, bool initiallyExpanded)
+    {
+        base.WithCategory(category, initiallyExpanded);
+        return Self;
+    }
+
     public TSelf WithCategory(Func<T, string> category)
     {
         if (category == null)
             throw new ArgumentNullException(nameof(category));
 
         Configuration.CategoryFormatter = item => category((T)item);
+        return Self;
+    }
+
+    public new TSelf WithInitiallyExpanded(bool expanded = true)
+    {
+        base.WithInitiallyExpanded(expanded);
         return Self;
     }
 
@@ -1677,6 +1706,18 @@ internal sealed class CollectionConfigurator<T, TItem>
     public CollectionConfigurator(PropertyConfiguration configuration)
         : base(configuration) { }
 
+    public new ICollectionConfigurator<T, TItem> WithInitiallyExpanded(bool expanded = true)
+    {
+        if (_lastOutput?.Mode == CollectionMode.ExpandedItems)
+        {
+            _lastOutput.InitiallyExpanded = expanded;
+            return this;
+        }
+
+        base.WithInitiallyExpanded(expanded);
+        return this;
+    }
+
     public ICollectionConfigurator<T, TItem> ShowCount(string name = null)
     {
         AddOutput(CollectionMode.Count, name);
@@ -1988,18 +2029,23 @@ internal sealed class CollectionExpandedItemConfigurator<TItem> : ICollectionExp
             throw new ArgumentNullException(nameof(format));
 
         _output.CategoryFormatter = item => format((TItem)item);
+        _output.IndexedNameFormatter = null;
+        return this;
+    }
+
+    public ICollectionExpandedItemConfigurator<TItem> WithName(Func<TItem, int, string> format)
+    {
+        if (format == null)
+            throw new ArgumentNullException(nameof(format));
+
+        _output.CategoryFormatter = null;
+        _output.IndexedNameFormatter = (item, index) => format((TItem)item, index);
         return this;
     }
 
     public ICollectionExpandedItemConfigurator<TItem> WithInitiallyExpanded()
     {
-        _output.InitiallyExpanded = true;
-        return this;
-    }
-
-    public ICollectionExpandedItemConfigurator<TItem> WithInitiallyCollapsed()
-    {
-        _output.InitiallyExpanded = false;
+        _output.ItemsInitiallyExpanded = true;
         return this;
     }
 

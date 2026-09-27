@@ -33,9 +33,6 @@ app-category-view .value-line.no-truncate {
 }
 
 .property-row.wide-property-row > app-property-hover { grid-column: 1; }
-.section-property-grid > .property-row.wide-property-row .property-name { padding-left: 0; }
-.category-view .section-property-grid > .property-row.wide-property-row:nth-child(n) .property-name { padding-left: 0; }
-.category-view:not(.max-property-columns-2) .section-property-grid > .property-row.wide-property-row:nth-child(n) .property-name { padding-left: 0; }
 .value-kind.wide-value { grid-column: 2 / span min(calc((var(--wide-column-count) * 2) - 1), var(--wide-max-span)); }
 
 @container (min-width: 73rem) {

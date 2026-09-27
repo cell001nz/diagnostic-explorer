@@ -1,7 +1,7 @@
 param(
-    [bool]$BuildAngularServer = $true,
+    [bool]$BuildAngularServer = $false,
     [bool]$BuildAngularSelfHost = $true,
-    [bool]$BuildAngularSelfHost48 = $true
+    [bool]$BuildAngularSelfHost48 = $false
 )
 
 $ErrorActionPreference = 'Stop'

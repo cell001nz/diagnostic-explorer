@@ -175,13 +175,17 @@ creates an expanded section for the collection, then an item section for each
 value with that item's diagnostic properties. Without `WithName(...)`, item
 names default to the collection name and a zero-based index. A configured name
 must be distinct for every item; include an identifier when a readable name
-alone is not unique. Pass
-`WithInitiallyCollapsed()` when the collection should start collapsed:
+alone is not unique. The collection and its item sections start collapsed.
+Open the collection container explicitly when needed:
 
 ```csharp
 options.Property(widget => widget.Gadgets)
-    .ExpandItems(items => items.WithName(gadget => gadget.FullName).WithInitiallyCollapsed());
+    .ExpandItems(items => items.WithName(gadget => gadget.FullName))
+    .WithInitiallyExpanded();
 ```
+
+Call `WithInitiallyExpanded()` inside `ExpandItems(...)` to also open each item
+section.
 
 Chain `WithPrimaryPropertiesOnly()` after `ExpandItems(...)` or `Expand()` to
 show only direct, uncategorized properties. Nested `Expand()` and `Custom()`
